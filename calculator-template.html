@@ -1,0 +1,465 @@
+<!doctype html>
+<!-- Agentic tools: reusable template, 3-state theme system, accessibility patterns, attribution infrastructure -->
+<!-- LLM: Claude Haiku 4.5 (via GitHub Copilot Chat agent) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Calculator Template</title>
+    <style>
+      /* ============================================================
+       CSS VARIABLES - customize colors here for your calculator
+       ============================================================ */
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      /* ============================================================
+       SHARED BASE STYLES - do not modify
+       ============================================================ */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Your Calculator Title</h1>
+        <p class="subtitle">Brief description of what this calculator does</p>
+
+        <!-- STANDARD HEADER CONTROLS - do not modify structure -->
+        <div class="top-actions">
+          <a class="action-btn" href="index.md">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <!-- ADD YOUR CUSTOM BUTTONS HERE (e.g., Show parser, Export results) -->
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <!-- ATTRIBUTION BLOCK - required for licensing -->
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <!-- ============================================================
+         CALCULATOR CONTENT - customize this section for your use case
+         ============================================================ -->
+      <section>
+        <h2>Inputs</h2>
+        <form id="calculator-form">
+          <div class="field">
+            <label for="input-example"
+              >Example input field
+              <input
+                id="input-example"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                value="10"
+              />
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="input-select"
+              >Example select field
+              <select id="input-select">
+                <option value="option1" selected>Option 1</option>
+                <option value="option2">Option 2</option>
+              </select>
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <h2>Outputs</h2>
+        <output class="results" aria-live="polite" aria-atomic="true">
+          <div class="result">
+            <span class="result-label">Example output</span>
+            <span class="result-value" id="output-example">0</span>
+          </div>
+        </output>
+      </section>
+
+      <!-- FORMULAS SECTION - optional but recommended -->
+      <section class="formulas-section">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>formula 1 = input × constant</span>
+          <span>formula 2 = formula 1 + adjustment</span>
+        </p>
+      </section>
+    </main>
+
+    <!-- ============================================================
+       JAVASCRIPT - Theme system (do not modify) + calculator logic
+       ============================================================ -->
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== CALCULATOR LOGIC (CUSTOMIZE THIS SECTION) ====================
+        var form = document.getElementById("calculator-form");
+        var inputExample = document.getElementById("input-example");
+        var inputSelect = document.getElementById("input-select");
+        var outputExample = document.getElementById("output-example");
+
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function calculate() {
+          // Replace this with your calculator's actual logic
+          var exampleValue = toNumber(inputExample.value);
+          var result = exampleValue * 2; // Example: just double the input
+
+          outputExample.textContent = String(result.toFixed(2));
+        }
+
+        // Wire up input handlers
+        inputExample.addEventListener("input", calculate);
+        inputExample.addEventListener("change", calculate);
+        inputSelect.addEventListener("change", calculate);
+
+        // ==================== INITIALIZATION ====================
+        applyThemeMode(getStoredThemeMode(), false);
+        calculate();
+      })();
+    </script>
+  </body>
+</html>

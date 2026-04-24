@@ -1,1236 +1,1699 @@
-<!DOCTYPE html>
+<!doctype html>
+<!-- Agentic tools: spell-check, 3-state theme system, accessibility audit & fixes, attribution system -->
+<!-- LLM: Claude Haiku 4.5 (via GitHub Copilot Chat agent) -->
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#ffffff">
-  <title>Solar Panel Sense Checker</title>
-  <style>
-    :root {
-      --page-bg: #f7f7f2;
-      --panel-bg: #ffffff;
-      --text: #1f2520;
-      --muted: #5c645d;
-      --border: #d9ddd4;
-      --accent: #1d6b43;
-      --accent-soft: #eef6ef;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Solar Panel Sense Checker</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: var(--page-bg);
-      color: var(--text);
-      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-      line-height: 1.5;
-    }
-
-    main {
-      width: min(100%, 96rem);
-      margin: 0 auto;
-      padding: 2rem 1rem 3rem;
-    }
-
-    header {
-      margin-bottom: 1rem;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2rem, 5vw, 2.75rem);
-      line-height: 1.1;
-    }
-
-    .subtitle {
-      margin: 0.5rem 0 0;
-      color: var(--muted);
-      font-size: 0.98rem;
-    }
-
-    .calculator-actions {
-      margin-top: 1rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-
-    .parser-toggle-row {
-      margin-top: 0.6rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-
-    .calculator-actions .add-calculator-btn {
-      display: none;
-    }
-
-    .action-btn {
-      border: 1px solid var(--border);
-      background: var(--panel-bg);
-      color: var(--text);
-      padding: 0.45rem 0.75rem;
-      font: inherit;
-      font-size: 0.9rem;
-      line-height: 1.2;
-      cursor: pointer;
-    }
-
-    .action-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .add-calculator-btn {
-      border-style: dashed;
-      width: fit-content;
-      min-width: 12rem;
-      align-self: start;
-      /* push down past the calculator-label + grid gap so top edge aligns with the inputs section */
-      margin-top: calc(0.9rem * 1.5 + 1rem);
-      min-height: 21.35rem;
-      padding: 0.55rem 1rem;
-    }
-
-    .calculator-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .paste-parser {
-      margin-top: 1rem;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      padding: 1rem;
-      display: grid;
-      gap: 0.8rem;
-    }
-
-    .paste-parser[hidden] {
-      display: none !important;
-    }
-
-    .paste-parser textarea {
-      width: 100%;
-      min-height: 7.5rem;
-      resize: vertical;
-      border: 1px solid var(--border);
-      padding: 0.75rem 0.85rem;
-      font: inherit;
-      background: #fff;
-      color: var(--text);
-    }
-
-    .paste-parser textarea:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-      border-color: var(--accent);
-    }
-
-    .parser-results {
-      display: grid;
-      gap: 0.55rem;
-    }
-
-    .parser-result-row {
-      display: grid;
-      grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
-      gap: 0.75rem;
-      align-items: start;
-      border-top: 1px solid var(--border);
-      padding-top: 0.55rem;
-    }
-
-    .parser-result-row:first-child {
-      border-top: 0;
-      padding-top: 0;
-    }
-
-    .parser-result-label {
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    .parser-result-values {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-    }
-
-    .parser-chip {
-      border: 1px solid var(--border);
-      background: var(--accent-soft);
-      padding: 0.15rem 0.45rem;
-      font-size: 0.9rem;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .parser-empty {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .parser-status {
-      color: var(--muted);
-      font-size: 0.88rem;
-      min-height: 1.2em;
-    }
-
-    .free-text-field[hidden] {
-      display: none !important;
-    }
-
-    .export-panel {
-      margin-top: 1rem;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      padding: 1rem;
-      display: grid;
-      gap: 0.8rem;
-    }
-
-    .export-panel[hidden] {
-      display: none !important;
-    }
-
-    .export-panel textarea {
-      width: 100%;
-      min-height: 10rem;
-      resize: vertical;
-      border: 1px solid var(--border);
-      padding: 0.75rem 0.85rem;
-      font: inherit;
-      background: #fff;
-      color: var(--text);
-    }
-
-    .export-status {
-      color: var(--muted);
-      font-size: 0.88rem;
-      min-height: 1.2em;
-    }
-
-    .calculator-card {
-      display: grid;
-      gap: 1rem;
-    }
-
-    .calculator-label {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    section {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      padding: 1rem;
-    }
-
-    .formulas-section {
-      margin-top: 1.5rem;
-    }
-
-    h2 {
-      margin: 0 0 1rem;
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-
-    form {
-      display: grid;
-      gap: 0.9rem;
-    }
-
-    .field {
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    .field-row {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      grid-template-areas:
-        "eff-label out-label"
-        "eff-input out-input";
-      column-gap: 0.9rem;
-      row-gap: 0.35rem;
-      align-items: start;
-    }
-
-    .field-row > label {
-      display: block;
-      align-self: start;
-      min-height: 2.6em;
-    }
-
-    .field-row > label:nth-of-type(1) {
-      grid-area: eff-label;
-    }
-
-    .field-row > label:nth-of-type(2) {
-      grid-area: out-label;
-    }
-
-    .field-row > .input-claimed-efficiency {
-      grid-area: eff-input;
-    }
-
-    .field-row > .value-with-unit {
-      grid-area: out-input;
-    }
-
-    label {
-      font-weight: 600;
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 0.75rem 0.85rem;
-      border: 1px solid var(--border);
-      border-radius: 0;
-      background: #fff;
-      color: var(--text);
-      font: inherit;
-    }
-
-    input:focus,
-    select:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-      border-color: var(--accent);
-    }
-
-    .value-with-unit {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.5rem;
-    }
-
-    .value-with-unit input {
-      min-width: 0;
-    }
-
-    .value-with-unit select {
-      width: auto;
-      min-width: 4.5rem;
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
-
-    output {
-      display: block;
-      width: 100%;
-    }
-
-    .results {
-      display: grid;
-      gap: 0.75rem;
-    }
-
-    .output-pair {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.9rem;
-    }
-
-    .result-group {
-      border-top: 1px solid var(--border);
-      padding-top: 0.85rem;
-    }
-
-    .result-group-title {
-      margin: 0 0 0.35rem;
-      color: var(--muted);
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .result-grid-stc {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-      gap: 0.75rem;
-    }
-
-    .result-grid-stc .result {
-      grid-template-columns: 1fr;
-      row-gap: 0.35rem;
-      align-items: start;
-      padding: 0.75rem;
-      border: 1px solid var(--border);
-    }
-
-    .result-grid-stc .result:first-child {
-      border-top: 1px solid var(--border);
-      padding-top: 0.75rem;
-    }
-
-    .result-grid-stc .result-value {
-      justify-self: start;
-      text-align: left;
-    }
-
-    .result-grid-stc .result-value--power,
-    .result-grid-stc .result-value--current {
-      justify-items: start;
-    }
-
-    .result {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 8ch;
-      align-items: baseline;
-      column-gap: 1rem;
-      padding: 0.85rem 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .result:first-child {
-      border-top: 0;
-      padding-top: 0;
-    }
-
-    .result-label {
-      color: var(--muted);
-      min-width: 0;
-      overflow-wrap: normal;
-      word-break: normal;
-      white-space: normal;
-    }
-
-    .result-value {
-      font-size: 1.3rem;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-      text-align: right;
-      white-space: normal;
-      width: 8ch;
-      justify-self: end;
-      line-height: 1.1;
-    }
-
-    .result-value--power {
-      display: inline-grid;
-      justify-items: end;
-      row-gap: 0.08rem;
-      width: 8ch;
-    }
-
-    .result-value-number {
-      white-space: nowrap;
-    }
-
-    .result-value-unit {
-      font-size: 0.75em;
-      font-weight: 600;
-      color: var(--muted);
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    .formula-note {
-      margin-top: 1rem;
-      padding: 0.8rem 0.9rem;
-      background: var(--accent-soft);
-      color: var(--muted);
-      font-size: 0.92rem;
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    .formula-note span {
-      display: block;
-    }
-
-    .optional {
-      font-weight: 400;
-      color: var(--muted);
-      font-size: 0.88em;
-    }
-
-    .result-value--current {
-      display: inline-grid;
-      justify-items: end;
-      row-gap: 0.08rem;
-      width: 8ch;
-    }
-
-    @media (max-width: 640px) {
       main {
-        padding: 1.25rem 0.9rem 2rem;
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
       }
 
-      .result {
-        align-items: flex-start;
-        flex-direction: column;
+      header {
+        margin-bottom: 1rem;
       }
 
-      .result-value {
-        text-align: left;
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .calculator-actions {
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .parser-toggle-row {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .calculator-actions .add-calculator-btn {
+        display: none;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .add-calculator-btn {
+        border-style: dashed;
+        width: fit-content;
+        min-width: 12rem;
+        align-self: start;
+        /* push down past the calculator-label + grid gap so top edge aligns with the inputs section */
+        margin-top: calc(0.9rem * 1.5 + 1rem);
+        min-height: 21.35rem;
+        padding: 0.55rem 1rem;
+      }
+
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .paste-parser {
+        margin-top: 1rem;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .paste-parser[hidden] {
+        display: none !important;
+      }
+
+      .paste-parser textarea {
+        width: 100%;
+        min-height: 7.5rem;
+        resize: vertical;
+        border: 1px solid var(--border);
+        padding: 0.75rem 0.85rem;
+        font: inherit;
+        background: var(--field-bg);
+        color: var(--text);
+      }
+
+      .paste-parser textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .parser-results {
+        display: grid;
+        gap: 0.55rem;
+      }
+
+      .parser-result-row {
+        display: grid;
+        grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: start;
+        border-top: 1px solid var(--border);
+        padding-top: 0.55rem;
+      }
+
+      .parser-result-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .parser-result-label {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .parser-result-values {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .parser-chip {
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        padding: 0.15rem 0.45rem;
+        font-size: 0.9rem;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .parser-empty {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .parser-status {
+        color: var(--muted);
+        font-size: 0.88rem;
+        min-height: 1.2em;
+      }
+
+      .free-text-field[hidden] {
+        display: none !important;
+      }
+
+      .export-panel {
+        margin-top: 1rem;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .export-panel[hidden] {
+        display: none !important;
+      }
+
+      .export-panel textarea {
+        width: 100%;
+        min-height: 10rem;
+        resize: vertical;
+        border: 1px solid var(--border);
+        padding: 0.75rem 0.85rem;
+        font: inherit;
+        background: var(--field-bg);
+        color: var(--text);
+      }
+
+      .export-status {
+        color: var(--muted);
+        font-size: 0.88rem;
+        min-height: 1.2em;
+      }
+
+      .calculator-card {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .calculator-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      form {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        grid-template-areas:
+          "eff-label out-label"
+          "eff-input out-input";
+        column-gap: 0.9rem;
+        row-gap: 0.35rem;
+        align-items: start;
+      }
+
+      .field-row > label {
+        display: block;
+        align-self: start;
+        min-height: 2.6em;
+      }
+
+      .field-row > label:nth-of-type(1) {
+        grid-area: eff-label;
+      }
+
+      .field-row > label:nth-of-type(2) {
+        grid-area: out-label;
+      }
+
+      .field-row > .input-claimed-efficiency {
+        grid-area: eff-input;
+      }
+
+      .field-row > .value-with-unit {
+        grid-area: out-input;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .value-with-unit {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+      }
+
+      .value-with-unit input {
+        min-width: 0;
+      }
+
+      .value-with-unit select {
+        width: auto;
+        min-width: 4.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+
+      output {
+        display: block;
+        width: 100%;
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
       }
 
       .output-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+      }
+
+      .result-group {
+        border-top: 1px solid var(--border);
+        padding-top: 0.85rem;
+      }
+
+      .result-group-title {
+        margin: 0 0 0.35rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .result-grid-stc {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+        gap: 0.75rem;
+      }
+
+      .result-grid-stc .result {
         grid-template-columns: 1fr;
+        row-gap: 0.35rem;
+        align-items: start;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
       }
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <header>
-      <h1>Solar Panel Sense Checker</h1>
-      <p class="subtitle">A self-contained calculator to spot silly marketing claims</p>
-      <div class="parser-toggle-row">
-        <button id="toggle-parser-btn" class="action-btn" type="button" aria-expanded="false" aria-controls="paste-parser-panel">Show regex parser</button>
-        <button id="toggle-notes-btn" class="action-btn" type="button" aria-expanded="false">Show free text on calculators</button>
-        <button id="export-results-btn" class="action-btn" type="button">Export markdown table</button>
-      </div>
-      <div class="calculator-actions">
-        <button id="add-high-example-btn" class="action-btn" type="button">Add example high efficiency panel</button>
-        <button id="add-low-example-btn" class="action-btn" type="button">Add example low efficiency panel</button>
-      </div>
-    </header>
 
-    <section id="export-panel" class="export-panel" hidden>
-      <h2>Exported Markdown</h2>
-      <div>
-        <button id="copy-export-btn" class="action-btn" type="button">Copy markdown</button>
-      </div>
-      <textarea id="export-output" readonly aria-label="Exported markdown table"></textarea>
-      <div id="export-status" class="export-status"></div>
-    </section>
+      .result-grid-stc .result:first-child {
+        border-top: 1px solid var(--border);
+        padding-top: 0.75rem;
+      }
 
-    <section id="paste-parser-panel" class="paste-parser" hidden>
-      <h2>Paste Regex Parser</h2>
-      <div class="field">
-        <label for="parser-input">Pasted product text</label>
-        <textarea id="parser-input" placeholder="Paste listing text here, then extract likely length, width, and power values."></textarea>
-      </div>
-      <div>
-        <button id="parse-input-btn" class="action-btn" type="button">Extract candidates</button>
-        <button id="apply-parser-btn" class="action-btn" type="button" disabled>Apply to newest calculator</button>
-      </div>
-      <div id="parser-status" class="parser-status"></div>
-      <div class="parser-results" id="parser-results">
-        <div class="parser-result-row">
-          <div class="parser-result-label">Possible lengths</div>
-          <div class="parser-result-values" id="parser-length-results"><span class="parser-empty">No matches yet</span></div>
+      .result-grid-stc .result-value {
+        justify-self: start;
+        text-align: left;
+      }
+
+      .result-grid-stc .result-value--power,
+      .result-grid-stc .result-value--current {
+        justify-items: start;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 8ch;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+        min-width: 0;
+        overflow-wrap: normal;
+        word-break: normal;
+        white-space: normal;
+      }
+
+      .result-value {
+        font-size: 1.3rem;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        text-align: right;
+        white-space: normal;
+        width: 8ch;
+        justify-self: end;
+        line-height: 1.1;
+      }
+
+      .result-value--power {
+        display: inline-grid;
+        justify-items: end;
+        row-gap: 0.08rem;
+        width: 8ch;
+      }
+
+      .result-value-number {
+        white-space: nowrap;
+      }
+
+      .result-value-unit {
+        font-size: 0.75em;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
+      .result-value--current {
+        display: inline-grid;
+        justify-items: end;
+        row-gap: 0.08rem;
+        width: 8ch;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+
+        .output-pair {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Solar Panel Sense Checker</h1>
+        <p class="subtitle">
+          A self-contained calculator to spot silly marketing claims
+        </p>
+        <div class="parser-toggle-row">
+          <a class="action-btn" href="index.md">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-parser-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+            aria-controls="paste-parser-panel"
+          >
+            Show regex parser
+          </button>
+          <button
+            id="toggle-notes-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Show free text on calculators
+          </button>
+          <button id="export-results-btn" class="action-btn" type="button">
+            Export markdown table
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
         </div>
-        <div class="parser-result-row">
-          <div class="parser-result-label">Possible widths</div>
-          <div class="parser-result-values" id="parser-width-results"><span class="parser-empty">No matches yet</span></div>
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
         </div>
-        <div class="parser-result-row">
-          <div class="parser-result-label">Possible power outputs</div>
-          <div class="parser-result-values" id="parser-power-results"><span class="parser-empty">No matches yet</span></div>
+        <div class="calculator-actions">
+          <button id="add-high-example-btn" class="action-btn" type="button">
+            Add example high efficiency panel
+          </button>
+          <button id="add-low-example-btn" class="action-btn" type="button">
+            Add example low efficiency panel
+          </button>
         </div>
+      </header>
+
+      <section id="export-panel" class="export-panel" hidden>
+        <h2>Exported Markdown</h2>
+        <div>
+          <button id="copy-export-btn" class="action-btn" type="button">
+            Copy markdown
+          </button>
+        </div>
+        <textarea
+          id="export-output"
+          readonly
+          aria-label="Exported markdown table"
+        ></textarea>
+        <div id="export-status" class="export-status"></div>
+      </section>
+
+      <section id="paste-parser-panel" class="paste-parser" hidden>
+        <h2>Paste Regex Parser</h2>
+        <div class="field">
+          <label for="parser-input">Pasted product text</label>
+          <textarea
+            id="parser-input"
+            placeholder="Paste listing text here, then extract likely length, width, and power values."
+          ></textarea>
+        </div>
+        <div>
+          <button id="parse-input-btn" class="action-btn" type="button">
+            Extract candidates
+          </button>
+          <button
+            id="apply-parser-btn"
+            class="action-btn"
+            type="button"
+            disabled
+          >
+            Apply to newest calculator
+          </button>
+        </div>
+        <div id="parser-status" class="parser-status"></div>
+        <div class="parser-results" id="parser-results">
+          <div class="parser-result-row">
+            <div class="parser-result-label">Possible lengths</div>
+            <div class="parser-result-values" id="parser-length-results">
+              <span class="parser-empty">No matches yet</span>
+            </div>
+          </div>
+          <div class="parser-result-row">
+            <div class="parser-result-label">Possible widths</div>
+            <div class="parser-result-values" id="parser-width-results">
+              <span class="parser-empty">No matches yet</span>
+            </div>
+          </div>
+          <div class="parser-result-row">
+            <div class="parser-result-label">Possible power outputs</div>
+            <div class="parser-result-values" id="parser-power-results">
+              <span class="parser-empty">No matches yet</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="calculator-grid" class="calculator-grid">
+        <button
+          id="add-calculator-btn"
+          class="action-btn add-calculator-btn"
+          type="button"
+        >
+          Add calculator
+        </button>
       </div>
-    </section>
 
-    <div id="calculator-grid" class="calculator-grid">
-      <button id="add-calculator-btn" class="action-btn add-calculator-btn" type="button">Add calculator</button>
-    </div>
+      <section class="formulas-section">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>area (mm²) = length (mm) × width (mm)</span>
+          <span
+            >ideal expected output (from efficiency) = area (mm²) × 1000 W/m² ×
+            claimed efficiency (%)</span
+          >
+          <span
+            >adjusted output (from efficiency) = ideal expected output ×
+            0.8</span
+          >
+          <span
+            >expected efficiency (from claimed output) = claimed output (W) ÷
+            (area (mm²) × 1000 W/m²) × 100</span
+          >
+          <span
+            >adjusted output (from claimed output) = claimed output (W) ×
+            0.8</span
+          >
+        </p>
+      </section>
 
-    <section class="formulas-section">
-      <h2>Formulas</h2>
-      <p class="formula-note">
-        <span>area (mm²) = length (mm) × width (mm)</span>
-        <span>ideal expected output (from efficiency) = area (mm²) × 1000 W/m² × claimed efficiency (%)</span>
-        <span>adjusted output (from efficiency) = ideal expected output × 0.8</span>
-        <span>expected efficiency (from claimed output) = claimed output (W) ÷ (area (mm²) × 1000 W/m²) × 100</span>
-        <span>adjusted output (from claimed output) = claimed output (W) × 0.8</span>
-      </p>
-    </section>
+      <template id="calculator-template">
+        <article class="calculator-card">
+          <p class="calculator-label">Calculator</p>
 
-    <template id="calculator-template">
-      <article class="calculator-card">
-        <p class="calculator-label">Calculator</p>
-
-        <section>
-          <h2>Inputs</h2>
-          <form class="solar-form">
-            <div class="field free-text-field" hidden>
-              <label>Free text
-                <input class="input-free-text" type="text" placeholder="Add context, source, or notes">
-              </label>
-            </div>
-
-            <div class="field">
-              <label>Length (mm)
-                <input class="input-length" type="number" inputmode="decimal" step="any" value="40">
-              </label>
-            </div>
-
-            <div class="field">
-              <label>Width (mm)
-                <input class="input-width" type="number" inputmode="decimal" step="any" value="40">
-              </label>
-            </div>
-
-            <div class="field">
-              <label>Voltage (V) <span class="optional">(optional)</span>
-                <input class="input-voltage" type="number" inputmode="decimal" step="any" placeholder="e.g. 5">
-              </label>
-            </div>
-
-            <div class="field-row">
-              <label>Claimed efficiency (%)</label>
-              <label>Claimed output</label>
-              <input class="input-claimed-efficiency" type="number" inputmode="decimal" step="any" value="10">
-              <div class="value-with-unit">
-                <input class="input-claimed-output" type="number" inputmode="decimal" step="any" value="0.2">
-                <select class="input-claimed-output-unit" aria-label="Claimed output unit">
-                  <option value="W" selected>W</option>
-                  <option value="mW">mW</option>
-                  <option value="uW">μW</option>
-                </select>
+          <section>
+            <h2>Inputs</h2>
+            <form class="solar-form">
+              <div class="field free-text-field" hidden>
+                <label
+                  >Free text
+                  <input
+                    class="input-free-text"
+                    type="text"
+                    placeholder="Add context, source, or notes"
+                  />
+                </label>
               </div>
-            </div>
-          </form>
-        </section>
 
-        <section>
-          <h2>Outputs</h2>
-          <output class="results" aria-live="polite" aria-atomic="true">
-            <div class="result">
-              <span class="result-label">Area (mm²)</span>
-              <span class="result-value output-area">0 mm²</span>
-            </div>
-            <div class="output-pair">
+              <div class="field">
+                <label
+                  >Length (mm)
+                  <input
+                    class="input-length"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    value="40"
+                  />
+                </label>
+              </div>
+
+              <div class="field">
+                <label
+                  >Width (mm)
+                  <input
+                    class="input-width"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    value="40"
+                  />
+                </label>
+              </div>
+
+              <div class="field">
+                <label
+                  >Voltage (V) <span class="optional">(optional)</span>
+                  <input
+                    class="input-voltage"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    placeholder="e.g. 5"
+                  />
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label>Claimed efficiency (%)</label>
+                <label>Claimed output</label>
+                <input
+                  class="input-claimed-efficiency"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  value="10"
+                  aria-label="Claimed efficiency percent"
+                />
+                <div class="value-with-unit">
+                  <input
+                    class="input-claimed-output"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    value="0.2"
+                    aria-label="Claimed output value"
+                  />
+                  <select
+                    class="input-claimed-output-unit"
+                    aria-label="Claimed output unit"
+                  >
+                    <option value="W" selected>W</option>
+                    <option value="mW">mW</option>
+                    <option value="uW">μW</option>
+                  </select>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section>
+            <h2>Outputs</h2>
+            <output class="results" aria-live="polite" aria-atomic="true">
+              <div class="result">
+                <span class="result-label">Area (mm²)</span>
+                <span class="result-value output-area">0 mm²</span>
+              </div>
+              <div class="output-pair">
+                <div class="result-group">
+                  <p class="result-group-title">From Claimed Efficiency</p>
+                  <div class="result">
+                    <span class="result-label">Ideal expected output</span>
+                    <span
+                      class="result-value result-value--power output-ideal-efficiency"
+                      ><span class="result-value-number">0</span
+                      ><span class="result-value-unit">W</span></span
+                    >
+                  </div>
+                  <div class="result output-current-row" style="display: none">
+                    <span class="result-label">Ideal expected current</span>
+                    <span
+                      class="result-value result-value--current output-ideal-current"
+                      ><span class="result-value-number">—</span
+                      ><span class="result-value-unit"></span
+                    ></span>
+                  </div>
+                  <div class="result">
+                    <span class="result-label"
+                      >Adjusted output (NOCT,<wbr /> 80%)</span
+                    >
+                    <span
+                      class="result-value result-value--power output-adjusted-efficiency"
+                      ><span class="result-value-number">0</span
+                      ><span class="result-value-unit">W</span></span
+                    >
+                  </div>
+                </div>
+                <div class="result-group">
+                  <p class="result-group-title">From Claimed Output</p>
+                  <div class="result">
+                    <span class="result-label">Expected efficiency (%)</span>
+                    <span class="result-value output-expected-efficiency"
+                      >0%</span
+                    >
+                  </div>
+                  <div
+                    class="result output-current-output-row"
+                    style="display: none"
+                  >
+                    <span class="result-label">Ideal expected current</span>
+                    <span
+                      class="result-value result-value--current output-ideal-current-output"
+                      ><span class="result-value-number">—</span
+                      ><span class="result-value-unit"></span
+                    ></span>
+                  </div>
+                  <div class="result">
+                    <span class="result-label"
+                      >Adjusted output (NOCT,<wbr /> 80%)</span
+                    >
+                    <span
+                      class="result-value result-value--power output-adjusted-output"
+                      ><span class="result-value-number">0</span
+                      ><span class="result-value-unit">W</span></span
+                    >
+                  </div>
+                </div>
+              </div>
               <div class="result-group">
-                <p class="result-group-title">From Claimed Efficiency</p>
-                <div class="result">
-                  <span class="result-label">Ideal expected output</span>
-                  <span class="result-value result-value--power output-ideal-efficiency"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
-                </div>
-                <div class="result output-current-row" style="display:none">
-                  <span class="result-label">Ideal expected current</span>
-                  <span class="result-value result-value--current output-ideal-current"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                </div>
-                <div class="result">
-                  <span class="result-label">Adjusted output (NOCT,<wbr> 80%)</span>
-                  <span class="result-value result-value--power output-adjusted-efficiency"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
-                </div>
-              </div>
-              <div class="result-group">
-                <p class="result-group-title">From Claimed Output</p>
-                <div class="result">
-                  <span class="result-label">Expected efficiency (%)</span>
-                  <span class="result-value output-expected-efficiency">0%</span>
-                </div>
-                <div class="result output-current-output-row" style="display:none">
-                  <span class="result-label">Ideal expected current</span>
-                  <span class="result-value result-value--current output-ideal-current-output"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                </div>
-                <div class="result">
-                  <span class="result-label">Adjusted output (NOCT,<wbr> 80%)</span>
-                  <span class="result-value result-value--power output-adjusted-output"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                <p class="result-group-title">Expected Output At STC</p>
+                <div class="result-grid-stc">
+                  <div class="result">
+                    <span class="result-label">10% efficiency</span>
+                    <span class="result-value result-value--power output-stc-10"
+                      ><span class="result-value-number">0</span
+                      ><span class="result-value-unit">W</span></span
+                    >
+                  </div>
+                  <div class="result">
+                    <span class="result-label">15% efficiency</span>
+                    <span class="result-value result-value--power output-stc-15"
+                      ><span class="result-value-number">0</span
+                      ><span class="result-value-unit">W</span></span
+                    >
+                  </div>
+                  <div class="result">
+                    <span class="result-label">20% efficiency</span>
+                    <span class="result-value result-value--power output-stc-20"
+                      ><span class="result-value-number">0</span
+                      ><span class="result-value-unit">W</span></span
+                    >
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="result-group">
-              <p class="result-group-title">Expected Output At STC</p>
-              <div class="result-grid-stc">
-                <div class="result">
-                  <span class="result-label">10% efficiency</span>
-                  <span class="result-value result-value--power output-stc-10"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
-                </div>
-                <div class="result">
-                  <span class="result-label">15% efficiency</span>
-                  <span class="result-value result-value--power output-stc-15"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
-                </div>
-                <div class="result">
-                  <span class="result-label">20% efficiency</span>
-                  <span class="result-value result-value--power output-stc-20"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
-                </div>
-              </div>
-            </div>
-          </output>
+            </output>
+          </section>
+        </article>
+      </template>
+    </main>
 
-        </section>
-      </article>
-    </template>
-  </main>
+    <script>
+      (function () {
+        var calculatorGrid = document.getElementById("calculator-grid");
+        var calculatorTemplate = document.getElementById("calculator-template");
+        var addCalculatorButton = document.getElementById("add-calculator-btn");
+        var addHighExampleButton = document.getElementById(
+          "add-high-example-btn",
+        );
+        var addLowExampleButton = document.getElementById(
+          "add-low-example-btn",
+        );
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var toggleParserButton = document.getElementById("toggle-parser-btn");
+        var toggleNotesButton = document.getElementById("toggle-notes-btn");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+        var exportResultsButton = document.getElementById("export-results-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var parserPanel = document.getElementById("paste-parser-panel");
+        var parserInput = document.getElementById("parser-input");
+        var parseInputButton = document.getElementById("parse-input-btn");
+        var applyParserButton = document.getElementById("apply-parser-btn");
+        var parserStatus = document.getElementById("parser-status");
+        var parserLengthResults = document.getElementById(
+          "parser-length-results",
+        );
+        var parserWidthResults = document.getElementById(
+          "parser-width-results",
+        );
+        var parserPowerResults = document.getElementById(
+          "parser-power-results",
+        );
+        var exportPanel = document.getElementById("export-panel");
+        var exportOutput = document.getElementById("export-output");
+        var copyExportButton = document.getElementById("copy-export-btn");
+        var exportStatus = document.getElementById("export-status");
+        var calculatorCount = 0;
+        var lastParsedCandidates = { lengths: [], widths: [], powers: [] };
+        var notesVisible = false;
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
 
-  <script>
-    (function () {
-      var calculatorGrid = document.getElementById('calculator-grid');
-      var calculatorTemplate = document.getElementById('calculator-template');
-      var addCalculatorButton = document.getElementById('add-calculator-btn');
-      var addHighExampleButton = document.getElementById('add-high-example-btn');
-      var addLowExampleButton = document.getElementById('add-low-example-btn');
-      var toggleParserButton = document.getElementById('toggle-parser-btn');
-      var toggleNotesButton = document.getElementById('toggle-notes-btn');
-      var exportResultsButton = document.getElementById('export-results-btn');
-      var parserPanel = document.getElementById('paste-parser-panel');
-      var parserInput = document.getElementById('parser-input');
-      var parseInputButton = document.getElementById('parse-input-btn');
-      var applyParserButton = document.getElementById('apply-parser-btn');
-      var parserStatus = document.getElementById('parser-status');
-      var parserLengthResults = document.getElementById('parser-length-results');
-      var parserWidthResults = document.getElementById('parser-width-results');
-      var parserPowerResults = document.getElementById('parser-power-results');
-      var exportPanel = document.getElementById('export-panel');
-      var exportOutput = document.getElementById('export-output');
-      var copyExportButton = document.getElementById('copy-export-btn');
-      var exportStatus = document.getElementById('export-status');
-      var calculatorCount = 0;
-      var lastParsedCandidates = { lengths: [], widths: [], powers: [] };
-      var notesVisible = false;
-
-      // Editable example presets: update these values to change example buttons.
-      var EXAMPLE_PRESETS = {
-        highEfficiencyPanel: {
-          length: 120,
-          width: 60,
-          claimedEfficiency: 24,
-          claimedOutput: 1.5,
-          claimedOutputUnit: 'W',
-          label: 'Example: High Efficiency'
-        },
-        lowEfficiencyPanel: {
-          length: 120,
-          width: 60,
-          claimedEfficiency: 8,
-          claimedOutput: 350,
-          claimedOutputUnit: 'mW',
-          label: 'Example: Low Efficiency'
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
         }
-      };
 
-      function toNumber(value) {
-        var parsed = parseFloat(value);
-        return Number.isFinite(parsed) ? parsed : 0;
-      }
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
 
-      function normalizeLengthUnit(unit) {
-        var normalized = (unit || '').toLowerCase();
-        if (normalized === 'mm' || normalized.indexOf('millimeter') === 0) {
-          return 'mm';
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
         }
-        if (normalized === 'cm' || normalized.indexOf('centimeter') === 0) {
-          return 'cm';
-        }
-        if (normalized === 'm' || normalized.indexOf('meter') === 0) {
-          return 'm';
-        }
-        if (normalized === 'in' || normalized.indexOf('inch') === 0 || normalized === '"') {
-          return 'in';
-        }
-        return '';
-      }
 
-      function lengthToMillimeters(value, unit) {
-        if (unit === 'mm') {
+        function getNextThemeMode(mode) {
+          if (mode === "light") {
+            return "dark";
+          }
+          if (mode === "dark") {
+            return "auto";
+          }
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        // Editable example presets: update these values to change example buttons.
+        var EXAMPLE_PRESETS = {
+          highEfficiencyPanel: {
+            length: 120,
+            width: 60,
+            claimedEfficiency: 24,
+            claimedOutput: 1.5,
+            claimedOutputUnit: "W",
+            label: "Example: High Efficiency",
+          },
+          lowEfficiencyPanel: {
+            length: 120,
+            width: 60,
+            claimedEfficiency: 8,
+            claimedOutput: 350,
+            claimedOutputUnit: "mW",
+            label: "Example: Low Efficiency",
+          },
+        };
+
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function normalizeLengthUnit(unit) {
+          var normalized = (unit || "").toLowerCase();
+          if (normalized === "mm" || normalized.indexOf("millimeter") === 0) {
+            return "mm";
+          }
+          if (normalized === "cm" || normalized.indexOf("centimeter") === 0) {
+            return "cm";
+          }
+          if (normalized === "m" || normalized.indexOf("meter") === 0) {
+            return "m";
+          }
+          if (
+            normalized === "in" ||
+            normalized.indexOf("inch") === 0 ||
+            normalized === '"'
+          ) {
+            return "in";
+          }
+          return "";
+        }
+
+        function lengthToMillimeters(value, unit) {
+          if (unit === "mm") {
+            return value;
+          }
+          if (unit === "cm") {
+            return value * 10;
+          }
+          if (unit === "m") {
+            return value * 1000;
+          }
+          if (unit === "in") {
+            return value * 25.4;
+          }
           return value;
         }
-        if (unit === 'cm') {
-          return value * 10;
-        }
-        if (unit === 'm') {
-          return value * 1000;
-        }
-        if (unit === 'in') {
-          return value * 25.4;
-        }
-        return value;
-      }
 
-      function normalizePowerUnit(unit) {
-        var normalized = (unit || '').toLowerCase();
-        if (normalized === 'w') {
-          return 'W';
-        }
-        if (normalized === 'mw') {
-          return 'mW';
-        }
-        if (normalized === 'uw' || normalized === 'μw') {
-          return 'μW';
-        }
-        return '';
-      }
-
-      function makeLengthCandidate(value, unit, source) {
-        var mm = lengthToMillimeters(value, unit);
-        return {
-          key: formatNumber(mm, 3) + '|mm',
-          text: formatNumber(mm, 3) + ' mm' + (source ? ' (from ' + source + ')' : ''),
-          mm: mm,
-          sourceUnit: unit
-        };
-      }
-
-      function makePowerCandidate(value, unit) {
-        return {
-          key: formatNumber(value, 4) + '|' + unit,
-          text: formatNumber(value, 4) + ' ' + unit,
-          value: value,
-          unit: unit
-        };
-      }
-
-      function uniqueCandidates(candidates) {
-        var seen = {};
-        return candidates.filter(function (candidate) {
-          if (seen[candidate.key]) {
-            return false;
+        function normalizePowerUnit(unit) {
+          var normalized = (unit || "").toLowerCase();
+          if (normalized === "w") {
+            return "W";
           }
-          seen[candidate.key] = true;
-          return true;
-        });
-      }
-
-      function parseCandidates(rawText) {
-        var text = rawText || '';
-        var lengths = [];
-        var widths = [];
-        var powers = [];
-        var match;
-        var dimensionTripletRegex = /(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
-        var dimensionRegex = /(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")\s*[x×]\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
-        var lengthRegex = /\b(?:length|long(?:er)?|l)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
-        var widthRegex = /\b(?:width|wide|w)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
-        var powerKeywordRegex = /\b(?:power|output|pmax|max(?:imum)?\s*power|rated)\b[^\d]{0,24}(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
-        var powerLooseRegex = /(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
-
-        while ((match = dimensionTripletRegex.exec(text)) !== null) {
-          var t1 = toNumber(match[1]);
-          var t2 = toNumber(match[2]);
-          var tu = normalizeLengthUnit(match[4]);
-          if (t1 > 0 && tu) {
-            lengths.push(makeLengthCandidate(t1, tu, formatNumber(t1, 3) + ' ' + tu));
+          if (normalized === "mw") {
+            return "mW";
           }
-          if (t2 > 0 && tu) {
-            widths.push(makeLengthCandidate(t2, tu, formatNumber(t2, 3) + ' ' + tu));
+          if (normalized === "uw" || normalized === "μw") {
+            return "μW";
           }
+          return "";
         }
 
-        while ((match = dimensionRegex.exec(text)) !== null) {
-          var d1 = toNumber(match[1]);
-          var u1 = normalizeLengthUnit(match[2]);
-          var d2 = toNumber(match[3]);
-          var u2 = normalizeLengthUnit(match[4]);
-          if (d1 > 0 && u1) {
-            lengths.push(makeLengthCandidate(d1, u1, formatNumber(d1, 3) + ' ' + u1));
-          }
-          if (d2 > 0 && u2) {
-            widths.push(makeLengthCandidate(d2, u2, formatNumber(d2, 3) + ' ' + u2));
-          }
+        function makeLengthCandidate(value, unit, source) {
+          var mm = lengthToMillimeters(value, unit);
+          return {
+            key: formatNumber(mm, 3) + "|mm",
+            text:
+              formatNumber(mm, 3) +
+              " mm" +
+              (source ? " (from " + source + ")" : ""),
+            mm: mm,
+            sourceUnit: unit,
+          };
         }
 
-        while ((match = lengthRegex.exec(text)) !== null) {
-          var lv = toNumber(match[1]);
-          var lu = normalizeLengthUnit(match[2]);
-          if (lv > 0 && lu) {
-            lengths.push(makeLengthCandidate(lv, lu, formatNumber(lv, 3) + ' ' + lu));
-          }
+        function makePowerCandidate(value, unit) {
+          return {
+            key: formatNumber(value, 4) + "|" + unit,
+            text: formatNumber(value, 4) + " " + unit,
+            value: value,
+            unit: unit,
+          };
         }
 
-        while ((match = widthRegex.exec(text)) !== null) {
-          var wv = toNumber(match[1]);
-          var wu = normalizeLengthUnit(match[2]);
-          if (wv > 0 && wu) {
-            widths.push(makeLengthCandidate(wv, wu, formatNumber(wv, 3) + ' ' + wu));
-          }
+        function uniqueCandidates(candidates) {
+          var seen = {};
+          return candidates.filter(function (candidate) {
+            if (seen[candidate.key]) {
+              return false;
+            }
+            seen[candidate.key] = true;
+            return true;
+          });
         }
 
-        while ((match = powerKeywordRegex.exec(text)) !== null) {
-          var pv = toNumber(match[1]);
-          var pu = normalizePowerUnit(match[2]);
-          if (pv > 0 && pu) {
-            powers.push(makePowerCandidate(pv, pu));
-          }
-        }
+        function parseCandidates(rawText) {
+          var text = rawText || "";
+          var lengths = [];
+          var widths = [];
+          var powers = [];
+          var match;
+          var dimensionTripletRegex =
+            /(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+          var dimensionRegex =
+            /(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")\s*[x×]\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+          var lengthRegex =
+            /\b(?:length|long(?:er)?|l)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+          var widthRegex =
+            /\b(?:width|wide|w)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+          var powerKeywordRegex =
+            /\b(?:power|output|pmax|max(?:imum)?\s*power|rated)\b[^\d]{0,24}(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
+          var powerLooseRegex = /(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
 
-        if (powers.length === 0) {
-          while ((match = powerLooseRegex.exec(text)) !== null) {
-            var pvl = toNumber(match[1]);
-            var pul = normalizePowerUnit(match[2]);
-            if (pvl > 0 && pul) {
-              powers.push(makePowerCandidate(pvl, pul));
+          while ((match = dimensionTripletRegex.exec(text)) !== null) {
+            var t1 = toNumber(match[1]);
+            var t2 = toNumber(match[2]);
+            var tu = normalizeLengthUnit(match[4]);
+            if (t1 > 0 && tu) {
+              lengths.push(
+                makeLengthCandidate(t1, tu, formatNumber(t1, 3) + " " + tu),
+              );
+            }
+            if (t2 > 0 && tu) {
+              widths.push(
+                makeLengthCandidate(t2, tu, formatNumber(t2, 3) + " " + tu),
+              );
             }
           }
+
+          while ((match = dimensionRegex.exec(text)) !== null) {
+            var d1 = toNumber(match[1]);
+            var u1 = normalizeLengthUnit(match[2]);
+            var d2 = toNumber(match[3]);
+            var u2 = normalizeLengthUnit(match[4]);
+            if (d1 > 0 && u1) {
+              lengths.push(
+                makeLengthCandidate(d1, u1, formatNumber(d1, 3) + " " + u1),
+              );
+            }
+            if (d2 > 0 && u2) {
+              widths.push(
+                makeLengthCandidate(d2, u2, formatNumber(d2, 3) + " " + u2),
+              );
+            }
+          }
+
+          while ((match = lengthRegex.exec(text)) !== null) {
+            var lv = toNumber(match[1]);
+            var lu = normalizeLengthUnit(match[2]);
+            if (lv > 0 && lu) {
+              lengths.push(
+                makeLengthCandidate(lv, lu, formatNumber(lv, 3) + " " + lu),
+              );
+            }
+          }
+
+          while ((match = widthRegex.exec(text)) !== null) {
+            var wv = toNumber(match[1]);
+            var wu = normalizeLengthUnit(match[2]);
+            if (wv > 0 && wu) {
+              widths.push(
+                makeLengthCandidate(wv, wu, formatNumber(wv, 3) + " " + wu),
+              );
+            }
+          }
+
+          while ((match = powerKeywordRegex.exec(text)) !== null) {
+            var pv = toNumber(match[1]);
+            var pu = normalizePowerUnit(match[2]);
+            if (pv > 0 && pu) {
+              powers.push(makePowerCandidate(pv, pu));
+            }
+          }
+
+          if (powers.length === 0) {
+            while ((match = powerLooseRegex.exec(text)) !== null) {
+              var pvl = toNumber(match[1]);
+              var pul = normalizePowerUnit(match[2]);
+              if (pvl > 0 && pul) {
+                powers.push(makePowerCandidate(pvl, pul));
+              }
+            }
+          }
+
+          return {
+            lengths: uniqueCandidates(lengths),
+            widths: uniqueCandidates(widths),
+            powers: uniqueCandidates(powers),
+          };
         }
 
-        return {
-          lengths: uniqueCandidates(lengths),
-          widths: uniqueCandidates(widths),
-          powers: uniqueCandidates(powers)
-        };
-      }
+        function renderCandidates(container, candidates) {
+          container.innerHTML = "";
+          if (!candidates || candidates.length === 0) {
+            container.innerHTML =
+              '<span class="parser-empty">No matches</span>';
+            return;
+          }
 
-      function renderCandidates(container, candidates) {
-        container.innerHTML = '';
-        if (!candidates || candidates.length === 0) {
-          container.innerHTML = '<span class="parser-empty">No matches</span>';
-          return;
+          candidates.slice(0, 8).forEach(function (candidate) {
+            var chip = document.createElement("span");
+            chip.className = "parser-chip";
+            chip.textContent = candidate.text;
+            container.appendChild(chip);
+          });
         }
 
-        candidates.slice(0, 8).forEach(function (candidate) {
-          var chip = document.createElement('span');
-          chip.className = 'parser-chip';
-          chip.textContent = candidate.text;
-          container.appendChild(chip);
-        });
-      }
-
-      function runParser() {
-        var parsed = parseCandidates(parserInput.value);
-        lastParsedCandidates = parsed;
-        renderCandidates(parserLengthResults, parsed.lengths);
-        renderCandidates(parserWidthResults, parsed.widths);
-        renderCandidates(parserPowerResults, parsed.powers);
-        applyParserButton.disabled = parsed.lengths.length === 0 && parsed.widths.length === 0 && parsed.powers.length === 0;
-        parserStatus.textContent = '';
-      }
-
-      function getNewestCalculatorCard() {
-        var cards = calculatorGrid.querySelectorAll('.calculator-card');
-        if (cards.length === 0) {
-          return null;
-        }
-        return cards[cards.length - 1];
-      }
-
-      function pickPreferredLength(candidates) {
-        if (!candidates || candidates.length === 0) {
-          return null;
+        function runParser() {
+          var parsed = parseCandidates(parserInput.value);
+          lastParsedCandidates = parsed;
+          renderCandidates(parserLengthResults, parsed.lengths);
+          renderCandidates(parserWidthResults, parsed.widths);
+          renderCandidates(parserPowerResults, parsed.powers);
+          applyParserButton.disabled =
+            parsed.lengths.length === 0 &&
+            parsed.widths.length === 0 &&
+            parsed.powers.length === 0;
+          parserStatus.textContent = "";
         }
 
-        var metric = candidates.find(function (candidate) {
-          return candidate.sourceUnit === 'mm';
-        });
-        return metric || candidates[0];
-      }
-
-      function applyParserToNewestCalculator() {
-        var card = getNewestCalculatorCard();
-        if (!card) {
-          parserStatus.textContent = 'No calculator available to apply values.';
-          return;
+        function getNewestCalculatorCard() {
+          var cards = calculatorGrid.querySelectorAll(".calculator-card");
+          if (cards.length === 0) {
+            return null;
+          }
+          return cards[cards.length - 1];
         }
 
-        if (!lastParsedCandidates || (lastParsedCandidates.lengths.length === 0 && lastParsedCandidates.widths.length === 0 && lastParsedCandidates.powers.length === 0)) {
-          runParser();
+        function pickPreferredLength(candidates) {
+          if (!candidates || candidates.length === 0) {
+            return null;
+          }
+
+          var metric = candidates.find(function (candidate) {
+            return candidate.sourceUnit === "mm";
+          });
+          return metric || candidates[0];
         }
 
-        var chosenLength = pickPreferredLength(lastParsedCandidates.lengths);
-        var chosenWidth = pickPreferredLength(lastParsedCandidates.widths);
-        var chosenPower = lastParsedCandidates.powers[0] || null;
+        function applyParserToNewestCalculator() {
+          var card = getNewestCalculatorCard();
+          if (!card) {
+            parserStatus.textContent =
+              "No calculator available to apply values.";
+            return;
+          }
 
-        if (chosenLength) {
-          card.querySelector('.input-length').value = String(Number(chosenLength.mm.toFixed(3)));
+          if (
+            !lastParsedCandidates ||
+            (lastParsedCandidates.lengths.length === 0 &&
+              lastParsedCandidates.widths.length === 0 &&
+              lastParsedCandidates.powers.length === 0)
+          ) {
+            runParser();
+          }
+
+          var chosenLength = pickPreferredLength(lastParsedCandidates.lengths);
+          var chosenWidth = pickPreferredLength(lastParsedCandidates.widths);
+          var chosenPower = lastParsedCandidates.powers[0] || null;
+
+          if (chosenLength) {
+            card.querySelector(".input-length").value = String(
+              Number(chosenLength.mm.toFixed(3)),
+            );
+          }
+          if (chosenWidth) {
+            card.querySelector(".input-width").value = String(
+              Number(chosenWidth.mm.toFixed(3)),
+            );
+          }
+          if (chosenPower) {
+            var outputInput = card.querySelector(".input-claimed-output");
+            var outputUnit = card.querySelector(".input-claimed-output-unit");
+            outputInput.value = String(
+              Number(chosenPower.value.toPrecision(6)),
+            );
+            outputUnit.value =
+              chosenPower.unit === "μW" ? "uW" : chosenPower.unit;
+          }
+
+          [
+            ".input-length",
+            ".input-width",
+            ".input-claimed-output",
+            ".input-claimed-output-unit",
+          ].forEach(function (selector) {
+            var field = card.querySelector(selector);
+            field.dispatchEvent(new Event("input", { bubbles: true }));
+            field.dispatchEvent(new Event("change", { bubbles: true }));
+          });
+
+          parserStatus.textContent =
+            "Applied parsed values to newest calculator.";
         }
-        if (chosenWidth) {
-          card.querySelector('.input-width').value = String(Number(chosenWidth.mm.toFixed(3)));
+
+        function setNotesVisibility(visible) {
+          notesVisible = visible;
+          var freeTextFields =
+            calculatorGrid.querySelectorAll(".free-text-field");
+          freeTextFields.forEach(function (field) {
+            if (visible) {
+              field.removeAttribute("hidden");
+            } else {
+              field.setAttribute("hidden", "hidden");
+            }
+          });
+
+          toggleNotesButton.textContent = visible
+            ? "Hide free text on calculators"
+            : "Show free text on calculators";
+          toggleNotesButton.setAttribute(
+            "aria-expanded",
+            visible ? "true" : "false",
+          );
         }
-        if (chosenPower) {
-          var outputInput = card.querySelector('.input-claimed-output');
-          var outputUnit = card.querySelector('.input-claimed-output-unit');
-          outputInput.value = String(Number(chosenPower.value.toPrecision(6)));
-          outputUnit.value = chosenPower.unit === 'μW' ? 'uW' : chosenPower.unit;
+
+        function escapeMarkdownCell(value) {
+          return String(value || "")
+            .replace(/\|/g, "\\|")
+            .replace(/\r?\n/g, " ")
+            .trim();
         }
 
-        ['.input-length', '.input-width', '.input-claimed-output', '.input-claimed-output-unit'].forEach(function (selector) {
-          var field = card.querySelector(selector);
-          field.dispatchEvent(new Event('input', { bubbles: true }));
-          field.dispatchEvent(new Event('change', { bubbles: true }));
-        });
+        function buildMarkdownTable() {
+          var cards = Array.prototype.slice.call(
+            calculatorGrid.querySelectorAll(".calculator-card"),
+          );
+          var header =
+            "| Calculator | Free text | Length (mm) | Width (mm) | Area (mm^2) | Claimed efficiency (%) | Claimed output | Expected efficiency (%) |";
+          var divider =
+            "| --- | --- | ---: | ---: | ---: | ---: | --- | ---: |";
+          var rows = cards.map(function (card, index) {
+            var length = toNumber(card.querySelector(".input-length").value);
+            var width = toNumber(card.querySelector(".input-width").value);
+            var area = length * width;
+            var claimedEfficiency = toNumber(
+              card.querySelector(".input-claimed-efficiency").value,
+            );
+            var claimedOutput = toNumber(
+              card.querySelector(".input-claimed-output").value,
+            );
+            var claimedOutputUnit = card.querySelector(
+              ".input-claimed-output-unit",
+            ).value;
+            var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
+            var expectedEfficiency =
+              area > 0
+                ? (claimedOutputWatts / ((area / 1000000) * 1000)) * 100
+                : 0;
+            var freeTextValue = card.querySelector(".input-free-text").value;
 
-        parserStatus.textContent = 'Applied parsed values to newest calculator.';
-      }
+            return (
+              "| " +
+              escapeMarkdownCell("Calculator " + (index + 1)) +
+              " | " +
+              escapeMarkdownCell(freeTextValue) +
+              " | " +
+              escapeMarkdownCell(formatNumber(length, 3)) +
+              " | " +
+              escapeMarkdownCell(formatNumber(width, 3)) +
+              " | " +
+              escapeMarkdownCell(formatNumber(area, 2)) +
+              " | " +
+              escapeMarkdownCell(formatNumber(claimedEfficiency, 3)) +
+              " | " +
+              escapeMarkdownCell(
+                formatNumber(claimedOutput, 4) + " " + claimedOutputUnit,
+              ) +
+              " | " +
+              escapeMarkdownCell(formatNumber(expectedEfficiency, 2)) +
+              " |"
+            );
+          });
 
-      function setNotesVisibility(visible) {
-        notesVisible = visible;
-        var freeTextFields = calculatorGrid.querySelectorAll('.free-text-field');
-        freeTextFields.forEach(function (field) {
-          if (visible) {
-            field.removeAttribute('hidden');
+          return [header, divider].concat(rows).join("\n");
+        }
+
+        function exportMarkdownTable() {
+          var markdown = buildMarkdownTable();
+          exportOutput.value = markdown;
+          exportPanel.removeAttribute("hidden");
+          exportResultsButton.textContent = "Hide exporter";
+          exportStatus.textContent = "Markdown table generated below.";
+        }
+
+        function toggleExportPanel() {
+          var isHidden = exportPanel.hasAttribute("hidden");
+          if (isHidden) {
+            exportMarkdownTable();
           } else {
-            field.setAttribute('hidden', 'hidden');
+            exportPanel.setAttribute("hidden", "hidden");
+            exportResultsButton.textContent = "Export markdown table";
+            exportStatus.textContent = "";
+          }
+        }
+
+        function copyExportedMarkdown() {
+          var text = exportOutput.value;
+          if (!text) {
+            exportStatus.textContent = "Nothing to copy yet.";
+            return;
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(function () {
+                exportStatus.textContent = "Markdown copied to clipboard.";
+              })
+              .catch(function () {
+                exportStatus.textContent =
+                  "Copy failed. You can still copy from the text box.";
+              });
+            return;
+          }
+
+          exportOutput.focus();
+          exportOutput.select();
+          exportStatus.textContent =
+            "Clipboard API unavailable. Copy from the text box.";
+        }
+
+        function formatNumber(value, maximumFractionDigits) {
+          return new Intl.NumberFormat("en-US", {
+            maximumFractionDigits: maximumFractionDigits,
+            minimumFractionDigits: 0,
+          }).format(value);
+        }
+
+        function formatPower(valueWatts) {
+          var absoluteValue = Math.abs(valueWatts);
+
+          if (absoluteValue >= 1) {
+            return { number: formatNumber(valueWatts, 3), unit: "W" };
+          }
+
+          if (absoluteValue >= 0.001) {
+            return { number: formatNumber(valueWatts * 1000, 3), unit: "mW" };
+          }
+
+          return { number: formatNumber(valueWatts * 1000000, 3), unit: "μW" };
+        }
+
+        function formatCurrent(amps) {
+          var abs = Math.abs(amps);
+          if (abs >= 1) {
+            return { number: formatNumber(amps, 3), unit: "A" };
+          }
+          return { number: formatNumber(amps * 1000, 3), unit: "mA" };
+        }
+
+        function setCurrentOutput(row, valueEl, voltageV, powerW) {
+          if (voltageV > 0) {
+            var c = formatCurrent(powerW / voltageV);
+            valueEl.innerHTML =
+              '<span class="result-value-number">' +
+              c.number +
+              '</span><span class="result-value-unit">' +
+              c.unit +
+              "</span>";
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        }
+
+        function setPowerOutput(element, valueWatts) {
+          var power = formatPower(valueWatts);
+          element.innerHTML =
+            '<span class="result-value-number">' +
+            power.number +
+            '</span><span class="result-value-unit">' +
+            power.unit +
+            "</span>";
+        }
+
+        function toWatts(value, unit) {
+          if (unit === "mW") {
+            return value / 1000;
+          }
+
+          if (unit === "uW") {
+            return value / 1000000;
+          }
+
+          return value;
+        }
+
+        function initCalculator(card, number, customLabel) {
+          card.querySelector(".calculator-label").textContent =
+            customLabel || "Calculator " + number;
+
+          var fields = {
+            length: card.querySelector(".input-length"),
+            width: card.querySelector(".input-width"),
+            voltage: card.querySelector(".input-voltage"),
+            claimedEfficiency: card.querySelector(".input-claimed-efficiency"),
+            claimedOutput: card.querySelector(".input-claimed-output"),
+            claimedOutputUnit: card.querySelector(".input-claimed-output-unit"),
+          };
+
+          var outputs = {
+            area: card.querySelector(".output-area"),
+            idealOutputFromEfficiency: card.querySelector(
+              ".output-ideal-efficiency",
+            ),
+            currentRow: card.querySelector(".output-current-row"),
+            idealCurrentFromEfficiency: card.querySelector(
+              ".output-ideal-current",
+            ),
+            adjustedOutputFromEfficiency: card.querySelector(
+              ".output-adjusted-efficiency",
+            ),
+            expectedEfficiencyFromOutput: card.querySelector(
+              ".output-expected-efficiency",
+            ),
+            currentOutputRow: card.querySelector(".output-current-output-row"),
+            idealCurrentFromClaimedOutput: card.querySelector(
+              ".output-ideal-current-output",
+            ),
+            adjustedOutputFromClaimedOutput: card.querySelector(
+              ".output-adjusted-output",
+            ),
+            stc10: card.querySelector(".output-stc-10"),
+            stc15: card.querySelector(".output-stc-15"),
+            stc20: card.querySelector(".output-stc-20"),
+          };
+
+          function calculate() {
+            var length = toNumber(fields.length.value);
+            var width = toNumber(fields.width.value);
+            var voltage =
+              fields.voltage.value !== "" ? toNumber(fields.voltage.value) : 0;
+            var claimedEfficiency = toNumber(fields.claimedEfficiency.value);
+            var claimedOutput = toNumber(fields.claimedOutput.value);
+            var claimedOutputUnit = fields.claimedOutputUnit.value;
+            var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
+
+            var area = length * width;
+            var areaSquareMeters = area / 1000000;
+            var incidentPowerAtStc = areaSquareMeters * 1000;
+            var idealOutputFromEfficiency =
+              incidentPowerAtStc * (claimedEfficiency / 100);
+            var adjustedOutputFromEfficiency = idealOutputFromEfficiency * 0.8;
+            var expectedEfficiencyFromOutput =
+              incidentPowerAtStc > 0
+                ? (claimedOutputWatts / incidentPowerAtStc) * 100
+                : 0;
+            var adjustedOutputFromClaimedOutput = claimedOutputWatts * 0.8;
+
+            outputs.area.textContent = formatNumber(area, 2) + " mm²";
+            setPowerOutput(
+              outputs.idealOutputFromEfficiency,
+              idealOutputFromEfficiency,
+            );
+            setCurrentOutput(
+              outputs.currentRow,
+              outputs.idealCurrentFromEfficiency,
+              voltage,
+              idealOutputFromEfficiency,
+            );
+            setPowerOutput(
+              outputs.adjustedOutputFromEfficiency,
+              adjustedOutputFromEfficiency,
+            );
+            outputs.expectedEfficiencyFromOutput.textContent =
+              formatNumber(expectedEfficiencyFromOutput, 2) + "%";
+            setCurrentOutput(
+              outputs.currentOutputRow,
+              outputs.idealCurrentFromClaimedOutput,
+              voltage,
+              claimedOutputWatts,
+            );
+            setPowerOutput(
+              outputs.adjustedOutputFromClaimedOutput,
+              adjustedOutputFromClaimedOutput,
+            );
+            setPowerOutput(outputs.stc10, incidentPowerAtStc * 0.1);
+            setPowerOutput(outputs.stc15, incidentPowerAtStc * 0.15);
+            setPowerOutput(outputs.stc20, incidentPowerAtStc * 0.2);
+          }
+
+          Object.keys(fields).forEach(function (key) {
+            fields[key].addEventListener("input", calculate);
+            fields[key].addEventListener("change", calculate);
+          });
+
+          calculate();
+        }
+
+        function applyPreset(card, preset) {
+          if (!preset) {
+            return;
+          }
+
+          card.querySelector(".input-length").value = preset.length;
+          card.querySelector(".input-width").value = preset.width;
+          card.querySelector(".input-claimed-efficiency").value =
+            preset.claimedEfficiency;
+          card.querySelector(".input-claimed-output").value =
+            preset.claimedOutput;
+          card.querySelector(".input-claimed-output-unit").value =
+            preset.claimedOutputUnit;
+        }
+
+        function addCalculator(preset) {
+          var card =
+            calculatorTemplate.content.firstElementChild.cloneNode(true);
+          calculatorCount += 1;
+          calculatorGrid.insertBefore(card, addCalculatorButton);
+          calculatorGrid.appendChild(addCalculatorButton);
+          applyPreset(card, preset);
+          initCalculator(card, calculatorCount, preset && preset.label);
+          var freeTextField = card.querySelector(".free-text-field");
+          if (notesVisible) {
+            freeTextField.removeAttribute("hidden");
+          } else {
+            freeTextField.setAttribute("hidden", "hidden");
+          }
+        }
+
+        addCalculatorButton.addEventListener("click", function () {
+          addCalculator();
+        });
+
+        toggleParserButton.addEventListener("click", function () {
+          var shouldShow = parserPanel.hasAttribute("hidden");
+          if (shouldShow) {
+            parserPanel.removeAttribute("hidden");
+            toggleParserButton.textContent = "Hide regex parser";
+            toggleParserButton.setAttribute("aria-expanded", "true");
+            parserInput.focus();
+          } else {
+            parserPanel.setAttribute("hidden", "hidden");
+            toggleParserButton.textContent = "Show regex parser";
+            toggleParserButton.setAttribute("aria-expanded", "false");
           }
         });
 
-        toggleNotesButton.textContent = visible ? 'Hide free text on calculators' : 'Show free text on calculators';
-        toggleNotesButton.setAttribute('aria-expanded', visible ? 'true' : 'false');
-      }
+        parseInputButton.addEventListener("click", runParser);
+        parserInput.addEventListener("change", runParser);
+        applyParserButton.addEventListener(
+          "click",
+          applyParserToNewestCalculator,
+        );
+        toggleNotesButton.addEventListener("click", function () {
+          setNotesVisibility(!notesVisible);
+        });
+        exportResultsButton.addEventListener("click", toggleExportPanel);
+        copyExportButton.addEventListener("click", copyExportedMarkdown);
 
-      function escapeMarkdownCell(value) {
-        return String(value || '')
-          .replace(/\|/g, '\\|')
-          .replace(/\r?\n/g, ' ')
-          .trim();
-      }
-
-      function buildMarkdownTable() {
-        var cards = Array.prototype.slice.call(calculatorGrid.querySelectorAll('.calculator-card'));
-        var header = '| Calculator | Free text | Length (mm) | Width (mm) | Area (mm^2) | Claimed efficiency (%) | Claimed output | Expected efficiency (%) |';
-        var divider = '| --- | --- | ---: | ---: | ---: | ---: | --- | ---: |';
-        var rows = cards.map(function (card, index) {
-          var length = toNumber(card.querySelector('.input-length').value);
-          var width = toNumber(card.querySelector('.input-width').value);
-          var area = length * width;
-          var claimedEfficiency = toNumber(card.querySelector('.input-claimed-efficiency').value);
-          var claimedOutput = toNumber(card.querySelector('.input-claimed-output').value);
-          var claimedOutputUnit = card.querySelector('.input-claimed-output-unit').value;
-          var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
-          var expectedEfficiency = area > 0 ? (claimedOutputWatts / ((area / 1000000) * 1000)) * 100 : 0;
-          var freeTextValue = card.querySelector('.input-free-text').value;
-
-          return '| ' +
-            escapeMarkdownCell('Calculator ' + (index + 1)) + ' | ' +
-            escapeMarkdownCell(freeTextValue) + ' | ' +
-            escapeMarkdownCell(formatNumber(length, 3)) + ' | ' +
-            escapeMarkdownCell(formatNumber(width, 3)) + ' | ' +
-            escapeMarkdownCell(formatNumber(area, 2)) + ' | ' +
-            escapeMarkdownCell(formatNumber(claimedEfficiency, 3)) + ' | ' +
-            escapeMarkdownCell(formatNumber(claimedOutput, 4) + ' ' + claimedOutputUnit) + ' | ' +
-            escapeMarkdownCell(formatNumber(expectedEfficiency, 2)) + ' |';
+        addHighExampleButton.addEventListener("click", function () {
+          addCalculator(EXAMPLE_PRESETS.highEfficiencyPanel);
+        });
+        addLowExampleButton.addEventListener("click", function () {
+          addCalculator(EXAMPLE_PRESETS.lowEfficiencyPanel);
         });
 
-        return [header, divider].concat(rows).join('\n');
-      }
-
-      function exportMarkdownTable() {
-        var markdown = buildMarkdownTable();
-        exportOutput.value = markdown;
-        exportPanel.removeAttribute('hidden');
-        exportResultsButton.textContent = 'Hide exporter';
-        exportStatus.textContent = 'Markdown table generated below.';
-      }
-
-      function toggleExportPanel() {
-        var isHidden = exportPanel.hasAttribute('hidden');
-        if (isHidden) {
-          exportMarkdownTable();
-        } else {
-          exportPanel.setAttribute('hidden', 'hidden');
-          exportResultsButton.textContent = 'Export markdown table';
-          exportStatus.textContent = '';
-        }
-      }
-
-      function copyExportedMarkdown() {
-        var text = exportOutput.value;
-        if (!text) {
-          exportStatus.textContent = 'Nothing to copy yet.';
-          return;
-        }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(function () {
-            exportStatus.textContent = 'Markdown copied to clipboard.';
-          }).catch(function () {
-            exportStatus.textContent = 'Copy failed. You can still copy from the text box.';
-          });
-          return;
-        }
-
-        exportOutput.focus();
-        exportOutput.select();
-        exportStatus.textContent = 'Clipboard API unavailable. Copy from the text box.';
-      }
-
-      function formatNumber(value, maximumFractionDigits) {
-        return new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: maximumFractionDigits,
-          minimumFractionDigits: 0
-        }).format(value);
-      }
-
-      function formatPower(valueWatts) {
-        var absoluteValue = Math.abs(valueWatts);
-
-        if (absoluteValue >= 1) {
-          return { number: formatNumber(valueWatts, 3), unit: 'W' };
-        }
-
-        if (absoluteValue >= 0.001) {
-          return { number: formatNumber(valueWatts * 1000, 3), unit: 'mW' };
-        }
-
-        return { number: formatNumber(valueWatts * 1000000, 3), unit: 'μW' };
-      }
-
-      function formatCurrent(amps) {
-        var abs = Math.abs(amps);
-        if (abs >= 1) {
-          return { number: formatNumber(amps, 3), unit: 'A' };
-        }
-        return { number: formatNumber(amps * 1000, 3), unit: 'mA' };
-      }
-
-      function setCurrentOutput(row, valueEl, voltageV, powerW) {
-        if (voltageV > 0) {
-          var c = formatCurrent(powerW / voltageV);
-          valueEl.innerHTML = '<span class="result-value-number">' + c.number + '</span><span class="result-value-unit">' + c.unit + '</span>';
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
-      }
-
-      function setPowerOutput(element, valueWatts) {
-        var power = formatPower(valueWatts);
-        element.innerHTML = '<span class="result-value-number">' + power.number + '</span><span class="result-value-unit">' + power.unit + '</span>';
-      }
-
-      function toWatts(value, unit) {
-        if (unit === 'mW') {
-          return value / 1000;
-        }
-
-        if (unit === 'uW') {
-          return value / 1000000;
-        }
-
-        return value;
-      }
-
-      function initCalculator(card, number, customLabel) {
-        card.querySelector('.calculator-label').textContent = customLabel || ('Calculator ' + number);
-
-        var fields = {
-          length: card.querySelector('.input-length'),
-          width: card.querySelector('.input-width'),
-          voltage: card.querySelector('.input-voltage'),
-          claimedEfficiency: card.querySelector('.input-claimed-efficiency'),
-          claimedOutput: card.querySelector('.input-claimed-output'),
-          claimedOutputUnit: card.querySelector('.input-claimed-output-unit')
-        };
-
-        var outputs = {
-          area: card.querySelector('.output-area'),
-          idealOutputFromEfficiency: card.querySelector('.output-ideal-efficiency'),
-          currentRow: card.querySelector('.output-current-row'),
-          idealCurrentFromEfficiency: card.querySelector('.output-ideal-current'),
-          adjustedOutputFromEfficiency: card.querySelector('.output-adjusted-efficiency'),
-          expectedEfficiencyFromOutput: card.querySelector('.output-expected-efficiency'),
-          currentOutputRow: card.querySelector('.output-current-output-row'),
-          idealCurrentFromClaimedOutput: card.querySelector('.output-ideal-current-output'),
-          adjustedOutputFromClaimedOutput: card.querySelector('.output-adjusted-output'),
-          stc10: card.querySelector('.output-stc-10'),
-          stc15: card.querySelector('.output-stc-15'),
-          stc20: card.querySelector('.output-stc-20')
-        };
-
-        function calculate() {
-          var length = toNumber(fields.length.value);
-          var width = toNumber(fields.width.value);
-          var voltage = fields.voltage.value !== '' ? toNumber(fields.voltage.value) : 0;
-          var claimedEfficiency = toNumber(fields.claimedEfficiency.value);
-          var claimedOutput = toNumber(fields.claimedOutput.value);
-          var claimedOutputUnit = fields.claimedOutputUnit.value;
-          var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
-
-          var area = length * width;
-          var areaSquareMeters = area / 1000000;
-          var incidentPowerAtStc = areaSquareMeters * 1000;
-          var idealOutputFromEfficiency = incidentPowerAtStc * (claimedEfficiency / 100);
-          var adjustedOutputFromEfficiency = idealOutputFromEfficiency * 0.8;
-          var expectedEfficiencyFromOutput = incidentPowerAtStc > 0 ? (claimedOutputWatts / incidentPowerAtStc) * 100 : 0;
-          var adjustedOutputFromClaimedOutput = claimedOutputWatts * 0.8;
-
-          outputs.area.textContent = formatNumber(area, 2) + " mm²";
-          setPowerOutput(outputs.idealOutputFromEfficiency, idealOutputFromEfficiency);
-          setCurrentOutput(outputs.currentRow, outputs.idealCurrentFromEfficiency, voltage, idealOutputFromEfficiency);
-          setPowerOutput(outputs.adjustedOutputFromEfficiency, adjustedOutputFromEfficiency);
-          outputs.expectedEfficiencyFromOutput.textContent = formatNumber(expectedEfficiencyFromOutput, 2) + '%';
-          setCurrentOutput(outputs.currentOutputRow, outputs.idealCurrentFromClaimedOutput, voltage, claimedOutputWatts);
-          setPowerOutput(outputs.adjustedOutputFromClaimedOutput, adjustedOutputFromClaimedOutput);
-          setPowerOutput(outputs.stc10, incidentPowerAtStc * 0.10);
-          setPowerOutput(outputs.stc15, incidentPowerAtStc * 0.15);
-          setPowerOutput(outputs.stc20, incidentPowerAtStc * 0.20);
-        }
-
-        Object.keys(fields).forEach(function (key) {
-          fields[key].addEventListener('input', calculate);
-          fields[key].addEventListener('change', calculate);
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
         });
 
-        calculate();
-      }
-
-      function applyPreset(card, preset) {
-        if (!preset) {
-          return;
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
         }
 
-        card.querySelector('.input-length').value = preset.length;
-        card.querySelector('.input-width').value = preset.width;
-        card.querySelector('.input-claimed-efficiency').value = preset.claimedEfficiency;
-        card.querySelector('.input-claimed-output').value = preset.claimedOutput;
-        card.querySelector('.input-claimed-output-unit').value = preset.claimedOutputUnit;
-      }
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
 
-      function addCalculator(preset) {
-        var card = calculatorTemplate.content.firstElementChild.cloneNode(true);
-        calculatorCount += 1;
-        calculatorGrid.insertBefore(card, addCalculatorButton);
-        calculatorGrid.appendChild(addCalculatorButton);
-        applyPreset(card, preset);
-        initCalculator(card, calculatorCount, preset && preset.label);
-        var freeTextField = card.querySelector('.free-text-field');
-        if (notesVisible) {
-          freeTextField.removeAttribute('hidden');
-        } else {
-          freeTextField.setAttribute('hidden', 'hidden');
-        }
-      }
-
-      addCalculatorButton.addEventListener('click', function () {
         addCalculator();
-      });
-
-      toggleParserButton.addEventListener('click', function () {
-        var shouldShow = parserPanel.hasAttribute('hidden');
-        if (shouldShow) {
-          parserPanel.removeAttribute('hidden');
-          toggleParserButton.textContent = 'Hide regex parser';
-          toggleParserButton.setAttribute('aria-expanded', 'true');
-          parserInput.focus();
-        } else {
-          parserPanel.setAttribute('hidden', 'hidden');
-          toggleParserButton.textContent = 'Show regex parser';
-          toggleParserButton.setAttribute('aria-expanded', 'false');
-        }
-      });
-
-      parseInputButton.addEventListener('click', runParser);
-      parserInput.addEventListener('change', runParser);
-      applyParserButton.addEventListener('click', applyParserToNewestCalculator);
-      toggleNotesButton.addEventListener('click', function () {
-        setNotesVisibility(!notesVisible);
-      });
-      exportResultsButton.addEventListener('click', toggleExportPanel);
-      copyExportButton.addEventListener('click', copyExportedMarkdown);
-
-      addHighExampleButton.addEventListener('click', function () {
-        addCalculator(EXAMPLE_PRESETS.highEfficiencyPanel);
-      });
-      addLowExampleButton.addEventListener('click', function () {
-        addCalculator(EXAMPLE_PRESETS.lowEfficiencyPanel);
-      });
-      addCalculator();
-      setNotesVisibility(false);
-      exportPanel.setAttribute('hidden', 'hidden');
-      exportResultsButton.textContent = 'Export markdown table';
-    })();
-  </script>
-</body>
+        applyThemeMode(getStoredThemeMode(), false);
+        setNotesVisibility(false);
+        exportPanel.setAttribute("hidden", "hidden");
+        exportResultsButton.textContent = "Export markdown table";
+      })();
+    </script>
+  </body>
 </html>
