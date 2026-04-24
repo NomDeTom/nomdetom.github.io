@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <title>Solar Panel Sense Checker</title>
+  <style>
+    :root {
+      --page-bg: #f7f7f2;
+      --panel-bg: #ffffff;
+      --text: #1f2520;
+      --muted: #5c645d;
+      --border: #d9ddd4;
+      --accent: #1d6b43;
+      --accent-soft: #eef6ef;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--page-bg);
+      color: var(--text);
+      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(100%, 96rem);
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    header {
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 0.5rem 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .calculator-actions {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .calculator-actions .add-calculator-btn {
+      display: none;
+    }
+
+    .action-btn {
+      border: 1px solid var(--border);
+      background: var(--panel-bg);
+      color: var(--text);
+      padding: 0.45rem 0.75rem;
+      font: inherit;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+
+    .action-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .add-calculator-btn {
+      border-style: dashed;
+      width: fit-content;
+      min-width: 12rem;
+      align-self: start;
+      /* push down past the calculator-label + grid gap so top edge aligns with the inputs section */
+      margin-top: calc(0.9rem * 1.5 + 1rem);
+      min-height: 21.35rem;
+      padding: 0.55rem 1rem;
+    }
+
+    .calculator-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .calculator-card {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .calculator-label {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    section {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 1rem;
+    }
+
+    .formulas-section {
+      margin-top: 1.5rem;
+    }
+
+    h2 {
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    form {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-areas:
+        "eff-label out-label"
+        "eff-input out-input";
+      column-gap: 0.9rem;
+      row-gap: 0.35rem;
+      align-items: start;
+    }
+
+    .field-row > label {
+      display: block;
+      align-self: start;
+      min-height: 2.6em;
+    }
+
+    .field-row > label:nth-of-type(1) {
+      grid-area: eff-label;
+    }
+
+    .field-row > label:nth-of-type(2) {
+      grid-area: out-label;
+    }
+
+    .field-row > .input-claimed-efficiency {
+      grid-area: eff-input;
+    }
+
+    .field-row > .value-with-unit {
+      grid-area: out-input;
+    }
+
+    label {
+      font-weight: 600;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 0;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    input:focus,
+    select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-color: var(--accent);
+    }
+
+    .value-with-unit {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem;
+    }
+
+    .value-with-unit input {
+      min-width: 0;
+    }
+
+    .value-with-unit select {
+      width: auto;
+      min-width: 4.5rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    output {
+      display: block;
+      width: 100%;
+    }
+
+    .results {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .output-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem;
+    }
+
+    .result-group {
+      border-top: 1px solid var(--border);
+      padding-top: 0.85rem;
+    }
+
+    .result-group-title {
+      margin: 0 0 0.35rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .result {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 8ch;
+      align-items: baseline;
+      column-gap: 1rem;
+      padding: 0.85rem 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .result:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .result-label {
+      color: var(--muted);
+      min-width: 0;
+      overflow-wrap: normal;
+      word-break: normal;
+      white-space: normal;
+    }
+
+    .result-value {
+      font-size: 1.3rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      text-align: right;
+      white-space: normal;
+      width: 8ch;
+      justify-self: end;
+      line-height: 1.1;
+    }
+
+    .result-value--power {
+      display: inline-grid;
+      justify-items: end;
+      row-gap: 0.08rem;
+      width: 8ch;
+    }
+
+    .result-value-number {
+      white-space: nowrap;
+    }
+
+    .result-value-unit {
+      font-size: 0.75em;
+      font-weight: 600;
+      color: var(--muted);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .formula-note {
+      margin-top: 1rem;
+      padding: 0.8rem 0.9rem;
+      background: var(--accent-soft);
+      color: var(--muted);
+      font-size: 0.92rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .formula-note span {
+      display: block;
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding: 1.25rem 0.9rem 2rem;
+      }
+
+      .result {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .result-value {
+        text-align: left;
+      }
+
+      .output-pair {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Solar Panel Sense Checker</h1>
+      <p class="subtitle">A self-contained calculator to spot silly marketing claims</p>
+      <div class="calculator-actions">
+        <button id="add-high-example-btn" class="action-btn" type="button">Add example high efficiency panel</button>
+        <button id="add-low-example-btn" class="action-btn" type="button">Add example low efficiency panel</button>
+      </div>
+    </header>
+
+    <div id="calculator-grid" class="calculator-grid">
+      <button id="add-calculator-btn" class="action-btn add-calculator-btn" type="button">Add calculator</button>
+    </div>
+
+    <section class="formulas-section">
+      <h2>Formulas</h2>
+      <p class="formula-note">
+        <span>area (mm²) = length (mm) × width (mm)</span>
+        <span>ideal expected output (from efficiency) = area (mm²) × 1000 W/m² × claimed efficiency (%)</span>
+        <span>adjusted output (from efficiency) = ideal expected output × 0.8</span>
+        <span>expected efficiency (from claimed output) = claimed output (W) ÷ (area (mm²) × 1000 W/m²) × 100</span>
+        <span>adjusted output (from claimed output) = claimed output (W) × 0.8</span>
+      </p>
+    </section>
+
+    <template id="calculator-template">
+      <article class="calculator-card">
+        <p class="calculator-label">Calculator</p>
+
+        <section>
+          <h2>Inputs</h2>
+          <form class="solar-form">
+            <div class="field">
+              <label>Length (mm)
+                <input class="input-length" type="number" inputmode="decimal" step="any" value="40">
+              </label>
+            </div>
+
+            <div class="field">
+              <label>Width (mm)
+                <input class="input-width" type="number" inputmode="decimal" step="any" value="40">
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label>Claimed efficiency (%)</label>
+              <label>Claimed output</label>
+              <input class="input-claimed-efficiency" type="number" inputmode="decimal" step="any" value="10">
+              <div class="value-with-unit">
+                <input class="input-claimed-output" type="number" inputmode="decimal" step="any" value="0.2">
+                <select class="input-claimed-output-unit" aria-label="Claimed output unit">
+                  <option value="W" selected>W</option>
+                  <option value="mW">mW</option>
+                  <option value="uW">μW</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section>
+          <h2>Outputs</h2>
+          <output class="results" aria-live="polite" aria-atomic="true">
+            <div class="result">
+              <span class="result-label">Area (mm²)</span>
+              <span class="result-value output-area">0 mm²</span>
+            </div>
+            <div class="output-pair">
+              <div class="result-group">
+                <p class="result-group-title">From Claimed Efficiency</p>
+                <div class="result">
+                  <span class="result-label">Ideal expected output</span>
+                  <span class="result-value result-value--power output-ideal-efficiency"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                </div>
+                <div class="result">
+                  <span class="result-label">Adjusted output (NOCT,<wbr> 80%)</span>
+                  <span class="result-value result-value--power output-adjusted-efficiency"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                </div>
+              </div>
+              <div class="result-group">
+                <p class="result-group-title">From Claimed Output</p>
+                <div class="result">
+                  <span class="result-label">Expected efficiency (%)</span>
+                  <span class="result-value output-expected-efficiency">0%</span>
+                </div>
+                <div class="result">
+                  <span class="result-label">Adjusted output (NOCT,<wbr> 80%)</span>
+                  <span class="result-value result-value--power output-adjusted-output"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                </div>
+              </div>
+            </div>
+          </output>
+
+        </section>
+      </article>
+    </template>
+  </main>
+
+  <script>
+    (function () {
+      var calculatorGrid = document.getElementById('calculator-grid');
+      var calculatorTemplate = document.getElementById('calculator-template');
+      var addCalculatorButton = document.getElementById('add-calculator-btn');
+      var addHighExampleButton = document.getElementById('add-high-example-btn');
+      var addLowExampleButton = document.getElementById('add-low-example-btn');
+      var calculatorCount = 0;
+
+      // Editable example presets: update these values to change example buttons.
+      var EXAMPLE_PRESETS = {
+        highEfficiencyPanel: {
+          length: 120,
+          width: 60,
+          claimedEfficiency: 24,
+          claimedOutput: 1.5,
+          claimedOutputUnit: 'W',
+          label: 'Example: High Efficiency'
+        },
+        lowEfficiencyPanel: {
+          length: 120,
+          width: 60,
+          claimedEfficiency: 8,
+          claimedOutput: 350,
+          claimedOutputUnit: 'mW',
+          label: 'Example: Low Efficiency'
+        }
+      };
+
+      function toNumber(value) {
+        var parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function formatNumber(value, maximumFractionDigits) {
+        return new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: maximumFractionDigits,
+          minimumFractionDigits: 0
+        }).format(value);
+      }
+
+      function formatPower(valueWatts) {
+        var absoluteValue = Math.abs(valueWatts);
+
+        if (absoluteValue >= 1) {
+          return { number: formatNumber(valueWatts, 3), unit: 'W' };
+        }
+
+        if (absoluteValue >= 0.001) {
+          return { number: formatNumber(valueWatts * 1000, 3), unit: 'mW' };
+        }
+
+        return { number: formatNumber(valueWatts * 1000000, 3), unit: 'μW' };
+      }
+
+      function setPowerOutput(element, valueWatts) {
+        var power = formatPower(valueWatts);
+        element.innerHTML = '<span class="result-value-number">' + power.number + '</span><span class="result-value-unit">' + power.unit + '</span>';
+      }
+
+      function toWatts(value, unit) {
+        if (unit === 'mW') {
+          return value / 1000;
+        }
+
+        if (unit === 'uW') {
+          return value / 1000000;
+        }
+
+        return value;
+      }
+
+      function initCalculator(card, number, customLabel) {
+        card.querySelector('.calculator-label').textContent = customLabel || ('Calculator ' + number);
+
+        var fields = {
+          length: card.querySelector('.input-length'),
+          width: card.querySelector('.input-width'),
+          claimedEfficiency: card.querySelector('.input-claimed-efficiency'),
+          claimedOutput: card.querySelector('.input-claimed-output'),
+          claimedOutputUnit: card.querySelector('.input-claimed-output-unit')
+        };
+
+        var outputs = {
+          area: card.querySelector('.output-area'),
+          idealOutputFromEfficiency: card.querySelector('.output-ideal-efficiency'),
+          adjustedOutputFromEfficiency: card.querySelector('.output-adjusted-efficiency'),
+          expectedEfficiencyFromOutput: card.querySelector('.output-expected-efficiency'),
+          adjustedOutputFromClaimedOutput: card.querySelector('.output-adjusted-output')
+        };
+
+        function calculate() {
+          var length = toNumber(fields.length.value);
+          var width = toNumber(fields.width.value);
+          var claimedEfficiency = toNumber(fields.claimedEfficiency.value);
+          var claimedOutput = toNumber(fields.claimedOutput.value);
+          var claimedOutputUnit = fields.claimedOutputUnit.value;
+          var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
+
+          var area = length * width;
+          var areaSquareMeters = area / 1000000;
+          var incidentPowerAtStc = areaSquareMeters * 1000;
+          var idealOutputFromEfficiency = incidentPowerAtStc * (claimedEfficiency / 100);
+          var adjustedOutputFromEfficiency = idealOutputFromEfficiency * 0.8;
+          var expectedEfficiencyFromOutput = incidentPowerAtStc > 0 ? (claimedOutputWatts / incidentPowerAtStc) * 100 : 0;
+          var adjustedOutputFromClaimedOutput = claimedOutputWatts * 0.8;
+
+          outputs.area.textContent = formatNumber(area, 2) + " mm²";
+          setPowerOutput(outputs.idealOutputFromEfficiency, idealOutputFromEfficiency);
+          setPowerOutput(outputs.adjustedOutputFromEfficiency, adjustedOutputFromEfficiency);
+          outputs.expectedEfficiencyFromOutput.textContent = formatNumber(expectedEfficiencyFromOutput, 2) + '%';
+          setPowerOutput(outputs.adjustedOutputFromClaimedOutput, adjustedOutputFromClaimedOutput);
+        }
+
+        Object.keys(fields).forEach(function (key) {
+          fields[key].addEventListener('input', calculate);
+          fields[key].addEventListener('change', calculate);
+        });
+
+        calculate();
+      }
+
+      function applyPreset(card, preset) {
+        if (!preset) {
+          return;
+        }
+
+        card.querySelector('.input-length').value = preset.length;
+        card.querySelector('.input-width').value = preset.width;
+        card.querySelector('.input-claimed-efficiency').value = preset.claimedEfficiency;
+        card.querySelector('.input-claimed-output').value = preset.claimedOutput;
+        card.querySelector('.input-claimed-output-unit').value = preset.claimedOutputUnit;
+      }
+
+      function addCalculator(preset) {
+        var card = calculatorTemplate.content.firstElementChild.cloneNode(true);
+        calculatorCount += 1;
+        calculatorGrid.insertBefore(card, addCalculatorButton);
+        calculatorGrid.appendChild(addCalculatorButton);
+        applyPreset(card, preset);
+        initCalculator(card, calculatorCount, preset && preset.label);
+      }
+
+      addCalculatorButton.addEventListener('click', function () {
+        addCalculator();
+      });
+      addHighExampleButton.addEventListener('click', function () {
+        addCalculator(EXAMPLE_PRESETS.highEfficiencyPanel);
+      });
+      addLowExampleButton.addEventListener('click', function () {
+        addCalculator(EXAMPLE_PRESETS.lowEfficiencyPanel);
+      });
+      addCalculator();
+    })();
+  </script>
+</body>
+</html>
