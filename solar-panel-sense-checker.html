@@ -240,6 +240,35 @@
       letter-spacing: 0.04em;
     }
 
+    .result-grid-stc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+      gap: 0.75rem;
+    }
+
+    .result-grid-stc .result {
+      grid-template-columns: 1fr;
+      row-gap: 0.35rem;
+      align-items: start;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+    }
+
+    .result-grid-stc .result:first-child {
+      border-top: 1px solid var(--border);
+      padding-top: 0.75rem;
+    }
+
+    .result-grid-stc .result-value {
+      justify-self: start;
+      text-align: left;
+    }
+
+    .result-grid-stc .result-value--power,
+    .result-grid-stc .result-value--current {
+      justify-items: start;
+    }
+
     .result {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 8ch;
@@ -304,6 +333,19 @@
 
     .formula-note span {
       display: block;
+    }
+
+    .optional {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 0.88em;
+    }
+
+    .result-value--current {
+      display: inline-grid;
+      justify-items: end;
+      row-gap: 0.08rem;
+      width: 8ch;
     }
 
     @media (max-width: 640px) {
@@ -371,6 +413,12 @@
               </label>
             </div>
 
+            <div class="field">
+              <label>Voltage (V) <span class="optional">(optional)</span>
+                <input class="input-voltage" type="number" inputmode="decimal" step="any" placeholder="e.g. 5">
+              </label>
+            </div>
+
             <div class="field-row">
               <label>Claimed efficiency (%)</label>
               <label>Claimed output</label>
@@ -401,6 +449,10 @@
                   <span class="result-label">Ideal expected output</span>
                   <span class="result-value result-value--power output-ideal-efficiency"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
                 </div>
+                <div class="result output-current-row" style="display:none">
+                  <span class="result-label">Ideal expected current</span>
+                  <span class="result-value result-value--current output-ideal-current"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
+                </div>
                 <div class="result">
                   <span class="result-label">Adjusted output (NOCT,<wbr> 80%)</span>
                   <span class="result-value result-value--power output-adjusted-efficiency"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
@@ -412,9 +464,30 @@
                   <span class="result-label">Expected efficiency (%)</span>
                   <span class="result-value output-expected-efficiency">0%</span>
                 </div>
+                <div class="result output-current-output-row" style="display:none">
+                  <span class="result-label">Ideal expected current</span>
+                  <span class="result-value result-value--current output-ideal-current-output"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
+                </div>
                 <div class="result">
                   <span class="result-label">Adjusted output (NOCT,<wbr> 80%)</span>
                   <span class="result-value result-value--power output-adjusted-output"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="result-group">
+              <p class="result-group-title">Expected Output At STC</p>
+              <div class="result-grid-stc">
+                <div class="result">
+                  <span class="result-label">10% efficiency</span>
+                  <span class="result-value result-value--power output-stc-10"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                </div>
+                <div class="result">
+                  <span class="result-label">15% efficiency</span>
+                  <span class="result-value result-value--power output-stc-15"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
+                </div>
+                <div class="result">
+                  <span class="result-label">20% efficiency</span>
+                  <span class="result-value result-value--power output-stc-20"><span class="result-value-number">0</span><span class="result-value-unit">W</span></span>
                 </div>
               </div>
             </div>
@@ -480,6 +553,24 @@
         return { number: formatNumber(valueWatts * 1000000, 3), unit: 'μW' };
       }
 
+      function formatCurrent(amps) {
+        var abs = Math.abs(amps);
+        if (abs >= 1) {
+          return { number: formatNumber(amps, 3), unit: 'A' };
+        }
+        return { number: formatNumber(amps * 1000, 3), unit: 'mA' };
+      }
+
+      function setCurrentOutput(row, valueEl, voltageV, powerW) {
+        if (voltageV > 0) {
+          var c = formatCurrent(powerW / voltageV);
+          valueEl.innerHTML = '<span class="result-value-number">' + c.number + '</span><span class="result-value-unit">' + c.unit + '</span>';
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+
       function setPowerOutput(element, valueWatts) {
         var power = formatPower(valueWatts);
         element.innerHTML = '<span class="result-value-number">' + power.number + '</span><span class="result-value-unit">' + power.unit + '</span>';
@@ -503,6 +594,7 @@
         var fields = {
           length: card.querySelector('.input-length'),
           width: card.querySelector('.input-width'),
+          voltage: card.querySelector('.input-voltage'),
           claimedEfficiency: card.querySelector('.input-claimed-efficiency'),
           claimedOutput: card.querySelector('.input-claimed-output'),
           claimedOutputUnit: card.querySelector('.input-claimed-output-unit')
@@ -511,14 +603,22 @@
         var outputs = {
           area: card.querySelector('.output-area'),
           idealOutputFromEfficiency: card.querySelector('.output-ideal-efficiency'),
+          currentRow: card.querySelector('.output-current-row'),
+          idealCurrentFromEfficiency: card.querySelector('.output-ideal-current'),
           adjustedOutputFromEfficiency: card.querySelector('.output-adjusted-efficiency'),
           expectedEfficiencyFromOutput: card.querySelector('.output-expected-efficiency'),
-          adjustedOutputFromClaimedOutput: card.querySelector('.output-adjusted-output')
+          currentOutputRow: card.querySelector('.output-current-output-row'),
+          idealCurrentFromClaimedOutput: card.querySelector('.output-ideal-current-output'),
+          adjustedOutputFromClaimedOutput: card.querySelector('.output-adjusted-output'),
+          stc10: card.querySelector('.output-stc-10'),
+          stc15: card.querySelector('.output-stc-15'),
+          stc20: card.querySelector('.output-stc-20')
         };
 
         function calculate() {
           var length = toNumber(fields.length.value);
           var width = toNumber(fields.width.value);
+          var voltage = fields.voltage.value !== '' ? toNumber(fields.voltage.value) : 0;
           var claimedEfficiency = toNumber(fields.claimedEfficiency.value);
           var claimedOutput = toNumber(fields.claimedOutput.value);
           var claimedOutputUnit = fields.claimedOutputUnit.value;
@@ -534,9 +634,14 @@
 
           outputs.area.textContent = formatNumber(area, 2) + " mm²";
           setPowerOutput(outputs.idealOutputFromEfficiency, idealOutputFromEfficiency);
+          setCurrentOutput(outputs.currentRow, outputs.idealCurrentFromEfficiency, voltage, idealOutputFromEfficiency);
           setPowerOutput(outputs.adjustedOutputFromEfficiency, adjustedOutputFromEfficiency);
           outputs.expectedEfficiencyFromOutput.textContent = formatNumber(expectedEfficiencyFromOutput, 2) + '%';
+          setCurrentOutput(outputs.currentOutputRow, outputs.idealCurrentFromClaimedOutput, voltage, claimedOutputWatts);
           setPowerOutput(outputs.adjustedOutputFromClaimedOutput, adjustedOutputFromClaimedOutput);
+          setPowerOutput(outputs.stc10, incidentPowerAtStc * 0.10);
+          setPowerOutput(outputs.stc15, incidentPowerAtStc * 0.15);
+          setPowerOutput(outputs.stc20, incidentPowerAtStc * 0.20);
         }
 
         Object.keys(fields).forEach(function (key) {
