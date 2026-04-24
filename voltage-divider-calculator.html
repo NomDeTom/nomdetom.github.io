@@ -1,1129 +1,1464 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#ffffff">
-  <title>Resistor Ladder Voltage Divider Checker</title>
-  <style>
-    :root {
-      --page-bg: #f7f7f2;
-      --panel-bg: #ffffff;
-      --text: #1f2520;
-      --muted: #5c645d;
-      --border: #d9ddd4;
-      --accent: #1d6b43;
-      --accent-soft: #eef6ef;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Resistor Ladder Voltage Divider Checker</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
 
-    * {
-      box-sizing: border-box;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    body {
-      margin: 0;
-      background: var(--page-bg);
-      color: var(--text);
-      font-family: "Segoe UI", Helvetica, Arial, sans-serif;
-      line-height: 1.5;
-    }
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
 
-    main {
-      width: min(100%, 96rem);
-      margin: 0 auto;
-      padding: 2rem 1rem 3rem;
-    }
-
-    header {
-      margin-bottom: 1rem;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2rem, 5vw, 2.75rem);
-      line-height: 1.1;
-    }
-
-    .subtitle {
-      margin: 0.5rem 0 0;
-      color: var(--muted);
-      font-size: 0.98rem;
-    }
-
-    .calculator-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-      align-items: start;
-    }
-
-    .calculator-card {
-      display: grid;
-      gap: 1rem;
-      align-self: start;
-    }
-
-    .calculator-label {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .add-calculator-btn {
-      border: 1px dashed var(--border);
-      background: var(--panel-bg);
-      color: var(--text);
-      width: fit-content;
-      min-width: 12rem;
-      align-self: start;
-      margin-top: calc(0.9rem * 1.5 + 1rem);
-      min-height: 21rem;
-      padding: 0.55rem 1rem;
-      font: inherit;
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .add-calculator-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1rem;
-      align-items: start;
-    }
-
-    section {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      padding: 1rem;
-    }
-
-    .formulas-section {
-      margin-top: 1.5rem;
-    }
-
-    h2 {
-      margin: 0 0 1rem;
-      font-size: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-
-    form {
-      display: grid;
-      gap: 0.9rem;
-    }
-
-    .field {
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    .field-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 0.5rem;
-      align-items: end;
-    }
-
-    .resistor-stack {
-      display: grid;
-      gap: 0.5rem;
-    }
-
-    .resistor-row {
-      margin-left: -0.35rem;
-    }
-
-    .tap-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 8ch;
-      align-items: baseline;
-      column-gap: 1rem;
-      margin-left: 0.4rem;
-      padding: 0.15rem 0 0.35rem 0.65rem;
-      border-left: 2px solid var(--border);
-    }
-
-    .tap-label {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    label {
-      font-weight: 600;
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 0.75rem 0.85rem;
-      border: 1px solid var(--border);
-      border-radius: 0;
-      background: #fff;
-      color: var(--text);
-      font: inherit;
-    }
-
-    input:focus,
-    select:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-      border-color: var(--accent);
-    }
-
-    .value-with-unit {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 0.5rem;
-    }
-
-    .value-with-unit input {
-      min-width: 0;
-    }
-
-    .value-with-unit select {
-      width: auto;
-      min-width: 5.5rem;
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-    }
-
-    .hint,
-    .optional {
-      color: var(--muted);
-      font-weight: 400;
-      font-size: 0.92rem;
-    }
-
-    output {
-      display: block;
-      width: 100%;
-    }
-
-    .results {
-      display: grid;
-      gap: 0.75rem;
-    }
-
-    .result-group {
-      border-top: 1px solid var(--border);
-      padding-top: 0.85rem;
-    }
-
-    .result-group-title {
-      margin: 0 0 0.35rem;
-      color: var(--muted);
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .result {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 8ch;
-      align-items: baseline;
-      column-gap: 1rem;
-      padding: 0.85rem 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .result:first-child {
-      border-top: 0;
-      padding-top: 0;
-    }
-
-    .result-label {
-      color: var(--muted);
-      min-width: 0;
-      white-space: normal;
-    }
-
-    .result-value {
-      font-size: 1.3rem;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-      text-align: right;
-      width: 8ch;
-      justify-self: end;
-      line-height: 1.1;
-      white-space: normal;
-    }
-
-    .result-value--stacked {
-      display: inline-grid;
-      justify-items: end;
-      row-gap: 0.08rem;
-      width: 8ch;
-    }
-
-    .result-value-number {
-      white-space: nowrap;
-    }
-
-    .result-value-unit {
-      font-size: 0.75em;
-      font-weight: 600;
-      color: var(--muted);
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    .formula-note {
-      padding: 0.8rem 0.9rem;
-      background: var(--accent-soft);
-      color: var(--muted);
-      font-size: 0.92rem;
-      display: grid;
-      gap: 0.35rem;
-    }
-
-    .formula-note span {
-      display: block;
-    }
-
-    .cheat-sheet-section {
-      margin-top: 1rem;
-    }
-
-    .cheat-sheet-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.75rem;
-    }
-
-    .cheat-sheet-card {
-      border: 1px solid var(--border);
-      padding: 0.8rem;
-      background: #fff;
-    }
-
-    .cheat-sheet-card h3 {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.9rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .cheat-sheet-list {
-      margin: 0.55rem 0 0;
-      padding: 0;
-      list-style: none;
-      display: grid;
-      gap: 0.45rem;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .cheat-sheet-list li {
-      display: grid;
-      gap: 0.12rem;
-    }
-
-    .cheat-sheet-values {
-      display: grid;
-      gap: 0.2rem 0.45rem;
-      font-size: 0.92rem;
-    }
-
-    .cheat-sheet-values--3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .cheat-sheet-values--4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .cheat-sheet-values--6 {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-
-    .cheat-sheet-decade {
-      color: var(--muted);
-      font-size: 0.82rem;
-    }
-
-    @media (max-width: 640px) {
       main {
-        padding: 1.25rem 0.9rem 2rem;
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
       }
 
-      .field-row,
-      .value-with-unit,
-      .layout {
-        grid-template-columns: 1fr;
+      header {
+        margin-bottom: 1rem;
       }
 
-      .tap-row {
-        grid-template-columns: 1fr;
-        row-gap: 0.25rem;
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
       }
 
-      .result {
-        grid-template-columns: 1fr;
-        row-gap: 0.35rem;
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
         align-items: start;
       }
 
-      .result-value,
-      .result-value--stacked {
-        justify-self: start;
-        text-align: left;
-        justify-items: start;
+      .calculator-card {
+        display: grid;
+        gap: 1rem;
+        align-self: start;
       }
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <header>
-      <h1>Resistor Ladder Voltage Divider Checker</h1>
-      <p class="subtitle">A standalone divider calculator for tap voltages across a configurable series resistor ladder</p>
-    </header>
 
-    <div id="calculator-grid" class="calculator-grid">
-      <button id="duplicate-calculator-btn" class="add-calculator-btn" type="button">Clone calculator</button>
-    </div>
+      .calculator-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
 
-    <section class="formulas-section">
-      <h2>Formulas</h2>
-      <p class="formula-note">
-        <span>total resistance = R1 + R2 + ... + Rn</span>
-        <span>divider current = applied voltage ÷ total resistance</span>
-        <span>tap voltage between Ri and Ri+1 = applied voltage × (sum of resistors below the tap ÷ total resistance)</span>
-      </p>
-    </section>
+      .add-calculator-btn {
+        border: 1px dashed var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        width: fit-content;
+        min-width: 12rem;
+        align-self: start;
+        margin-top: calc(0.9rem * 1.5 + 1rem);
+        min-height: 21rem;
+        padding: 0.55rem 1rem;
+        font: inherit;
+        cursor: pointer;
+        text-align: left;
+      }
 
-    <section class="cheat-sheet-section">
-      <h2>E-Series Cheat Sheet</h2>
-      <div class="cheat-sheet-grid">
-        <article class="cheat-sheet-card">
-          <h3>E3</h3>
-          <ul class="cheat-sheet-list">
-            <li>
-              <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--3">
-                <span>1.0</span><span>2.2</span><span>4.7</span>
-              </div>
-            </li>
-            <li>
-              <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--3">
-                <span>10</span><span>22</span><span>47</span>
-              </div>
-            </li>
-          </ul>
-        </article>
-        <article class="cheat-sheet-card">
-          <h3>E6</h3>
-          <ul class="cheat-sheet-list">
-            <li>
-              <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--3">
-                <span>1.0</span><span>1.5</span><span>2.2</span><span>3.3</span><span>4.7</span><span>6.8</span>
-              </div>
-            </li>
-            <li>
-              <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--3">
-                <span>10</span><span>15</span><span>22</span><span>33</span><span>47</span><span>68</span>
-              </div>
-            </li>
-          </ul>
-        </article>
-        <article class="cheat-sheet-card">
-          <h3>E12</h3>
-          <ul class="cheat-sheet-list">
-            <li>
-              <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--4">
-                <span>1.0</span><span>1.2</span><span>1.5</span><span>1.8</span><span>2.2</span><span>2.7</span><span>3.3</span><span>3.9</span><span>4.7</span><span>5.6</span><span>6.8</span><span>8.2</span>
-              </div>
-            </li>
-            <li>
-              <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--4">
-                <span>10</span><span>12</span><span>15</span><span>18</span><span>22</span><span>27</span><span>33</span><span>39</span><span>47</span><span>56</span><span>68</span><span>82</span>
-              </div>
-            </li>
-          </ul>
-        </article>
-        <article class="cheat-sheet-card">
-          <h3>E24</h3>
-          <ul class="cheat-sheet-list">
-            <li>
-              <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--6">
-                <span>1.0</span><span>1.1</span><span>1.2</span><span>1.3</span><span>1.5</span><span>1.6</span><span>1.8</span><span>2.0</span><span>2.2</span><span>2.4</span><span>2.7</span><span>3.0</span><span>3.3</span><span>3.6</span><span>3.9</span><span>4.3</span><span>4.7</span><span>5.1</span><span>5.6</span><span>6.2</span><span>6.8</span><span>7.5</span><span>8.2</span><span>9.1</span>
-              </div>
-            </li>
-            <li>
-              <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
-              <div class="cheat-sheet-values cheat-sheet-values--6">
-                <span>10</span><span>11</span><span>12</span><span>13</span><span>15</span><span>16</span><span>18</span><span>20</span><span>22</span><span>24</span><span>27</span><span>30</span><span>33</span><span>36</span><span>39</span><span>43</span><span>47</span><span>51</span><span>56</span><span>62</span><span>68</span><span>75</span><span>82</span><span>91</span>
-              </div>
-            </li>
-          </ul>
-        </article>
+      .add-calculator-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+        align-items: start;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      form {
+        display: grid;
+        gap: 0.9rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.5rem;
+        align-items: end;
+      }
+
+      .resistor-stack {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .resistor-row {
+        margin-left: -0.35rem;
+      }
+
+      .tap-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 8ch;
+        align-items: baseline;
+        column-gap: 1rem;
+        margin-left: 0.4rem;
+        padding: 0.15rem 0 0.35rem 0.65rem;
+        border-left: 2px solid var(--border);
+      }
+
+      .tap-label {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: #fff;
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .value-with-unit {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+      }
+
+      .value-with-unit input {
+        min-width: 0;
+      }
+
+      .value-with-unit select {
+        width: auto;
+        min-width: 5.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+      }
+
+      .hint,
+      .optional {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 0.92rem;
+      }
+
+      output {
+        display: block;
+        width: 100%;
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result-group {
+        border-top: 1px solid var(--border);
+        padding-top: 0.85rem;
+      }
+
+      .result-group-title {
+        margin: 0 0 0.35rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 8ch;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+        min-width: 0;
+        white-space: normal;
+      }
+
+      .result-value {
+        font-size: 1.3rem;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        text-align: right;
+        width: 8ch;
+        justify-self: end;
+        line-height: 1.1;
+        white-space: normal;
+      }
+
+      .result-value--stacked {
+        display: inline-grid;
+        justify-items: end;
+        row-gap: 0.08rem;
+        width: 8ch;
+      }
+
+      .result-value-number {
+        white-space: nowrap;
+      }
+
+      .result-value-unit {
+        font-size: 0.75em;
+        font-weight: 600;
+        color: var(--muted);
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .formula-note {
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .cheat-sheet-section {
+        margin-top: 1rem;
+      }
+
+      .cheat-sheet-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
+      }
+
+      .cheat-sheet-card {
+        border: 1px solid var(--border);
+        padding: 0.8rem;
+        background: #fff;
+      }
+
+      .cheat-sheet-card h3 {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .cheat-sheet-list {
+        margin: 0.55rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.45rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .cheat-sheet-list li {
+        display: grid;
+        gap: 0.12rem;
+      }
+
+      .cheat-sheet-values {
+        display: grid;
+        gap: 0.2rem 0.45rem;
+        font-size: 0.92rem;
+      }
+
+      .cheat-sheet-values--3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .cheat-sheet-values--4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .cheat-sheet-values--6 {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .cheat-sheet-decade {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .field-row,
+        .value-with-unit,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .tap-row {
+          grid-template-columns: 1fr;
+          row-gap: 0.25rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+          row-gap: 0.35rem;
+          align-items: start;
+        }
+
+        .result-value,
+        .result-value--stacked {
+          justify-self: start;
+          text-align: left;
+          justify-items: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Resistor Ladder Voltage Divider Checker</h1>
+        <p class="subtitle">
+          A standalone divider calculator for tap voltages across a configurable
+          series resistor ladder
+        </p>
+      </header>
+
+      <div id="calculator-grid" class="calculator-grid">
+        <button
+          id="duplicate-calculator-btn"
+          class="add-calculator-btn"
+          type="button"
+        >
+          Clone calculator
+        </button>
       </div>
-    </section>
 
-    <template id="calculator-template">
-      <article class="calculator-card">
-        <p class="calculator-label">Calculator</p>
-        <div class="layout">
-          <section>
-            <h2>Inputs</h2>
-            <form>
-              <div class="field">
-                <label>Applied voltage (V)
-                  <input class="input-voltage" type="number" inputmode="decimal" step="any" value="5">
-                </label>
-              </div>
+      <section class="formulas-section">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>total resistance = R1 + R2 + ... + Rn</span>
+          <span>divider current = applied voltage ÷ total resistance</span>
+          <span
+            >tap voltage between Ri and Ri+1 = applied voltage × (sum of
+            resistors below the tap ÷ total resistance)</span
+          >
+        </p>
+      </section>
 
-              <div class="field">
-                <label>Resistor value offering</label>
-                <select class="input-series-mode" aria-label="Resistor series offering">
-                  <option value="any" selected>Any value</option>
-                  <option value="e6">E6 only</option>
-                  <option value="e12">E12 only</option>
-                  <option value="e24">E24 only</option>
-                </select>
-                <div class="hint">When an E-series is selected, resistor entries snap to preferred values.</div>
-              </div>
+      <section class="cheat-sheet-section">
+        <h2>E-Series Cheat Sheet</h2>
+        <div class="cheat-sheet-grid">
+          <article class="cheat-sheet-card">
+            <h3>E3</h3>
+            <ul class="cheat-sheet-list">
+              <li>
+                <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--3">
+                  <span>1.0</span><span>2.2</span><span>4.7</span>
+                </div>
+              </li>
+              <li>
+                <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--3">
+                  <span>10</span><span>22</span><span>47</span>
+                </div>
+              </li>
+            </ul>
+          </article>
+          <article class="cheat-sheet-card">
+            <h3>E6</h3>
+            <ul class="cheat-sheet-list">
+              <li>
+                <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--3">
+                  <span>1.0</span><span>1.5</span><span>2.2</span
+                  ><span>3.3</span><span>4.7</span><span>6.8</span>
+                </div>
+              </li>
+              <li>
+                <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--3">
+                  <span>10</span><span>15</span><span>22</span><span>33</span
+                  ><span>47</span><span>68</span>
+                </div>
+              </li>
+            </ul>
+          </article>
+          <article class="cheat-sheet-card">
+            <h3>E12</h3>
+            <ul class="cheat-sheet-list">
+              <li>
+                <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--4">
+                  <span>1.0</span><span>1.2</span><span>1.5</span
+                  ><span>1.8</span><span>2.2</span><span>2.7</span
+                  ><span>3.3</span><span>3.9</span><span>4.7</span
+                  ><span>5.6</span><span>6.8</span><span>8.2</span>
+                </div>
+              </li>
+              <li>
+                <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--4">
+                  <span>10</span><span>12</span><span>15</span><span>18</span
+                  ><span>22</span><span>27</span><span>33</span><span>39</span
+                  ><span>47</span><span>56</span><span>68</span><span>82</span>
+                </div>
+              </li>
+            </ul>
+          </article>
+          <article class="cheat-sheet-card">
+            <h3>E24</h3>
+            <ul class="cheat-sheet-list">
+              <li>
+                <span class="cheat-sheet-decade">Decade 1 (1 to 10)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--6">
+                  <span>1.0</span><span>1.1</span><span>1.2</span
+                  ><span>1.3</span><span>1.5</span><span>1.6</span
+                  ><span>1.8</span><span>2.0</span><span>2.2</span
+                  ><span>2.4</span><span>2.7</span><span>3.0</span
+                  ><span>3.3</span><span>3.6</span><span>3.9</span
+                  ><span>4.3</span><span>4.7</span><span>5.1</span
+                  ><span>5.6</span><span>6.2</span><span>6.8</span
+                  ><span>7.5</span><span>8.2</span><span>9.1</span>
+                </div>
+              </li>
+              <li>
+                <span class="cheat-sheet-decade">Decade 2 (10 to 100)</span>
+                <div class="cheat-sheet-values cheat-sheet-values--6">
+                  <span>10</span><span>11</span><span>12</span><span>13</span
+                  ><span>15</span><span>16</span><span>18</span><span>20</span
+                  ><span>22</span><span>24</span><span>27</span><span>30</span
+                  ><span>33</span><span>36</span><span>39</span><span>43</span
+                  ><span>47</span><span>51</span><span>56</span><span>62</span
+                  ><span>68</span><span>75</span><span>82</span><span>91</span>
+                </div>
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
 
-              <div class="field">
-                <label>Series resistor values</label>
-                <div class="resistor-stack">
-                  <label class="resistor-row">R1
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" value="1">
-                      <select class="input-resistor-unit" aria-label="R1 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R1 and R2</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R2
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" value="1">
-                      <select class="input-resistor-unit" aria-label="R2 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R2 and R3</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R3
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R3 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R3 and R4</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R4
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R4 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R4 and R5</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R5
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R5 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R5 and R6</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R6
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R6 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R6 and R7</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R7
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R7 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R7 and R8</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R8
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R8 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R8 and R9</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R9
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R9 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R9 and R10</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R10
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R10 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R10 and R11</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R11
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R11 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R11 and R12</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R12
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R12 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R12 and R13</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R13
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R13 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R13 and R14</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R14
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R14 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
-                  </label>
-                  <div class="tap-row">
-                    <span class="tap-label">Between R14 and R15</span>
-                    <span class="result-value result-value--stacked output-tap-between"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-                  </div>
-                  <label class="resistor-row">R15
-                    <div class="value-with-unit">
-                      <input class="input-resistor" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
-                      <select class="input-resistor-unit" aria-label="R15 unit">
-                        <option value="ohm">Ω</option>
-                        <option value="kohm" selected>kΩ</option>
-                        <option value="mohm">MΩ</option>
-                      </select>
-                    </div>
+      <template id="calculator-template">
+        <article class="calculator-card">
+          <p class="calculator-label">Calculator</p>
+          <div class="layout">
+            <section>
+              <h2>Inputs</h2>
+              <form>
+                <div class="field">
+                  <label
+                    >Applied voltage (V)
+                    <input
+                      class="input-voltage"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="5"
+                    />
                   </label>
                 </div>
-                <div class="hint">Leave later resistors blank to use fewer resistors.</div>
-              </div>
-            </form>
-          </section>
 
-          <section>
-            <h2>Outputs</h2>
-            <output class="results" aria-live="polite" aria-atomic="true">
-              <div class="result">
-                <span class="result-label">Active resistors</span>
-                <span class="result-value output-active-resistors">2</span>
-              </div>
-              <div class="result">
-                <span class="result-label">Total resistance</span>
-                <span class="result-value result-value--stacked output-total-resistance"><span class="result-value-number">2</span><span class="result-value-unit">kΩ</span></span>
-              </div>
-              <div class="result">
-                <span class="result-label">Divider current</span>
-                <span class="result-value result-value--stacked output-divider-current"><span class="result-value-number">2.5</span><span class="result-value-unit">mA</span></span>
-              </div>
-              <div class="result">
-                <span class="result-label">Highest resistor power dissipation</span>
-                <span class="result-value result-value--stacked output-highest-power"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-              </div>
-              <div class="result">
-                <span class="result-label">Total resistor power dissipation</span>
-                <span class="result-value result-value--stacked output-total-power"><span class="result-value-number">—</span><span class="result-value-unit"></span></span>
-              </div>
-            </output>
-          </section>
-        </div>
-      </article>
-    </template>
-  </main>
+                <div class="field">
+                  <label>Resistor value offering</label>
+                  <select
+                    class="input-series-mode"
+                    aria-label="Resistor series offering"
+                  >
+                    <option value="any" selected>Any value</option>
+                    <option value="e6">E6 only</option>
+                    <option value="e12">E12 only</option>
+                    <option value="e24">E24 only</option>
+                  </select>
+                  <div class="hint">
+                    When an E-series is selected, resistor entries snap to
+                    preferred values.
+                  </div>
+                </div>
 
-  <script>
-    (function () {
-      var calculatorGrid = document.getElementById('calculator-grid');
-      var calculatorTemplate = document.getElementById('calculator-template');
-      var duplicateCalculatorButton = document.getElementById('duplicate-calculator-btn');
-      var calculatorCount = 0;
+                <div class="field">
+                  <label>Series resistor values</label>
+                  <div class="resistor-stack">
+                    <label class="resistor-row"
+                      >R1
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          value="1"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R1 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R1 and R2</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R2
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          value="1"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R2 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R2 and R3</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R3
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R3 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R3 and R4</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R4
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R4 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R4 and R5</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R5
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R5 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R5 and R6</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R6
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R6 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R6 and R7</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R7
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R7 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R7 and R8</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R8
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R8 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R8 and R9</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R9
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R9 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R9 and R10</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R10
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R10 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R10 and R11</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R11
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R11 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R11 and R12</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R12
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R12 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R12 and R13</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R13
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R13 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R13 and R14</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R14
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R14 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                    <div class="tap-row">
+                      <span class="tap-label">Between R14 and R15</span>
+                      <span
+                        class="result-value result-value--stacked output-tap-between"
+                        ><span class="result-value-number">—</span
+                        ><span class="result-value-unit"></span
+                      ></span>
+                    </div>
+                    <label class="resistor-row"
+                      >R15
+                      <div class="value-with-unit">
+                        <input
+                          class="input-resistor"
+                          type="number"
+                          inputmode="decimal"
+                          step="any"
+                          min="0"
+                          placeholder="optional"
+                        />
+                        <select
+                          class="input-resistor-unit"
+                          aria-label="R15 unit"
+                        >
+                          <option value="ohm">Ω</option>
+                          <option value="kohm" selected>kΩ</option>
+                          <option value="mohm">MΩ</option>
+                        </select>
+                      </div>
+                    </label>
+                  </div>
+                  <div class="hint">
+                    Leave later resistors blank to use fewer resistors.
+                  </div>
+                </div>
+              </form>
+            </section>
 
-      var E_SERIES = {
-        any: null,
-        e6: [1.0, 1.5, 2.2, 3.3, 4.7, 6.8],
-        e12: [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2],
-        e24: [1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3, 3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1]
-      };
+            <section>
+              <h2>Outputs</h2>
+              <output class="results" aria-live="polite" aria-atomic="true">
+                <div class="result">
+                  <span class="result-label">Active resistors</span>
+                  <span class="result-value output-active-resistors">2</span>
+                </div>
+                <div class="result">
+                  <span class="result-label">Total resistance</span>
+                  <span
+                    class="result-value result-value--stacked output-total-resistance"
+                    ><span class="result-value-number">2</span
+                    ><span class="result-value-unit">kΩ</span></span
+                  >
+                </div>
+                <div class="result">
+                  <span class="result-label">Divider current</span>
+                  <span
+                    class="result-value result-value--stacked output-divider-current"
+                    ><span class="result-value-number">2.5</span
+                    ><span class="result-value-unit">mA</span></span
+                  >
+                </div>
+                <div class="result">
+                  <span class="result-label"
+                    >Highest resistor power dissipation</span
+                  >
+                  <span
+                    class="result-value result-value--stacked output-highest-power"
+                    ><span class="result-value-number">—</span
+                    ><span class="result-value-unit"></span
+                  ></span>
+                </div>
+                <div class="result">
+                  <span class="result-label"
+                    >Total resistor power dissipation</span
+                  >
+                  <span
+                    class="result-value result-value--stacked output-total-power"
+                    ><span class="result-value-number">—</span
+                    ><span class="result-value-unit"></span
+                  ></span>
+                </div>
+              </output>
+            </section>
+          </div>
+        </article>
+      </template>
+    </main>
 
-      function toNumber(value) {
-        var parsed = parseFloat(value);
-        return Number.isFinite(parsed) ? parsed : 0;
-      }
+    <script>
+      (function () {
+        var calculatorGrid = document.getElementById("calculator-grid");
+        var calculatorTemplate = document.getElementById("calculator-template");
+        var duplicateCalculatorButton = document.getElementById(
+          "duplicate-calculator-btn",
+        );
+        var calculatorCount = 0;
 
-      function formatNumber(value, maximumFractionDigits) {
-        return new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: maximumFractionDigits,
-          minimumFractionDigits: 0
-        }).format(value);
-      }
+        var E_SERIES = {
+          any: null,
+          e6: [1.0, 1.5, 2.2, 3.3, 4.7, 6.8],
+          e12: [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2],
+          e24: [
+            1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3,
+            3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1,
+          ],
+        };
 
-      function formatEditableNumber(value) {
-        if (!Number.isFinite(value) || value <= 0) {
-          return '';
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
         }
-        return String(Number(value.toPrecision(4)));
-      }
 
-      function unitMultiplier(unit) {
-        if (unit === 'kohm') {
-          return 1000;
-        }
-        if (unit === 'mohm') {
-          return 1000000;
-        }
-        return 1;
-      }
-
-      function formatResistance(ohms) {
-        var abs = Math.abs(ohms);
-        if (abs >= 1000000) {
-          return { number: formatNumber(ohms / 1000000, 3), unit: 'MΩ' };
-        }
-        if (abs >= 1000) {
-          return { number: formatNumber(ohms / 1000, 3), unit: 'kΩ' };
-        }
-        return { number: formatNumber(ohms, 3), unit: 'Ω' };
-      }
-
-      function formatVoltage(volts) {
-        var abs = Math.abs(volts);
-        if (abs >= 1 || abs === 0) {
-          return { number: formatNumber(volts, 3), unit: 'V' };
-        }
-        if (abs >= 0.001) {
-          return { number: formatNumber(volts * 1000, 3), unit: 'mV' };
-        }
-        return { number: formatNumber(volts * 1000000, 3), unit: 'μV' };
-      }
-
-      function formatCurrent(amps) {
-        var abs = Math.abs(amps);
-        if (abs >= 1) {
-          return { number: formatNumber(amps, 3), unit: 'A' };
-        }
-        if (abs >= 0.001 || abs === 0) {
-          return { number: formatNumber(amps * 1000, 3), unit: 'mA' };
-        }
-        return { number: formatNumber(amps * 1000000, 3), unit: 'μA' };
-      }
-
-      function formatPower(watts) {
-        var abs = Math.abs(watts);
-        if (abs >= 1 || abs === 0) {
-          return { number: formatNumber(watts, 3), unit: 'W' };
-        }
-        if (abs >= 0.001) {
-          return { number: formatNumber(watts * 1000, 3), unit: 'mW' };
-        }
-        return { number: formatNumber(watts * 1000000, 3), unit: 'μW' };
-      }
-
-      function setStackedValue(element, value) {
-        element.innerHTML = '<span class="result-value-number">' + value.number + '</span><span class="result-value-unit">' + value.unit + '</span>';
-      }
-
-      function snapToSeries(value, seriesKey, mode) {
-        var series = E_SERIES[seriesKey];
-        if (!series || !Number.isFinite(value) || value <= 0) {
-          return value;
+        function formatNumber(value, maximumFractionDigits) {
+          return new Intl.NumberFormat("en-US", {
+            maximumFractionDigits: maximumFractionDigits,
+            minimumFractionDigits: 0,
+          }).format(value);
         }
 
-        var exponent = Math.floor(Math.log10(value));
-        var best = value;
-        var bestDiff = Infinity;
-        var bestUp = Infinity;
-        var bestDown = -Infinity;
-        var decadeOffset;
-        var index;
+        function formatEditableNumber(value) {
+          if (!Number.isFinite(value) || value <= 0) {
+            return "";
+          }
+          return String(Number(value.toPrecision(4)));
+        }
 
-        for (decadeOffset = -1; decadeOffset <= 1; decadeOffset += 1) {
-          var scale = Math.pow(10, exponent + decadeOffset);
-          for (index = 0; index < series.length; index += 1) {
-            var candidate = series[index] * scale;
-            var diff = Math.abs(candidate - value);
-            if (diff < bestDiff) {
-              best = candidate;
-              bestDiff = diff;
-            }
+        function unitMultiplier(unit) {
+          if (unit === "kohm") {
+            return 1000;
+          }
+          if (unit === "mohm") {
+            return 1000000;
+          }
+          return 1;
+        }
 
-            if (candidate >= value && candidate < bestUp) {
-              bestUp = candidate;
-            }
+        function formatResistance(ohms) {
+          var abs = Math.abs(ohms);
+          if (abs >= 1000000) {
+            return { number: formatNumber(ohms / 1000000, 3), unit: "MΩ" };
+          }
+          if (abs >= 1000) {
+            return { number: formatNumber(ohms / 1000, 3), unit: "kΩ" };
+          }
+          return { number: formatNumber(ohms, 3), unit: "Ω" };
+        }
 
-            if (candidate <= value && candidate > bestDown) {
-              bestDown = candidate;
+        function formatVoltage(volts) {
+          var abs = Math.abs(volts);
+          if (abs >= 1 || abs === 0) {
+            return { number: formatNumber(volts, 3), unit: "V" };
+          }
+          if (abs >= 0.001) {
+            return { number: formatNumber(volts * 1000, 3), unit: "mV" };
+          }
+          return { number: formatNumber(volts * 1000000, 3), unit: "μV" };
+        }
+
+        function formatCurrent(amps) {
+          var abs = Math.abs(amps);
+          if (abs >= 1) {
+            return { number: formatNumber(amps, 3), unit: "A" };
+          }
+          if (abs >= 0.001 || abs === 0) {
+            return { number: formatNumber(amps * 1000, 3), unit: "mA" };
+          }
+          return { number: formatNumber(amps * 1000000, 3), unit: "μA" };
+        }
+
+        function formatPower(watts) {
+          var abs = Math.abs(watts);
+          if (abs >= 1 || abs === 0) {
+            return { number: formatNumber(watts, 3), unit: "W" };
+          }
+          if (abs >= 0.001) {
+            return { number: formatNumber(watts * 1000, 3), unit: "mW" };
+          }
+          return { number: formatNumber(watts * 1000000, 3), unit: "μW" };
+        }
+
+        function setStackedValue(element, value) {
+          element.innerHTML =
+            '<span class="result-value-number">' +
+            value.number +
+            '</span><span class="result-value-unit">' +
+            value.unit +
+            "</span>";
+        }
+
+        function snapToSeries(value, seriesKey, mode) {
+          var series = E_SERIES[seriesKey];
+          if (!series || !Number.isFinite(value) || value <= 0) {
+            return value;
+          }
+
+          var exponent = Math.floor(Math.log10(value));
+          var best = value;
+          var bestDiff = Infinity;
+          var bestUp = Infinity;
+          var bestDown = -Infinity;
+          var decadeOffset;
+          var index;
+
+          for (decadeOffset = -1; decadeOffset <= 1; decadeOffset += 1) {
+            var scale = Math.pow(10, exponent + decadeOffset);
+            for (index = 0; index < series.length; index += 1) {
+              var candidate = series[index] * scale;
+              var diff = Math.abs(candidate - value);
+              if (diff < bestDiff) {
+                best = candidate;
+                bestDiff = diff;
+              }
+
+              if (candidate >= value && candidate < bestUp) {
+                bestUp = candidate;
+              }
+
+              if (candidate <= value && candidate > bestDown) {
+                bestDown = candidate;
+              }
             }
           }
+
+          if (mode === "up" && Number.isFinite(bestUp)) {
+            return bestUp;
+          }
+
+          if (mode === "down" && Number.isFinite(bestDown)) {
+            return bestDown;
+          }
+
+          return best;
         }
 
-        if (mode === 'up' && Number.isFinite(bestUp)) {
-          return bestUp;
-        }
-
-        if (mode === 'down' && Number.isFinite(bestDown)) {
-          return bestDown;
-        }
-
-        return best;
-      }
-
-      function getDefaultState() {
-        return {
-          appliedVoltage: '5',
-          seriesMode: 'any',
-          resistors: [
-            { value: '1', unit: 'kohm' },
-            { value: '1', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' },
-            { value: '', unit: 'kohm' }
-          ]
-        };
-      }
-
-      function initCalculator(card, number, initialState) {
-        card.querySelector('.calculator-label').textContent = 'Calculator ' + number;
-
-        var fields = {
-          appliedVoltage: card.querySelector('.input-voltage'),
-          seriesMode: card.querySelector('.input-series-mode'),
-          resistorInputs: Array.prototype.slice.call(card.querySelectorAll('.input-resistor')),
-          resistorUnits: Array.prototype.slice.call(card.querySelectorAll('.input-resistor-unit')),
-          resistorRows: Array.prototype.slice.call(card.querySelectorAll('.resistor-row')),
-          tapRows: Array.prototype.slice.call(card.querySelectorAll('.tap-row'))
-        };
-
-        var outputs = {
-          activeResistors: card.querySelector('.output-active-resistors'),
-          totalResistance: card.querySelector('.output-total-resistance'),
-          dividerCurrent: card.querySelector('.output-divider-current'),
-          highestPower: card.querySelector('.output-highest-power'),
-          totalPower: card.querySelector('.output-total-power'),
-          tapBetweenValues: Array.prototype.slice.call(card.querySelectorAll('.output-tap-between'))
-        };
-
-        function applyState(state) {
-          fields.appliedVoltage.value = state.appliedVoltage;
-          fields.seriesMode.value = state.seriesMode;
-          state.resistors.forEach(function (resistor, index) {
-            fields.resistorInputs[index].value = resistor.value;
-            fields.resistorUnits[index].value = resistor.unit;
-          });
-        }
-
-        function collectState() {
+        function getDefaultState() {
           return {
-            appliedVoltage: fields.appliedVoltage.value,
-            seriesMode: fields.seriesMode.value,
-            resistors: fields.resistorInputs.map(function (input, index) {
-              return {
-                value: input.value,
-                unit: fields.resistorUnits[index].value
-              };
-            })
+            appliedVoltage: "5",
+            seriesMode: "any",
+            resistors: [
+              { value: "1", unit: "kohm" },
+              { value: "1", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+              { value: "", unit: "kohm" },
+            ],
           };
         }
 
-        function snapResistorInput(index) {
-          var input = fields.resistorInputs[index];
-          if (input.value === '') {
-            input.dataset.lastSeriesValue = '';
-            return;
-          }
+        function initCalculator(card, number, initialState) {
+          card.querySelector(".calculator-label").textContent =
+            "Calculator " + number;
 
-          var value = toNumber(input.value);
-          if (value <= 0) {
-            input.value = '';
-            input.dataset.lastSeriesValue = '';
-            return;
-          }
+          var fields = {
+            appliedVoltage: card.querySelector(".input-voltage"),
+            seriesMode: card.querySelector(".input-series-mode"),
+            resistorInputs: Array.prototype.slice.call(
+              card.querySelectorAll(".input-resistor"),
+            ),
+            resistorUnits: Array.prototype.slice.call(
+              card.querySelectorAll(".input-resistor-unit"),
+            ),
+            resistorRows: Array.prototype.slice.call(
+              card.querySelectorAll(".resistor-row"),
+            ),
+            tapRows: Array.prototype.slice.call(
+              card.querySelectorAll(".tap-row"),
+            ),
+          };
 
-          var previousValue = toNumber(input.dataset.lastSeriesValue);
-          var mode = 'nearest';
-          if (previousValue > 0) {
-            if (value > previousValue) {
-              mode = 'up';
-            } else if (value < previousValue) {
-              mode = 'down';
-            }
-          }
+          var outputs = {
+            activeResistors: card.querySelector(".output-active-resistors"),
+            totalResistance: card.querySelector(".output-total-resistance"),
+            dividerCurrent: card.querySelector(".output-divider-current"),
+            highestPower: card.querySelector(".output-highest-power"),
+            totalPower: card.querySelector(".output-total-power"),
+            tapBetweenValues: Array.prototype.slice.call(
+              card.querySelectorAll(".output-tap-between"),
+            ),
+          };
 
-          var snapped = snapToSeries(value, fields.seriesMode.value, mode);
-          input.value = formatEditableNumber(snapped);
-          input.dataset.lastSeriesValue = formatEditableNumber(snapped);
-        }
-
-        function normalizePositiveInput(index) {
-          var input = fields.resistorInputs[index];
-          if (input.value === '') {
-            return;
-          }
-          if (toNumber(input.value) <= 0) {
-            input.value = '';
-          }
-        }
-
-        function hasPositiveInput(index) {
-          return toNumber(fields.resistorInputs[index].value) > 0;
-        }
-
-        function updateProgressiveVisibility() {
-          var rowVisible = fields.resistorRows.map(function (_, index) {
-            if (index === 0) {
-              return true;
-            }
-            return hasPositiveInput(index - 1);
-          });
-
-          fields.resistorRows.forEach(function (row, index) {
-            row.style.display = rowVisible[index] ? '' : 'none';
-          });
-
-          fields.tapRows.forEach(function (row, index) {
-            row.style.display = rowVisible[index + 1] ? '' : 'none';
-          });
-        }
-
-        function calculate() {
-          updateProgressiveVisibility();
-
-          var appliedVoltage = toNumber(fields.appliedVoltage.value);
-          var resistors = fields.resistorInputs.map(function (input, index) {
-            if (input.value === '') {
-              return null;
-            }
-            var baseValue = toNumber(input.value);
-            if (baseValue <= 0) {
-              return null;
-            }
-            return baseValue * unitMultiplier(fields.resistorUnits[index].value);
-          }).filter(function (value) {
-            return value !== null;
-          });
-
-          var totalResistance = resistors.reduce(function (sum, value) {
-            return sum + value;
-          }, 0);
-
-          outputs.activeResistors.textContent = String(resistors.length);
-          setStackedValue(outputs.totalResistance, totalResistance > 0 ? formatResistance(totalResistance) : { number: '—', unit: '' });
-
-          if (totalResistance > 0) {
-            var dividerCurrent = appliedVoltage / totalResistance;
-            var resistorPowers = resistors.map(function (resistance) {
-              return (dividerCurrent * dividerCurrent) * resistance;
+          function applyState(state) {
+            fields.appliedVoltage.value = state.appliedVoltage;
+            fields.seriesMode.value = state.seriesMode;
+            state.resistors.forEach(function (resistor, index) {
+              fields.resistorInputs[index].value = resistor.value;
+              fields.resistorUnits[index].value = resistor.unit;
             });
-            var highestPower = resistorPowers.reduce(function (maxValue, power) {
-              return power > maxValue ? power : maxValue;
-            }, 0);
-            var totalPower = resistorPowers.reduce(function (sum, power) {
-              return sum + power;
-            }, 0);
-
-            setStackedValue(outputs.dividerCurrent, formatCurrent(dividerCurrent));
-            setStackedValue(outputs.highestPower, formatPower(highestPower));
-            setStackedValue(outputs.totalPower, formatPower(totalPower));
-          } else {
-            setStackedValue(outputs.dividerCurrent, { number: '—', unit: '' });
-            setStackedValue(outputs.highestPower, { number: '—', unit: '' });
-            setStackedValue(outputs.totalPower, { number: '—', unit: '' });
           }
 
-          outputs.tapBetweenValues.forEach(function (valueEl, index) {
-            if (index >= resistors.length - 1 || totalResistance <= 0) {
-              setStackedValue(valueEl, { number: '—', unit: '' });
+          function collectState() {
+            return {
+              appliedVoltage: fields.appliedVoltage.value,
+              seriesMode: fields.seriesMode.value,
+              resistors: fields.resistorInputs.map(function (input, index) {
+                return {
+                  value: input.value,
+                  unit: fields.resistorUnits[index].value,
+                };
+              }),
+            };
+          }
+
+          function snapResistorInput(index) {
+            var input = fields.resistorInputs[index];
+            if (input.value === "") {
+              input.dataset.lastSeriesValue = "";
               return;
             }
-            var lowerResistance = resistors.slice(index + 1).reduce(function (sum, value) {
+
+            var value = toNumber(input.value);
+            if (value <= 0) {
+              input.value = "";
+              input.dataset.lastSeriesValue = "";
+              return;
+            }
+
+            var previousValue = toNumber(input.dataset.lastSeriesValue);
+            var mode = "nearest";
+            if (previousValue > 0) {
+              if (value > previousValue) {
+                mode = "up";
+              } else if (value < previousValue) {
+                mode = "down";
+              }
+            }
+
+            var snapped = snapToSeries(value, fields.seriesMode.value, mode);
+            input.value = formatEditableNumber(snapped);
+            input.dataset.lastSeriesValue = formatEditableNumber(snapped);
+          }
+
+          function normalizePositiveInput(index) {
+            var input = fields.resistorInputs[index];
+            if (input.value === "") {
+              return;
+            }
+            if (toNumber(input.value) <= 0) {
+              input.value = "";
+            }
+          }
+
+          function hasPositiveInput(index) {
+            return toNumber(fields.resistorInputs[index].value) > 0;
+          }
+
+          function updateProgressiveVisibility() {
+            var rowVisible = fields.resistorRows.map(function (_, index) {
+              if (index === 0) {
+                return true;
+              }
+              return hasPositiveInput(index - 1);
+            });
+
+            fields.resistorRows.forEach(function (row, index) {
+              row.style.display = rowVisible[index] ? "" : "none";
+            });
+
+            fields.tapRows.forEach(function (row, index) {
+              row.style.display = rowVisible[index + 1] ? "" : "none";
+            });
+          }
+
+          function calculate() {
+            updateProgressiveVisibility();
+
+            var appliedVoltage = toNumber(fields.appliedVoltage.value);
+            var resistors = fields.resistorInputs
+              .map(function (input, index) {
+                if (input.value === "") {
+                  return null;
+                }
+                var baseValue = toNumber(input.value);
+                if (baseValue <= 0) {
+                  return null;
+                }
+                return (
+                  baseValue * unitMultiplier(fields.resistorUnits[index].value)
+                );
+              })
+              .filter(function (value) {
+                return value !== null;
+              });
+
+            var totalResistance = resistors.reduce(function (sum, value) {
               return sum + value;
             }, 0);
-            setStackedValue(valueEl, formatVoltage(appliedVoltage * (lowerResistance / totalResistance)));
-          });
-        }
 
-        fields.appliedVoltage.addEventListener('input', calculate);
-        fields.appliedVoltage.addEventListener('change', calculate);
+            outputs.activeResistors.textContent = String(resistors.length);
+            setStackedValue(
+              outputs.totalResistance,
+              totalResistance > 0
+                ? formatResistance(totalResistance)
+                : { number: "—", unit: "" },
+            );
 
-        fields.seriesMode.addEventListener('change', function () {
-          fields.resistorInputs.forEach(function (_, index) {
-            snapResistorInput(index);
+            if (totalResistance > 0) {
+              var dividerCurrent = appliedVoltage / totalResistance;
+              var resistorPowers = resistors.map(function (resistance) {
+                return dividerCurrent * dividerCurrent * resistance;
+              });
+              var highestPower = resistorPowers.reduce(function (
+                maxValue,
+                power,
+              ) {
+                return power > maxValue ? power : maxValue;
+              }, 0);
+              var totalPower = resistorPowers.reduce(function (sum, power) {
+                return sum + power;
+              }, 0);
+
+              setStackedValue(
+                outputs.dividerCurrent,
+                formatCurrent(dividerCurrent),
+              );
+              setStackedValue(outputs.highestPower, formatPower(highestPower));
+              setStackedValue(outputs.totalPower, formatPower(totalPower));
+            } else {
+              setStackedValue(outputs.dividerCurrent, {
+                number: "—",
+                unit: "",
+              });
+              setStackedValue(outputs.highestPower, { number: "—", unit: "" });
+              setStackedValue(outputs.totalPower, { number: "—", unit: "" });
+            }
+
+            outputs.tapBetweenValues.forEach(function (valueEl, index) {
+              if (index >= resistors.length - 1 || totalResistance <= 0) {
+                setStackedValue(valueEl, { number: "—", unit: "" });
+                return;
+              }
+              var lowerResistance = resistors.slice(index + 1).reduce(function (
+                sum,
+                value,
+              ) {
+                return sum + value;
+              }, 0);
+              setStackedValue(
+                valueEl,
+                formatVoltage(
+                  appliedVoltage * (lowerResistance / totalResistance),
+                ),
+              );
+            });
+          }
+
+          fields.appliedVoltage.addEventListener("input", calculate);
+          fields.appliedVoltage.addEventListener("change", calculate);
+
+          fields.seriesMode.addEventListener("change", function () {
+            fields.resistorInputs.forEach(function (_, index) {
+              snapResistorInput(index);
+            });
+            calculate();
           });
+
+          fields.resistorInputs.forEach(function (input, index) {
+            input.addEventListener("input", calculate);
+            input.addEventListener("change", function () {
+              normalizePositiveInput(index);
+              snapResistorInput(index);
+              calculate();
+            });
+            input.addEventListener("blur", function () {
+              normalizePositiveInput(index);
+              snapResistorInput(index);
+              calculate();
+            });
+          });
+
+          fields.resistorUnits.forEach(function (select) {
+            select.addEventListener("input", calculate);
+            select.addEventListener("change", calculate);
+          });
+
+          applyState(initialState || getDefaultState());
           calculate();
-        });
-
-        fields.resistorInputs.forEach(function (input, index) {
-          input.addEventListener('input', calculate);
-          input.addEventListener('change', function () {
-            normalizePositiveInput(index);
-            snapResistorInput(index);
-            calculate();
-          });
-          input.addEventListener('blur', function () {
-            normalizePositiveInput(index);
-            snapResistorInput(index);
-            calculate();
-          });
-        });
-
-        fields.resistorUnits.forEach(function (select) {
-          select.addEventListener('input', calculate);
-          select.addEventListener('change', calculate);
-        });
-
-        applyState(initialState || getDefaultState());
-        calculate();
-        card.__getState = collectState;
-      }
-
-      function addCalculator(state) {
-        var card = calculatorTemplate.content.firstElementChild.cloneNode(true);
-        calculatorCount += 1;
-        calculatorGrid.insertBefore(card, duplicateCalculatorButton);
-        calculatorGrid.appendChild(duplicateCalculatorButton);
-        initCalculator(card, calculatorCount, state || getDefaultState());
-      }
-
-      function getLastCalculatorState() {
-        var cards = calculatorGrid.querySelectorAll('.calculator-card');
-        if (cards.length === 0) {
-          return getDefaultState();
+          card.__getState = collectState;
         }
-        return cards[cards.length - 1].__getState();
-      }
 
-      duplicateCalculatorButton.addEventListener('click', function () {
-        addCalculator(getLastCalculatorState());
-      });
+        function addCalculator(state) {
+          var card =
+            calculatorTemplate.content.firstElementChild.cloneNode(true);
+          calculatorCount += 1;
+          calculatorGrid.insertBefore(card, duplicateCalculatorButton);
+          calculatorGrid.appendChild(duplicateCalculatorButton);
+          initCalculator(card, calculatorCount, state || getDefaultState());
+        }
 
-      addCalculator(getDefaultState());
-    })();
-  </script>
-</body>
+        function getLastCalculatorState() {
+          var cards = calculatorGrid.querySelectorAll(".calculator-card");
+          if (cards.length === 0) {
+            return getDefaultState();
+          }
+          return cards[cards.length - 1].__getState();
+        }
+
+        duplicateCalculatorButton.addEventListener("click", function () {
+          addCalculator(getLastCalculatorState());
+        });
+
+        addCalculator(getDefaultState());
+      })();
+    </script>
+  </body>
 </html>
