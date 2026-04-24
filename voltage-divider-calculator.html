@@ -50,6 +50,29 @@
         font-size: 0.98rem;
       }
 
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
       .calculator-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -70,6 +93,40 @@
         font-size: 0.9rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
+      }
+
+      .card-export-row[hidden] {
+        display: none !important;
+      }
+
+      .export-panel {
+        margin-top: 1rem;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .export-panel[hidden] {
+        display: none !important;
+      }
+
+      .export-panel textarea {
+        width: 100%;
+        min-height: 12rem;
+        resize: vertical;
+        border: 1px solid var(--border);
+        padding: 0.75rem 0.85rem;
+        font: inherit;
+        background: #fff;
+        color: var(--text);
+      }
+
+      .export-status {
+        color: var(--muted);
+        font-size: 0.88rem;
+        min-height: 1.2em;
       }
 
       .add-calculator-btn {
@@ -393,7 +450,27 @@
           A standalone divider calculator for tap voltages across a configurable
           series resistor ladder
         </p>
+        <div class="top-actions">
+          <button id="toggle-exporter-btn" class="action-btn" type="button">
+            Show exporter
+          </button>
+        </div>
       </header>
+
+      <section id="export-panel" class="export-panel" hidden>
+        <h2>Exported Plaintext</h2>
+        <div>
+          <button id="copy-export-btn" class="action-btn" type="button">
+            Copy plaintext
+          </button>
+        </div>
+        <textarea
+          id="export-output"
+          readonly
+          aria-label="Exported plaintext"
+        ></textarea>
+        <div id="export-status" class="export-status"></div>
+      </section>
 
       <div id="calculator-grid" class="calculator-grid">
         <button
@@ -513,6 +590,11 @@
       <template id="calculator-template">
         <article class="calculator-card">
           <p class="calculator-label">Calculator</p>
+          <div class="card-export-row" hidden>
+            <button class="action-btn card-export-btn" type="button">
+              Export this calculator
+            </button>
+          </div>
           <div class="layout">
             <section>
               <h2>Inputs</h2>
@@ -1042,7 +1124,13 @@
         var duplicateCalculatorButton = document.getElementById(
           "duplicate-calculator-btn",
         );
+        var toggleExporterButton = document.getElementById("toggle-exporter-btn");
+        var exportPanel = document.getElementById("export-panel");
+        var exportOutput = document.getElementById("export-output");
+        var copyExportButton = document.getElementById("copy-export-btn");
+        var exportStatus = document.getElementById("export-status");
         var calculatorCount = 0;
+        var exporterVisible = false;
 
         var E_SERIES = {
           any: null,
@@ -1203,6 +1291,221 @@
               { value: "", unit: "kohm" },
             ],
           };
+        }
+
+        function collectCardSnapshot(card) {
+          var appliedVoltage = toNumber(card.querySelector(".input-voltage").value);
+          var resistorInputs = Array.prototype.slice.call(
+            card.querySelectorAll(".input-resistor"),
+          );
+          var resistorUnits = Array.prototype.slice.call(
+            card.querySelectorAll(".input-resistor-unit"),
+          );
+          var resistors = [];
+          var resistorLines = [];
+
+          resistorInputs.forEach(function (input, index) {
+            if (input.value === "") {
+              return;
+            }
+            var base = toNumber(input.value);
+            if (base <= 0) {
+              return;
+            }
+            var unitKey = resistorUnits[index].value;
+            var ohms = base * unitMultiplier(unitKey);
+            resistors.push(ohms);
+            resistorLines.push(
+              "R" +
+                (index + 1) +
+                ": " +
+                formatNumber(base, 6) +
+                " " +
+                (unitKey === "ohm" ? "Ω" : unitKey === "kohm" ? "kΩ" : "MΩ"),
+            );
+          });
+
+          var totalResistance = resistors.reduce(function (sum, value) {
+            return sum + value;
+          }, 0);
+          var dividerCurrent =
+            totalResistance > 0 ? appliedVoltage / totalResistance : null;
+          var resistorPowers =
+            dividerCurrent === null
+              ? []
+              : resistors.map(function (resistance) {
+                  return dividerCurrent * dividerCurrent * resistance;
+                });
+          var highestPower =
+            resistorPowers.length > 0
+              ? resistorPowers.reduce(function (maxValue, power) {
+                  return power > maxValue ? power : maxValue;
+                }, 0)
+              : null;
+          var totalPower =
+            resistorPowers.length > 0
+              ? resistorPowers.reduce(function (sum, power) {
+                  return sum + power;
+                }, 0)
+              : null;
+          var minResistance =
+            resistors.length > 0
+              ? resistors.reduce(function (minValue, resistance) {
+                  return resistance < minValue ? resistance : minValue;
+                }, resistors[0])
+              : null;
+          var minResistancePower =
+            dividerCurrent !== null && minResistance !== null
+              ? dividerCurrent * dividerCurrent * minResistance
+              : null;
+
+          var tapLines = [];
+          resistors.forEach(function (_, index) {
+            if (index >= resistors.length - 1 || totalResistance <= 0) {
+              return;
+            }
+            var lowerResistance = resistors.slice(index + 1).reduce(function (
+              sum,
+              value,
+            ) {
+              return sum + value;
+            }, 0);
+            var tapVoltage = appliedVoltage * (lowerResistance / totalResistance);
+            var formattedTap = formatVoltage(tapVoltage);
+            tapLines.push(
+              "V_" +
+                (index + 1) +
+                (index + 2) +
+                " = " +
+                formattedTap.number +
+                " " +
+                formattedTap.unit,
+            );
+          });
+
+          return {
+            appliedVoltage: formatNumber(appliedVoltage, 6),
+            totalResistance:
+              totalResistance > 0
+                ? formatResistance(totalResistance).number +
+                  " " +
+                  formatResistance(totalResistance).unit
+                : "—",
+            dividerCurrent:
+              dividerCurrent !== null
+                ? formatCurrent(dividerCurrent).number +
+                  " " +
+                  formatCurrent(dividerCurrent).unit
+                : "—",
+            minResistance:
+              minResistance !== null
+                ? formatNumber(minResistance, 3) + " ohms"
+                : "—",
+            minResistancePower:
+              minResistancePower !== null
+                ? formatPower(minResistancePower).number +
+                  " " +
+                  formatPower(minResistancePower).unit
+                : "—",
+            totalPower:
+              totalPower !== null
+                ? formatPower(totalPower).number + " " + formatPower(totalPower).unit
+                : "—",
+            resistorLines: resistorLines,
+            tapLines: tapLines,
+          };
+        }
+
+        function formatSnapshotPlainText(snapshot) {
+          var lines = [];
+          lines.push("V_in = " + snapshot.appliedVoltage + " V");
+          lines.push("R_total = " + snapshot.totalResistance);
+          lines.push("I_max = " + snapshot.dividerCurrent);
+          lines.push(
+            "R_min = " + snapshot.minResistance + ", P_R_min = " + snapshot.minResistancePower,
+          );
+          lines.push("P_total = " + snapshot.totalPower);
+          if (snapshot.resistorLines.length === 0) {
+            lines.push("R_1 = —");
+          } else {
+            snapshot.resistorLines.forEach(function (line, index) {
+              var valueOnly = line.split(": ")[1] || "—";
+              lines.push("R_" + (index + 1) + " = " + valueOnly);
+            });
+          }
+          if (snapshot.tapLines.length === 0) {
+            lines.push("V_12 = —");
+          } else {
+            snapshot.tapLines.forEach(function (line) {
+              lines.push(line);
+            });
+          }
+          return lines.join("\n");
+        }
+
+        function exportSingleCalculator(card) {
+          var snapshot = collectCardSnapshot(card);
+          var label = card.querySelector(".calculator-label").textContent.trim();
+          exportOutput.value = formatSnapshotPlainText(snapshot);
+          exportStatus.textContent = label + " exported.";
+          if (exportPanel.hasAttribute("hidden")) {
+            exportPanel.removeAttribute("hidden");
+          }
+          toggleExporterButton.textContent = "Hide exporter";
+          exporterVisible = true;
+        }
+
+        function setExporterVisibility(visible) {
+          exporterVisible = visible;
+          if (visible) {
+            exportPanel.removeAttribute("hidden");
+            toggleExporterButton.textContent = "Hide exporter";
+          } else {
+            exportPanel.setAttribute("hidden", "hidden");
+            toggleExporterButton.textContent = "Show exporter";
+          }
+
+          var rows = calculatorGrid.querySelectorAll(".card-export-row");
+          rows.forEach(function (row) {
+            if (visible) {
+              row.removeAttribute("hidden");
+            } else {
+              row.setAttribute("hidden", "hidden");
+            }
+          });
+        }
+
+        function bindCardExporter(card) {
+          var exportButton = card.querySelector(".card-export-btn");
+          exportButton.addEventListener("click", function () {
+            exportSingleCalculator(card);
+          });
+        }
+
+        function copyExportedPlaintext() {
+          var text = exportOutput.value;
+          if (!text) {
+            exportStatus.textContent = "Nothing to copy yet.";
+            return;
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(function () {
+                exportStatus.textContent = "Plaintext copied to clipboard.";
+              })
+              .catch(function () {
+                exportStatus.textContent =
+                  "Copy failed. You can still copy from the text box.";
+              });
+            return;
+          }
+
+          exportOutput.focus();
+          exportOutput.select();
+          exportStatus.textContent =
+            "Clipboard API unavailable. Copy from the text box.";
         }
 
         function initCalculator(card, number, initialState) {
@@ -1443,6 +1746,13 @@
           calculatorGrid.insertBefore(card, duplicateCalculatorButton);
           calculatorGrid.appendChild(duplicateCalculatorButton);
           initCalculator(card, calculatorCount, state || getDefaultState());
+          bindCardExporter(card);
+          var exportRow = card.querySelector(".card-export-row");
+          if (exporterVisible) {
+            exportRow.removeAttribute("hidden");
+          } else {
+            exportRow.setAttribute("hidden", "hidden");
+          }
         }
 
         function getLastCalculatorState() {
@@ -1457,7 +1767,14 @@
           addCalculator(getLastCalculatorState());
         });
 
+        toggleExporterButton.addEventListener("click", function () {
+          setExporterVisibility(!exporterVisible);
+        });
+
+        copyExportButton.addEventListener("click", copyExportedPlaintext);
+
         addCalculator(getDefaultState());
+        setExporterVisibility(false);
       })();
     </script>
   </body>

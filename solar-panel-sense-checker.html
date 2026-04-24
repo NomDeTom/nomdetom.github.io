@@ -57,6 +57,13 @@
       gap: 0.6rem;
     }
 
+    .parser-toggle-row {
+      margin-top: 0.6rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
     .calculator-actions .add-calculator-btn {
       display: none;
     }
@@ -93,6 +100,121 @@
       grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
       gap: 1rem;
       margin-top: 1rem;
+    }
+
+    .paste-parser {
+      margin-top: 1rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .paste-parser[hidden] {
+      display: none !important;
+    }
+
+    .paste-parser textarea {
+      width: 100%;
+      min-height: 7.5rem;
+      resize: vertical;
+      border: 1px solid var(--border);
+      padding: 0.75rem 0.85rem;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .paste-parser textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-color: var(--accent);
+    }
+
+    .parser-results {
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .parser-result-row {
+      display: grid;
+      grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+      gap: 0.75rem;
+      align-items: start;
+      border-top: 1px solid var(--border);
+      padding-top: 0.55rem;
+    }
+
+    .parser-result-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .parser-result-label {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .parser-result-values {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .parser-chip {
+      border: 1px solid var(--border);
+      background: var(--accent-soft);
+      padding: 0.15rem 0.45rem;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .parser-empty {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .parser-status {
+      color: var(--muted);
+      font-size: 0.88rem;
+      min-height: 1.2em;
+    }
+
+    .free-text-field[hidden] {
+      display: none !important;
+    }
+
+    .export-panel {
+      margin-top: 1rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .export-panel[hidden] {
+      display: none !important;
+    }
+
+    .export-panel textarea {
+      width: 100%;
+      min-height: 10rem;
+      resize: vertical;
+      border: 1px solid var(--border);
+      padding: 0.75rem 0.85rem;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .export-status {
+      color: var(--muted);
+      font-size: 0.88rem;
+      min-height: 1.2em;
     }
 
     .calculator-card {
@@ -373,11 +495,52 @@
     <header>
       <h1>Solar Panel Sense Checker</h1>
       <p class="subtitle">A self-contained calculator to spot silly marketing claims</p>
+      <div class="parser-toggle-row">
+        <button id="toggle-parser-btn" class="action-btn" type="button" aria-expanded="false" aria-controls="paste-parser-panel">Show regex parser</button>
+        <button id="toggle-notes-btn" class="action-btn" type="button" aria-expanded="false">Show free text on calculators</button>
+        <button id="export-results-btn" class="action-btn" type="button">Export markdown table</button>
+      </div>
       <div class="calculator-actions">
         <button id="add-high-example-btn" class="action-btn" type="button">Add example high efficiency panel</button>
         <button id="add-low-example-btn" class="action-btn" type="button">Add example low efficiency panel</button>
       </div>
     </header>
+
+    <section id="export-panel" class="export-panel" hidden>
+      <h2>Exported Markdown</h2>
+      <div>
+        <button id="copy-export-btn" class="action-btn" type="button">Copy markdown</button>
+      </div>
+      <textarea id="export-output" readonly aria-label="Exported markdown table"></textarea>
+      <div id="export-status" class="export-status"></div>
+    </section>
+
+    <section id="paste-parser-panel" class="paste-parser" hidden>
+      <h2>Paste Regex Parser</h2>
+      <div class="field">
+        <label for="parser-input">Pasted product text</label>
+        <textarea id="parser-input" placeholder="Paste listing text here, then extract likely length, width, and power values."></textarea>
+      </div>
+      <div>
+        <button id="parse-input-btn" class="action-btn" type="button">Extract candidates</button>
+        <button id="apply-parser-btn" class="action-btn" type="button" disabled>Apply to newest calculator</button>
+      </div>
+      <div id="parser-status" class="parser-status"></div>
+      <div class="parser-results" id="parser-results">
+        <div class="parser-result-row">
+          <div class="parser-result-label">Possible lengths</div>
+          <div class="parser-result-values" id="parser-length-results"><span class="parser-empty">No matches yet</span></div>
+        </div>
+        <div class="parser-result-row">
+          <div class="parser-result-label">Possible widths</div>
+          <div class="parser-result-values" id="parser-width-results"><span class="parser-empty">No matches yet</span></div>
+        </div>
+        <div class="parser-result-row">
+          <div class="parser-result-label">Possible power outputs</div>
+          <div class="parser-result-values" id="parser-power-results"><span class="parser-empty">No matches yet</span></div>
+        </div>
+      </div>
+    </section>
 
     <div id="calculator-grid" class="calculator-grid">
       <button id="add-calculator-btn" class="action-btn add-calculator-btn" type="button">Add calculator</button>
@@ -401,6 +564,12 @@
         <section>
           <h2>Inputs</h2>
           <form class="solar-form">
+            <div class="field free-text-field" hidden>
+              <label>Free text
+                <input class="input-free-text" type="text" placeholder="Add context, source, or notes">
+              </label>
+            </div>
+
             <div class="field">
               <label>Length (mm)
                 <input class="input-length" type="number" inputmode="decimal" step="any" value="40">
@@ -505,7 +674,24 @@
       var addCalculatorButton = document.getElementById('add-calculator-btn');
       var addHighExampleButton = document.getElementById('add-high-example-btn');
       var addLowExampleButton = document.getElementById('add-low-example-btn');
+      var toggleParserButton = document.getElementById('toggle-parser-btn');
+      var toggleNotesButton = document.getElementById('toggle-notes-btn');
+      var exportResultsButton = document.getElementById('export-results-btn');
+      var parserPanel = document.getElementById('paste-parser-panel');
+      var parserInput = document.getElementById('parser-input');
+      var parseInputButton = document.getElementById('parse-input-btn');
+      var applyParserButton = document.getElementById('apply-parser-btn');
+      var parserStatus = document.getElementById('parser-status');
+      var parserLengthResults = document.getElementById('parser-length-results');
+      var parserWidthResults = document.getElementById('parser-width-results');
+      var parserPowerResults = document.getElementById('parser-power-results');
+      var exportPanel = document.getElementById('export-panel');
+      var exportOutput = document.getElementById('export-output');
+      var copyExportButton = document.getElementById('copy-export-btn');
+      var exportStatus = document.getElementById('export-status');
       var calculatorCount = 0;
+      var lastParsedCandidates = { lengths: [], widths: [], powers: [] };
+      var notesVisible = false;
 
       // Editable example presets: update these values to change example buttons.
       var EXAMPLE_PRESETS = {
@@ -530,6 +716,334 @@
       function toNumber(value) {
         var parsed = parseFloat(value);
         return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function normalizeLengthUnit(unit) {
+        var normalized = (unit || '').toLowerCase();
+        if (normalized === 'mm' || normalized.indexOf('millimeter') === 0) {
+          return 'mm';
+        }
+        if (normalized === 'cm' || normalized.indexOf('centimeter') === 0) {
+          return 'cm';
+        }
+        if (normalized === 'm' || normalized.indexOf('meter') === 0) {
+          return 'm';
+        }
+        if (normalized === 'in' || normalized.indexOf('inch') === 0 || normalized === '"') {
+          return 'in';
+        }
+        return '';
+      }
+
+      function lengthToMillimeters(value, unit) {
+        if (unit === 'mm') {
+          return value;
+        }
+        if (unit === 'cm') {
+          return value * 10;
+        }
+        if (unit === 'm') {
+          return value * 1000;
+        }
+        if (unit === 'in') {
+          return value * 25.4;
+        }
+        return value;
+      }
+
+      function normalizePowerUnit(unit) {
+        var normalized = (unit || '').toLowerCase();
+        if (normalized === 'w') {
+          return 'W';
+        }
+        if (normalized === 'mw') {
+          return 'mW';
+        }
+        if (normalized === 'uw' || normalized === 'μw') {
+          return 'μW';
+        }
+        return '';
+      }
+
+      function makeLengthCandidate(value, unit, source) {
+        var mm = lengthToMillimeters(value, unit);
+        return {
+          key: formatNumber(mm, 3) + '|mm',
+          text: formatNumber(mm, 3) + ' mm' + (source ? ' (from ' + source + ')' : ''),
+          mm: mm,
+          sourceUnit: unit
+        };
+      }
+
+      function makePowerCandidate(value, unit) {
+        return {
+          key: formatNumber(value, 4) + '|' + unit,
+          text: formatNumber(value, 4) + ' ' + unit,
+          value: value,
+          unit: unit
+        };
+      }
+
+      function uniqueCandidates(candidates) {
+        var seen = {};
+        return candidates.filter(function (candidate) {
+          if (seen[candidate.key]) {
+            return false;
+          }
+          seen[candidate.key] = true;
+          return true;
+        });
+      }
+
+      function parseCandidates(rawText) {
+        var text = rawText || '';
+        var lengths = [];
+        var widths = [];
+        var powers = [];
+        var match;
+        var dimensionTripletRegex = /(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+        var dimensionRegex = /(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")\s*[x×]\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+        var lengthRegex = /\b(?:length|long(?:er)?|l)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+        var widthRegex = /\b(?:width|wide|w)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+        var powerKeywordRegex = /\b(?:power|output|pmax|max(?:imum)?\s*power|rated)\b[^\d]{0,24}(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
+        var powerLooseRegex = /(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
+
+        while ((match = dimensionTripletRegex.exec(text)) !== null) {
+          var t1 = toNumber(match[1]);
+          var t2 = toNumber(match[2]);
+          var tu = normalizeLengthUnit(match[4]);
+          if (t1 > 0 && tu) {
+            lengths.push(makeLengthCandidate(t1, tu, formatNumber(t1, 3) + ' ' + tu));
+          }
+          if (t2 > 0 && tu) {
+            widths.push(makeLengthCandidate(t2, tu, formatNumber(t2, 3) + ' ' + tu));
+          }
+        }
+
+        while ((match = dimensionRegex.exec(text)) !== null) {
+          var d1 = toNumber(match[1]);
+          var u1 = normalizeLengthUnit(match[2]);
+          var d2 = toNumber(match[3]);
+          var u2 = normalizeLengthUnit(match[4]);
+          if (d1 > 0 && u1) {
+            lengths.push(makeLengthCandidate(d1, u1, formatNumber(d1, 3) + ' ' + u1));
+          }
+          if (d2 > 0 && u2) {
+            widths.push(makeLengthCandidate(d2, u2, formatNumber(d2, 3) + ' ' + u2));
+          }
+        }
+
+        while ((match = lengthRegex.exec(text)) !== null) {
+          var lv = toNumber(match[1]);
+          var lu = normalizeLengthUnit(match[2]);
+          if (lv > 0 && lu) {
+            lengths.push(makeLengthCandidate(lv, lu, formatNumber(lv, 3) + ' ' + lu));
+          }
+        }
+
+        while ((match = widthRegex.exec(text)) !== null) {
+          var wv = toNumber(match[1]);
+          var wu = normalizeLengthUnit(match[2]);
+          if (wv > 0 && wu) {
+            widths.push(makeLengthCandidate(wv, wu, formatNumber(wv, 3) + ' ' + wu));
+          }
+        }
+
+        while ((match = powerKeywordRegex.exec(text)) !== null) {
+          var pv = toNumber(match[1]);
+          var pu = normalizePowerUnit(match[2]);
+          if (pv > 0 && pu) {
+            powers.push(makePowerCandidate(pv, pu));
+          }
+        }
+
+        if (powers.length === 0) {
+          while ((match = powerLooseRegex.exec(text)) !== null) {
+            var pvl = toNumber(match[1]);
+            var pul = normalizePowerUnit(match[2]);
+            if (pvl > 0 && pul) {
+              powers.push(makePowerCandidate(pvl, pul));
+            }
+          }
+        }
+
+        return {
+          lengths: uniqueCandidates(lengths),
+          widths: uniqueCandidates(widths),
+          powers: uniqueCandidates(powers)
+        };
+      }
+
+      function renderCandidates(container, candidates) {
+        container.innerHTML = '';
+        if (!candidates || candidates.length === 0) {
+          container.innerHTML = '<span class="parser-empty">No matches</span>';
+          return;
+        }
+
+        candidates.slice(0, 8).forEach(function (candidate) {
+          var chip = document.createElement('span');
+          chip.className = 'parser-chip';
+          chip.textContent = candidate.text;
+          container.appendChild(chip);
+        });
+      }
+
+      function runParser() {
+        var parsed = parseCandidates(parserInput.value);
+        lastParsedCandidates = parsed;
+        renderCandidates(parserLengthResults, parsed.lengths);
+        renderCandidates(parserWidthResults, parsed.widths);
+        renderCandidates(parserPowerResults, parsed.powers);
+        applyParserButton.disabled = parsed.lengths.length === 0 && parsed.widths.length === 0 && parsed.powers.length === 0;
+        parserStatus.textContent = '';
+      }
+
+      function getNewestCalculatorCard() {
+        var cards = calculatorGrid.querySelectorAll('.calculator-card');
+        if (cards.length === 0) {
+          return null;
+        }
+        return cards[cards.length - 1];
+      }
+
+      function pickPreferredLength(candidates) {
+        if (!candidates || candidates.length === 0) {
+          return null;
+        }
+
+        var metric = candidates.find(function (candidate) {
+          return candidate.sourceUnit === 'mm';
+        });
+        return metric || candidates[0];
+      }
+
+      function applyParserToNewestCalculator() {
+        var card = getNewestCalculatorCard();
+        if (!card) {
+          parserStatus.textContent = 'No calculator available to apply values.';
+          return;
+        }
+
+        if (!lastParsedCandidates || (lastParsedCandidates.lengths.length === 0 && lastParsedCandidates.widths.length === 0 && lastParsedCandidates.powers.length === 0)) {
+          runParser();
+        }
+
+        var chosenLength = pickPreferredLength(lastParsedCandidates.lengths);
+        var chosenWidth = pickPreferredLength(lastParsedCandidates.widths);
+        var chosenPower = lastParsedCandidates.powers[0] || null;
+
+        if (chosenLength) {
+          card.querySelector('.input-length').value = String(Number(chosenLength.mm.toFixed(3)));
+        }
+        if (chosenWidth) {
+          card.querySelector('.input-width').value = String(Number(chosenWidth.mm.toFixed(3)));
+        }
+        if (chosenPower) {
+          var outputInput = card.querySelector('.input-claimed-output');
+          var outputUnit = card.querySelector('.input-claimed-output-unit');
+          outputInput.value = String(Number(chosenPower.value.toPrecision(6)));
+          outputUnit.value = chosenPower.unit === 'μW' ? 'uW' : chosenPower.unit;
+        }
+
+        ['.input-length', '.input-width', '.input-claimed-output', '.input-claimed-output-unit'].forEach(function (selector) {
+          var field = card.querySelector(selector);
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+          field.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        parserStatus.textContent = 'Applied parsed values to newest calculator.';
+      }
+
+      function setNotesVisibility(visible) {
+        notesVisible = visible;
+        var freeTextFields = calculatorGrid.querySelectorAll('.free-text-field');
+        freeTextFields.forEach(function (field) {
+          if (visible) {
+            field.removeAttribute('hidden');
+          } else {
+            field.setAttribute('hidden', 'hidden');
+          }
+        });
+
+        toggleNotesButton.textContent = visible ? 'Hide free text on calculators' : 'Show free text on calculators';
+        toggleNotesButton.setAttribute('aria-expanded', visible ? 'true' : 'false');
+      }
+
+      function escapeMarkdownCell(value) {
+        return String(value || '')
+          .replace(/\|/g, '\\|')
+          .replace(/\r?\n/g, ' ')
+          .trim();
+      }
+
+      function buildMarkdownTable() {
+        var cards = Array.prototype.slice.call(calculatorGrid.querySelectorAll('.calculator-card'));
+        var header = '| Calculator | Free text | Length (mm) | Width (mm) | Area (mm^2) | Claimed efficiency (%) | Claimed output | Expected efficiency (%) |';
+        var divider = '| --- | --- | ---: | ---: | ---: | ---: | --- | ---: |';
+        var rows = cards.map(function (card, index) {
+          var length = toNumber(card.querySelector('.input-length').value);
+          var width = toNumber(card.querySelector('.input-width').value);
+          var area = length * width;
+          var claimedEfficiency = toNumber(card.querySelector('.input-claimed-efficiency').value);
+          var claimedOutput = toNumber(card.querySelector('.input-claimed-output').value);
+          var claimedOutputUnit = card.querySelector('.input-claimed-output-unit').value;
+          var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
+          var expectedEfficiency = area > 0 ? (claimedOutputWatts / ((area / 1000000) * 1000)) * 100 : 0;
+          var freeTextValue = card.querySelector('.input-free-text').value;
+
+          return '| ' +
+            escapeMarkdownCell('Calculator ' + (index + 1)) + ' | ' +
+            escapeMarkdownCell(freeTextValue) + ' | ' +
+            escapeMarkdownCell(formatNumber(length, 3)) + ' | ' +
+            escapeMarkdownCell(formatNumber(width, 3)) + ' | ' +
+            escapeMarkdownCell(formatNumber(area, 2)) + ' | ' +
+            escapeMarkdownCell(formatNumber(claimedEfficiency, 3)) + ' | ' +
+            escapeMarkdownCell(formatNumber(claimedOutput, 4) + ' ' + claimedOutputUnit) + ' | ' +
+            escapeMarkdownCell(formatNumber(expectedEfficiency, 2)) + ' |';
+        });
+
+        return [header, divider].concat(rows).join('\n');
+      }
+
+      function exportMarkdownTable() {
+        var markdown = buildMarkdownTable();
+        exportOutput.value = markdown;
+        exportPanel.removeAttribute('hidden');
+        exportResultsButton.textContent = 'Hide exporter';
+        exportStatus.textContent = 'Markdown table generated below.';
+      }
+
+      function toggleExportPanel() {
+        var isHidden = exportPanel.hasAttribute('hidden');
+        if (isHidden) {
+          exportMarkdownTable();
+        } else {
+          exportPanel.setAttribute('hidden', 'hidden');
+          exportResultsButton.textContent = 'Export markdown table';
+          exportStatus.textContent = '';
+        }
+      }
+
+      function copyExportedMarkdown() {
+        var text = exportOutput.value;
+        if (!text) {
+          exportStatus.textContent = 'Nothing to copy yet.';
+          return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            exportStatus.textContent = 'Markdown copied to clipboard.';
+          }).catch(function () {
+            exportStatus.textContent = 'Copy failed. You can still copy from the text box.';
+          });
+          return;
+        }
+
+        exportOutput.focus();
+        exportOutput.select();
+        exportStatus.textContent = 'Clipboard API unavailable. Copy from the text box.';
       }
 
       function formatNumber(value, maximumFractionDigits) {
@@ -671,11 +1185,41 @@
         calculatorGrid.appendChild(addCalculatorButton);
         applyPreset(card, preset);
         initCalculator(card, calculatorCount, preset && preset.label);
+        var freeTextField = card.querySelector('.free-text-field');
+        if (notesVisible) {
+          freeTextField.removeAttribute('hidden');
+        } else {
+          freeTextField.setAttribute('hidden', 'hidden');
+        }
       }
 
       addCalculatorButton.addEventListener('click', function () {
         addCalculator();
       });
+
+      toggleParserButton.addEventListener('click', function () {
+        var shouldShow = parserPanel.hasAttribute('hidden');
+        if (shouldShow) {
+          parserPanel.removeAttribute('hidden');
+          toggleParserButton.textContent = 'Hide regex parser';
+          toggleParserButton.setAttribute('aria-expanded', 'true');
+          parserInput.focus();
+        } else {
+          parserPanel.setAttribute('hidden', 'hidden');
+          toggleParserButton.textContent = 'Show regex parser';
+          toggleParserButton.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      parseInputButton.addEventListener('click', runParser);
+      parserInput.addEventListener('change', runParser);
+      applyParserButton.addEventListener('click', applyParserToNewestCalculator);
+      toggleNotesButton.addEventListener('click', function () {
+        setNotesVisibility(!notesVisible);
+      });
+      exportResultsButton.addEventListener('click', toggleExportPanel);
+      copyExportButton.addEventListener('click', copyExportedMarkdown);
+
       addHighExampleButton.addEventListener('click', function () {
         addCalculator(EXAMPLE_PRESETS.highEfficiencyPanel);
       });
@@ -683,6 +1227,9 @@
         addCalculator(EXAMPLE_PRESETS.lowEfficiencyPanel);
       });
       addCalculator();
+      setNotesVisibility(false);
+      exportPanel.setAttribute('hidden', 'hidden');
+      exportResultsButton.textContent = 'Export markdown table';
     })();
   </script>
 </body>
