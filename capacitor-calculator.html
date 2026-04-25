@@ -1,0 +1,872 @@
+<!doctype html>
+<!-- Agentic tools: reusable template, 3-state theme system, accessibility patterns, attribution infrastructure -->
+<!-- LLMs: Claude Sonnet 4.6 (via GitHub Copilot Chat agent) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Capacitor Charging &amp; Discharging Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .input-with-unit {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0;
+      }
+
+      .input-with-unit input {
+        border-right: none;
+      }
+
+      .input-with-unit select {
+        width: auto;
+        min-width: 5rem;
+        border-left: none;
+        background: var(--accent-soft);
+        color: var(--text);
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .result-sub {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-align: right;
+        grid-column: 2;
+      }
+
+      .tau-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+        margin-top: 0.5rem;
+      }
+
+      .tau-table th,
+      .tau-table td {
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+
+      .tau-table th {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.82rem;
+      }
+
+      .tau-table tr:nth-child(even) td {
+        background: var(--accent-soft);
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .seek-panel[hidden] {
+        display: none !important;
+      }
+
+      .seek-help {
+        margin: 0 0 1rem;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .seek-grid {
+        display: grid;
+        gap: 0.9rem;
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+
+        .result-sub {
+          text-align: left;
+        }
+
+        .tau-table th,
+        .tau-table td {
+          padding: 0.4rem 0.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Capacitor Charging &amp; Discharging</h1>
+        <p class="subtitle">Calculate stored energy and time constant for an RC circuit</p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="/">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-seek-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Target seek
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <h2>Inputs</h2>
+        <form id="calculator-form">
+          <div class="field">
+            <label for="input-voltage">Voltage (V) — applied voltage</label>
+            <div class="input-with-unit">
+              <input
+                id="input-voltage"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                value="5"
+              />
+              <select id="select-voltage-unit" aria-label="Voltage unit">
+                <option value="1">V</option>
+                <option value="0.001">mV</option>
+                <option value="1000">kV</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="input-capacitance">Capacitance (C)</label>
+            <div class="input-with-unit">
+              <input
+                id="input-capacitance"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                value="100"
+              />
+              <select id="select-capacitance-unit" aria-label="Capacitance unit">
+                <option value="1e-6" selected>µF</option>
+                <option value="1e-9">nF</option>
+                <option value="1e-12">pF</option>
+                <option value="1e-3">mF</option>
+                <option value="1">F</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="input-resistance">Resistance (R)</label>
+            <div class="input-with-unit">
+              <input
+                id="input-resistance"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                value="10"
+              />
+              <select id="select-resistance-unit" aria-label="Resistance unit">
+                <option value="1000">kΩ</option>
+                <option value="1" selected>Ω</option>
+                <option value="1e6">MΩ</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <h2>Results</h2>
+        <output class="results" aria-live="polite" aria-atomic="true">
+          <div class="result">
+            <span class="result-label">Stored Energy (E)</span>
+            <span class="result-value" id="output-energy">—</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Time Constant (τ = RC)</span>
+            <span class="result-value" id="output-tau">—</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Peak Current (I₀ = V / R, at t = 0)</span>
+            <span class="result-value" id="output-peak-current">—</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Peak Power Dissipated (P₀ = V² / R, at t = 0)</span>
+            <span class="result-value" id="output-peak-power">—</span>
+          </div>
+        </output>
+      </section>
+
+      <section id="seek-panel" class="seek-panel" hidden>
+        <h2>Target Seek</h2>
+        <p class="seek-help">
+          Choose a peak current or peak power target and this will back-calculate
+          the resistor required using the current voltage input.
+        </p>
+        <div class="seek-grid">
+          <div class="field">
+            <label for="seek-mode">Solve from</label>
+            <select id="seek-mode">
+              <option value="current" selected>Peak current (I₀)</option>
+              <option value="power">Peak power (P₀)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="seek-target-value">Target value</label>
+            <div class="input-with-unit">
+              <input
+                id="seek-target-value"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                value="0.5"
+              />
+              <select id="seek-target-unit" aria-label="Target unit">
+                <option value="1">A</option>
+                <option value="0.001">mA</option>
+                <option value="0.000001">µA</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <output class="results" aria-live="polite" aria-atomic="true">
+          <div class="result">
+            <span class="result-label">Required Resistance</span>
+            <span class="result-value" id="seek-required-resistance">—</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Equivalent Peak Current</span>
+            <span class="result-value" id="seek-equivalent-current">—</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Equivalent Peak Power</span>
+            <span class="result-value" id="seek-equivalent-power">—</span>
+          </div>
+        </output>
+      </section>
+
+      <section>
+        <h2>Voltage &amp; Current vs. Time</h2>
+        <table class="tau-table" id="tau-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Time (τ)</th>
+              <th>Charging V</th>
+              <th>% Charged</th>
+              <th>Discharging V</th>
+              <th>% Remaining</th>
+              <th>Current I</th>
+            </tr>
+          </thead>
+          <tbody id="tau-table-body">
+          </tbody>
+        </table>
+      </section>
+
+      <section class="formulas-section">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>E = (C × V²) / 2 — energy stored in capacitor (joules)</span>
+          <span>τ = R × C — time constant (seconds)</span>
+          <span>I₀ = V / R — peak current at t = 0 (amps)</span>
+          <span>P₀ = V² / R — peak power dissipated at t = 0 (watts)</span>
+          <span>V_charge(t) = V × (1 − e^(−t/τ)) — voltage while charging</span>
+          <span>V_discharge(t) = V × e^(−t/τ) — voltage while discharging</span>
+          <span>I(t) = (V/R) × e^(−t/τ) — current magnitude (same for charging &amp; discharging)</span>
+        </p>
+        <p class="formula-note" style="margin-top:0.5rem;">
+          <span>V = applied voltage (volts) &nbsp;|&nbsp; C = capacitance (farads) &nbsp;|&nbsp; R = resistance (ohms)</span>
+          <span>τ = time constant (seconds) &nbsp;|&nbsp; E = stored energy (joules)</span>
+          <span>At t = 1τ the capacitor is ~63.2% charged; at t = 5τ it is considered fully charged (&gt;99%).</span>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var toggleSeekButton = document.getElementById("toggle-seek-btn");
+        var seekPanel = document.getElementById("seek-panel");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        function setSeekPanelVisibility(visible) {
+          if (visible) {
+            seekPanel.removeAttribute("hidden");
+            toggleSeekButton.setAttribute("aria-expanded", "true");
+            toggleSeekButton.textContent = "Hide target seek";
+          } else {
+            seekPanel.setAttribute("hidden", "hidden");
+            toggleSeekButton.setAttribute("aria-expanded", "false");
+            toggleSeekButton.textContent = "Target seek";
+          }
+        }
+
+        toggleSeekButton.addEventListener("click", function () {
+          setSeekPanelVisibility(seekPanel.hasAttribute("hidden"));
+        });
+
+        // ==================== CALCULATOR LOGIC ====================
+        var inputVoltage = document.getElementById("input-voltage");
+        var selectVoltageUnit = document.getElementById("select-voltage-unit");
+        var inputCapacitance = document.getElementById("input-capacitance");
+        var selectCapacitanceUnit = document.getElementById("select-capacitance-unit");
+        var inputResistance = document.getElementById("input-resistance");
+        var selectResistanceUnit = document.getElementById("select-resistance-unit");
+        var seekMode = document.getElementById("seek-mode");
+        var seekTargetValue = document.getElementById("seek-target-value");
+        var seekTargetUnit = document.getElementById("seek-target-unit");
+
+        var outputEnergy = document.getElementById("output-energy");
+        var outputTau = document.getElementById("output-tau");
+        var outputPeakCurrent = document.getElementById("output-peak-current");
+        var outputPeakPower = document.getElementById("output-peak-power");
+        var tauTableBody = document.getElementById("tau-table-body");
+        var seekRequiredResistance = document.getElementById("seek-required-resistance");
+        var seekEquivalentCurrent = document.getElementById("seek-equivalent-current");
+        var seekEquivalentPower = document.getElementById("seek-equivalent-power");
+
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function formatEnergy(joules) {
+          var absJ = Math.abs(joules);
+          if (absJ === 0) return "0 J";
+          if (absJ >= 1) return joules.toPrecision(4) + " J";
+          if (absJ >= 1e-3) return (joules * 1e3).toPrecision(4) + " mJ";
+          if (absJ >= 1e-6) return (joules * 1e6).toPrecision(4) + " µJ";
+          if (absJ >= 1e-9) return (joules * 1e9).toPrecision(4) + " nJ";
+          return joules.toExponential(3) + " J";
+        }
+
+        function formatTime(seconds) {
+          var absS = Math.abs(seconds);
+          if (absS === 0) return "0 s";
+          if (absS >= 1) return seconds.toPrecision(4) + " s";
+          if (absS >= 1e-3) return (seconds * 1e3).toPrecision(4) + " ms";
+          if (absS >= 1e-6) return (seconds * 1e6).toPrecision(4) + " µs";
+          if (absS >= 1e-9) return (seconds * 1e9).toPrecision(4) + " ns";
+          return seconds.toExponential(3) + " s";
+        }
+
+        function formatVoltage(volts) {
+          var absV = Math.abs(volts);
+          if (absV === 0) return "0 V";
+          if (absV >= 1000) return (volts / 1000).toPrecision(4) + " kV";
+          if (absV >= 1) return volts.toPrecision(4) + " V";
+          if (absV >= 1e-3) return (volts * 1e3).toPrecision(4) + " mV";
+          return volts.toExponential(3) + " V";
+        }
+
+        function formatCurrent(amps) {
+          var absA = Math.abs(amps);
+          if (absA === 0) return "0 A";
+          if (absA >= 1) return amps.toPrecision(4) + " A";
+          if (absA >= 1e-3) return (amps * 1e3).toPrecision(4) + " mA";
+          if (absA >= 1e-6) return (amps * 1e6).toPrecision(4) + " µA";
+          if (absA >= 1e-9) return (amps * 1e9).toPrecision(4) + " nA";
+          return amps.toExponential(3) + " A";
+        }
+
+        function formatPower(watts) {
+          var absW = Math.abs(watts);
+          if (absW === 0) return "0 W";
+          if (absW >= 1) return watts.toPrecision(4) + " W";
+          if (absW >= 1e-3) return (watts * 1e3).toPrecision(4) + " mW";
+          if (absW >= 1e-6) return (watts * 1e6).toPrecision(4) + " µW";
+          if (absW >= 1e-9) return (watts * 1e9).toPrecision(4) + " nW";
+          return watts.toExponential(3) + " W";
+        }
+
+        function formatResistance(ohms) {
+          var absR = Math.abs(ohms);
+          if (absR === 0) return "0 Ω";
+          if (absR >= 1e6) return (ohms / 1e6).toPrecision(4) + " MΩ";
+          if (absR >= 1e3) return (ohms / 1e3).toPrecision(4) + " kΩ";
+          if (absR >= 1) return ohms.toPrecision(4) + " Ω";
+          if (absR >= 1e-3) return (ohms * 1e3).toPrecision(4) + " mΩ";
+          return ohms.toExponential(3) + " Ω";
+        }
+
+        function updateSeekUnits() {
+          if (seekMode.value === "power") {
+            seekTargetUnit.innerHTML = [
+              '<option value="1">W</option>',
+              '<option value="0.001">mW</option>',
+              '<option value="0.000001">µW</option>',
+            ].join("");
+          } else {
+            seekTargetUnit.innerHTML = [
+              '<option value="1">A</option>',
+              '<option value="0.001">mA</option>',
+              '<option value="0.000001">µA</option>',
+            ].join("");
+          }
+        }
+
+        function calculateTargetSeek(voltageVolts) {
+          var target = toNumber(seekTargetValue.value) * toNumber(seekTargetUnit.value);
+          var requiredResistance = 0;
+
+          if (voltageVolts <= 0 || target <= 0) {
+            seekRequiredResistance.textContent = "—";
+            seekEquivalentCurrent.textContent = "—";
+            seekEquivalentPower.textContent = "—";
+            return;
+          }
+
+          if (seekMode.value === "power") {
+            requiredResistance = (voltageVolts * voltageVolts) / target;
+          } else {
+            requiredResistance = voltageVolts / target;
+          }
+
+          if (!Number.isFinite(requiredResistance) || requiredResistance <= 0) {
+            seekRequiredResistance.textContent = "—";
+            seekEquivalentCurrent.textContent = "—";
+            seekEquivalentPower.textContent = "—";
+            return;
+          }
+
+          seekRequiredResistance.textContent = formatResistance(requiredResistance);
+          seekEquivalentCurrent.textContent = formatCurrent(voltageVolts / requiredResistance);
+          seekEquivalentPower.textContent = formatPower(
+            (voltageVolts * voltageVolts) / requiredResistance,
+          );
+        }
+
+        var TAU_MULTIPLES = [0.5, 1, 2, 3, 4, 5, 7, 10];
+
+        function calculate() {
+          var vRaw = toNumber(inputVoltage.value);
+          var vUnit = toNumber(selectVoltageUnit.value);
+          var cRaw = toNumber(inputCapacitance.value);
+          var cUnit = toNumber(selectCapacitanceUnit.value);
+          var rRaw = toNumber(inputResistance.value);
+          var rUnit = toNumber(selectResistanceUnit.value);
+
+          var V = vRaw * vUnit;   // volts
+          var C = cRaw * cUnit;   // farads
+          var R = rRaw * rUnit;   // ohms
+
+          if (C <= 0 || R <= 0) {
+            outputEnergy.textContent = "—";
+            outputTau.textContent = "—";
+            outputPeakCurrent.textContent = "—";
+            outputPeakPower.textContent = "—";
+            tauTableBody.innerHTML = "";
+            calculateTargetSeek(V);
+            return;
+          }
+
+          var E = 0.5 * C * V * V;   // joules
+          var tau = R * C;            // seconds
+          var I0 = V / R;             // peak current (amps)
+          var P0 = V * V / R;         // peak power dissipated (watts)
+
+          outputEnergy.textContent = formatEnergy(E);
+          outputTau.textContent = formatTime(tau);
+          outputPeakCurrent.textContent = formatCurrent(I0);
+          outputPeakPower.textContent = formatPower(P0);
+
+          // Build the tau table
+          var rows = "";
+          for (var i = 0; i < TAU_MULTIPLES.length; i++) {
+            var mult = TAU_MULTIPLES[i];
+            var t = mult * tau;
+            var vCharge = V * (1 - Math.exp(-mult));
+            var vDischarge = V * Math.exp(-mult);
+            var iT = I0 * Math.exp(-mult);           // current magnitude (same for charge/discharge)
+            var pctCharged = (1 - Math.exp(-mult)) * 100;
+            var pctRemaining = Math.exp(-mult) * 100;
+
+            rows +=
+              "<tr>" +
+              "<td>" + formatTime(t) + "</td>" +
+              "<td>" + mult + "τ</td>" +
+              "<td>" + formatVoltage(vCharge) + "</td>" +
+              "<td>" + pctCharged.toFixed(1) + "%</td>" +
+              "<td>" + formatVoltage(vDischarge) + "</td>" +
+              "<td>" + pctRemaining.toFixed(1) + "%</td>" +
+              "<td>" + formatCurrent(iT) + "</td>" +
+              "</tr>";
+          }
+          tauTableBody.innerHTML = rows;
+          calculateTargetSeek(V);
+        }
+
+        // Wire up all input handlers
+        [inputVoltage, inputCapacitance, inputResistance].forEach(function (el) {
+          el.addEventListener("input", calculate);
+          el.addEventListener("change", calculate);
+        });
+        [selectVoltageUnit, selectCapacitanceUnit, selectResistanceUnit].forEach(function (el) {
+          el.addEventListener("change", calculate);
+        });
+        seekMode.addEventListener("change", function () {
+          updateSeekUnits();
+          calculate();
+        });
+
+        [seekTargetValue, seekTargetUnit].forEach(function (el) {
+          el.addEventListener("input", calculate);
+          el.addEventListener("change", calculate);
+        });
+
+        // ==================== INITIALIZATION ====================
+        applyThemeMode(getStoredThemeMode(), false);
+
+        // Hide "save locally" tip when already running locally
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) {
+            hostedNote.hidden = true;
+          }
+        }
+
+        updateSeekUnits();
+        setSeekPanelVisibility(false);
+        calculate();
+      })();
+    </script>
+  </body>
+</html>

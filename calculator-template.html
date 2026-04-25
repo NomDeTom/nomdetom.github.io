@@ -458,6 +458,21 @@
 
         // ==================== INITIALIZATION ====================
         applyThemeMode(getStoredThemeMode(), false);
+
+        // Hide "save locally" tip when already running locally
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) {
+            hostedNote.hidden = true;
+          }
+        }
+
         calculate();
       })();
     </script>
