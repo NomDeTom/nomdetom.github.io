@@ -269,6 +269,35 @@
         grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
       }
 
+      .table-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .table-actions .field {
+        flex: 1 1 18rem;
+        margin-bottom: 0;
+      }
+
+      .custom-time-entry {
+        display: flex;
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 0.75rem;
+      }
+
+      .custom-time-entry[hidden] {
+        display: none !important;
+      }
+
+      .custom-time-entry .field {
+        flex: 1 1 18rem;
+      }
+
       @media (max-width: 640px) {
         main {
           padding: 1.25rem 0.9rem 2rem;
@@ -297,7 +326,9 @@
     <main>
       <header>
         <h1>Capacitor Charging &amp; Discharging</h1>
-        <p class="subtitle">Calculate stored energy and time constant for an RC circuit</p>
+        <p class="subtitle">
+          Calculate stored energy and time constant for an RC circuit
+        </p>
 
         <div class="top-actions">
           <a class="action-btn" href="/">Back to index</a>
@@ -375,9 +406,13 @@
                 type="number"
                 inputmode="decimal"
                 step="any"
+                min="0"
                 value="100"
               />
-              <select id="select-capacitance-unit" aria-label="Capacitance unit">
+              <select
+                id="select-capacitance-unit"
+                aria-label="Capacitance unit"
+              >
                 <option value="1e-6" selected>µF</option>
                 <option value="1e-9">nF</option>
                 <option value="1e-12">pF</option>
@@ -395,6 +430,7 @@
                 type="number"
                 inputmode="decimal"
                 step="any"
+                min="0"
                 value="10"
               />
               <select id="select-resistance-unit" aria-label="Resistance unit">
@@ -419,11 +455,15 @@
             <span class="result-value" id="output-tau">—</span>
           </div>
           <div class="result">
-            <span class="result-label">Peak Current (I₀ = V / R, at t = 0)</span>
+            <span class="result-label"
+              >Peak Current (I₀ = V / R, at t = 0)</span
+            >
             <span class="result-value" id="output-peak-current">—</span>
           </div>
           <div class="result">
-            <span class="result-label">Peak Power Dissipated (P₀ = V² / R, at t = 0)</span>
+            <span class="result-label"
+              >Peak Power Dissipated (P₀ = V² / R, at t = 0)</span
+            >
             <span class="result-value" id="output-peak-power">—</span>
           </div>
         </output>
@@ -432,8 +472,8 @@
       <section id="seek-panel" class="seek-panel" hidden>
         <h2>Target Seek</h2>
         <p class="seek-help">
-          Choose a peak current or peak power target and this will back-calculate
-          the resistor required using the current voltage input.
+          Choose a peak current or peak power target and this will
+          back-calculate the resistor required using the current voltage input.
         </p>
         <div class="seek-grid">
           <div class="field">
@@ -481,6 +521,51 @@
 
       <section>
         <h2>Voltage &amp; Current vs. Time</h2>
+        <div class="table-actions">
+          <button
+            id="add-custom-time-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Add row
+          </button>
+          <div id="custom-time-entry" class="custom-time-entry" hidden>
+            <div class="field">
+              <label for="custom-time-value">Add custom time row</label>
+              <div class="input-with-unit">
+                <input
+                  id="custom-time-value"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  min="0"
+                  value="1"
+                />
+                <select id="custom-time-unit" aria-label="Custom time unit">
+                  <option value="1">s</option>
+                  <option value="0.001" selected>ms</option>
+                  <option value="0.000001">µs</option>
+                  <option value="0.000000001">ns</option>
+                </select>
+              </div>
+            </div>
+            <button
+              id="confirm-custom-time-btn"
+              class="action-btn"
+              type="button"
+            >
+              Insert row
+            </button>
+            <button
+              id="cancel-custom-time-btn"
+              class="action-btn"
+              type="button"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
         <table class="tau-table" id="tau-table">
           <thead>
             <tr>
@@ -493,8 +578,7 @@
               <th>Current I</th>
             </tr>
           </thead>
-          <tbody id="tau-table-body">
-          </tbody>
+          <tbody id="tau-table-body"></tbody>
         </table>
       </section>
 
@@ -507,12 +591,24 @@
           <span>P₀ = V² / R — peak power dissipated at t = 0 (watts)</span>
           <span>V_charge(t) = V × (1 − e^(−t/τ)) — voltage while charging</span>
           <span>V_discharge(t) = V × e^(−t/τ) — voltage while discharging</span>
-          <span>I(t) = (V/R) × e^(−t/τ) — current magnitude (same for charging &amp; discharging)</span>
+          <span
+            >I(t) = (V/R) × e^(−t/τ) — current magnitude (same for charging
+            &amp; discharging)</span
+          >
         </p>
-        <p class="formula-note" style="margin-top:0.5rem;">
-          <span>V = applied voltage (volts) &nbsp;|&nbsp; C = capacitance (farads) &nbsp;|&nbsp; R = resistance (ohms)</span>
-          <span>τ = time constant (seconds) &nbsp;|&nbsp; E = stored energy (joules)</span>
-          <span>At t = 1τ the capacitor is ~63.2% charged; at t = 5τ it is considered fully charged (&gt;99%).</span>
+        <p class="formula-note" style="margin-top: 0.5rem">
+          <span
+            >V = applied voltage (volts) &nbsp;|&nbsp; C = capacitance (farads)
+            &nbsp;|&nbsp; R = resistance (ohms)</span
+          >
+          <span
+            >τ = time constant (seconds) &nbsp;|&nbsp; E = stored energy
+            (joules)</span
+          >
+          <span
+            >At t = 1τ the capacitor is ~63.2% charged; at t = 5τ it is
+            considered fully charged (&gt;99%).</span
+          >
         </p>
       </section>
     </main>
@@ -641,9 +737,25 @@
         var inputVoltage = document.getElementById("input-voltage");
         var selectVoltageUnit = document.getElementById("select-voltage-unit");
         var inputCapacitance = document.getElementById("input-capacitance");
-        var selectCapacitanceUnit = document.getElementById("select-capacitance-unit");
+        var selectCapacitanceUnit = document.getElementById(
+          "select-capacitance-unit",
+        );
         var inputResistance = document.getElementById("input-resistance");
-        var selectResistanceUnit = document.getElementById("select-resistance-unit");
+        var selectResistanceUnit = document.getElementById(
+          "select-resistance-unit",
+        );
+        var customTimeEntry = document.getElementById("custom-time-entry");
+        var customTimeValue = document.getElementById("custom-time-value");
+        var customTimeUnit = document.getElementById("custom-time-unit");
+        var addCustomTimeButton = document.getElementById(
+          "add-custom-time-btn",
+        );
+        var confirmCustomTimeButton = document.getElementById(
+          "confirm-custom-time-btn",
+        );
+        var cancelCustomTimeButton = document.getElementById(
+          "cancel-custom-time-btn",
+        );
         var seekMode = document.getElementById("seek-mode");
         var seekTargetValue = document.getElementById("seek-target-value");
         var seekTargetUnit = document.getElementById("seek-target-unit");
@@ -653,13 +765,76 @@
         var outputPeakCurrent = document.getElementById("output-peak-current");
         var outputPeakPower = document.getElementById("output-peak-power");
         var tauTableBody = document.getElementById("tau-table-body");
-        var seekRequiredResistance = document.getElementById("seek-required-resistance");
-        var seekEquivalentCurrent = document.getElementById("seek-equivalent-current");
-        var seekEquivalentPower = document.getElementById("seek-equivalent-power");
+        var seekRequiredResistance = document.getElementById(
+          "seek-required-resistance",
+        );
+        var seekEquivalentCurrent = document.getElementById(
+          "seek-equivalent-current",
+        );
+        var seekEquivalentPower = document.getElementById(
+          "seek-equivalent-power",
+        );
 
         function toNumber(value) {
           var parsed = parseFloat(value);
           return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function clampNonNegativeInput(input) {
+          var parsed = parseFloat(input.value);
+          if (Number.isFinite(parsed) && parsed < 0) {
+            input.value = "0";
+          }
+        }
+
+        function formatTauMultiple(value) {
+          return value.toFixed(3).replace(/\.?0+$/, "") + "τ";
+        }
+
+        function buildTableRow(
+          timeSeconds,
+          tauSeconds,
+          voltageVolts,
+          peakCurrentAmps,
+        ) {
+          var tauMultiple = timeSeconds / tauSeconds;
+          var decay = Math.exp(-tauMultiple);
+          var vCharge = voltageVolts * (1 - decay);
+          var vDischarge = voltageVolts * decay;
+          var iT = peakCurrentAmps * decay;
+          var pctCharged = (1 - decay) * 100;
+          var pctRemaining = decay * 100;
+
+          return (
+            "<tr>" +
+            "<td>" +
+            formatTime(timeSeconds) +
+            "</td>" +
+            "<td>" +
+            formatTauMultiple(tauMultiple) +
+            "</td>" +
+            "<td>" +
+            formatVoltage(vCharge) +
+            "</td>" +
+            "<td>" +
+            pctCharged.toFixed(1) +
+            "%</td>" +
+            "<td>" +
+            formatVoltage(vDischarge) +
+            "</td>" +
+            "<td>" +
+            pctRemaining.toFixed(1) +
+            "%</td>" +
+            "<td>" +
+            formatCurrent(iT) +
+            "</td>" +
+            "</tr>"
+          );
+        }
+
+        function timesMatch(left, right) {
+          var scale = Math.max(1, Math.abs(left), Math.abs(right));
+          return Math.abs(left - right) <= scale * 1e-9;
         }
 
         function formatEnergy(joules) {
@@ -738,7 +913,8 @@
         }
 
         function calculateTargetSeek(voltageVolts) {
-          var target = toNumber(seekTargetValue.value) * toNumber(seekTargetUnit.value);
+          var target =
+            toNumber(seekTargetValue.value) * toNumber(seekTargetUnit.value);
           var requiredResistance = 0;
 
           if (voltageVolts <= 0 || target <= 0) {
@@ -761,16 +937,36 @@
             return;
           }
 
-          seekRequiredResistance.textContent = formatResistance(requiredResistance);
-          seekEquivalentCurrent.textContent = formatCurrent(voltageVolts / requiredResistance);
+          seekRequiredResistance.textContent =
+            formatResistance(requiredResistance);
+          seekEquivalentCurrent.textContent = formatCurrent(
+            voltageVolts / requiredResistance,
+          );
           seekEquivalentPower.textContent = formatPower(
             (voltageVolts * voltageVolts) / requiredResistance,
           );
         }
 
+        function setCustomTimeEntryVisibility(visible) {
+          if (visible) {
+            customTimeEntry.removeAttribute("hidden");
+            addCustomTimeButton.setAttribute("aria-expanded", "true");
+            addCustomTimeButton.textContent = "Hide add row";
+          } else {
+            customTimeEntry.setAttribute("hidden", "hidden");
+            addCustomTimeButton.setAttribute("aria-expanded", "false");
+            addCustomTimeButton.textContent = "Add row";
+          }
+        }
+
+        var customTimeRows = [];
         var TAU_MULTIPLES = [0.5, 1, 2, 3, 4, 5, 7, 10];
 
         function calculate() {
+          clampNonNegativeInput(inputCapacitance);
+          clampNonNegativeInput(inputResistance);
+          clampNonNegativeInput(customTimeValue);
+
           var vRaw = toNumber(inputVoltage.value);
           var vUnit = toNumber(selectVoltageUnit.value);
           var cRaw = toNumber(inputCapacitance.value);
@@ -778,9 +974,9 @@
           var rRaw = toNumber(inputResistance.value);
           var rUnit = toNumber(selectResistanceUnit.value);
 
-          var V = vRaw * vUnit;   // volts
-          var C = cRaw * cUnit;   // farads
-          var R = rRaw * rUnit;   // ohms
+          var V = vRaw * vUnit; // volts
+          var C = cRaw * cUnit; // farads
+          var R = rRaw * rUnit; // ohms
 
           if (C <= 0 || R <= 0) {
             outputEnergy.textContent = "—";
@@ -792,10 +988,10 @@
             return;
           }
 
-          var E = 0.5 * C * V * V;   // joules
-          var tau = R * C;            // seconds
-          var I0 = V / R;             // peak current (amps)
-          var P0 = V * V / R;         // peak power dissipated (watts)
+          var E = 0.5 * C * V * V; // joules
+          var tau = R * C; // seconds
+          var I0 = V / R; // peak current (amps)
+          var P0 = (V * V) / R; // peak power dissipated (watts)
 
           outputEnergy.textContent = formatEnergy(E);
           outputTau.textContent = formatTime(tau);
@@ -807,33 +1003,60 @@
           for (var i = 0; i < TAU_MULTIPLES.length; i++) {
             var mult = TAU_MULTIPLES[i];
             var t = mult * tau;
-            var vCharge = V * (1 - Math.exp(-mult));
-            var vDischarge = V * Math.exp(-mult);
-            var iT = I0 * Math.exp(-mult);           // current magnitude (same for charge/discharge)
-            var pctCharged = (1 - Math.exp(-mult)) * 100;
-            var pctRemaining = Math.exp(-mult) * 100;
-
-            rows +=
-              "<tr>" +
-              "<td>" + formatTime(t) + "</td>" +
-              "<td>" + mult + "τ</td>" +
-              "<td>" + formatVoltage(vCharge) + "</td>" +
-              "<td>" + pctCharged.toFixed(1) + "%</td>" +
-              "<td>" + formatVoltage(vDischarge) + "</td>" +
-              "<td>" + pctRemaining.toFixed(1) + "%</td>" +
-              "<td>" + formatCurrent(iT) + "</td>" +
-              "</tr>";
+            rows += buildTableRow(t, tau, V, I0);
+          }
+          for (var j = 0; j < customTimeRows.length; j++) {
+            var matchesStandardRow = false;
+            for (var k = 0; k < TAU_MULTIPLES.length; k++) {
+              if (timesMatch(customTimeRows[j], TAU_MULTIPLES[k] * tau)) {
+                matchesStandardRow = true;
+                break;
+              }
+            }
+            if (!matchesStandardRow) {
+              rows += buildTableRow(customTimeRows[j], tau, V, I0);
+            }
           }
           tauTableBody.innerHTML = rows;
           calculateTargetSeek(V);
         }
 
+        function addCustomTimeRow() {
+          clampNonNegativeInput(customTimeValue);
+
+          var timeSeconds =
+            toNumber(customTimeValue.value) * toNumber(customTimeUnit.value);
+          if (timeSeconds <= 0) {
+            return;
+          }
+
+          for (var i = 0; i < customTimeRows.length; i++) {
+            if (Math.abs(customTimeRows[i] - timeSeconds) < 1e-12) {
+              calculate();
+              return;
+            }
+          }
+
+          customTimeRows.push(timeSeconds);
+          customTimeRows.sort(function (left, right) {
+            return left - right;
+          });
+          calculate();
+          setCustomTimeEntryVisibility(false);
+        }
+
         // Wire up all input handlers
-        [inputVoltage, inputCapacitance, inputResistance].forEach(function (el) {
-          el.addEventListener("input", calculate);
-          el.addEventListener("change", calculate);
-        });
-        [selectVoltageUnit, selectCapacitanceUnit, selectResistanceUnit].forEach(function (el) {
+        [inputVoltage, inputCapacitance, inputResistance].forEach(
+          function (el) {
+            el.addEventListener("input", calculate);
+            el.addEventListener("change", calculate);
+          },
+        );
+        [
+          selectVoltageUnit,
+          selectCapacitanceUnit,
+          selectResistanceUnit,
+        ].forEach(function (el) {
           el.addEventListener("change", calculate);
         });
         seekMode.addEventListener("change", function () {
@@ -844,6 +1067,13 @@
         [seekTargetValue, seekTargetUnit].forEach(function (el) {
           el.addEventListener("input", calculate);
           el.addEventListener("change", calculate);
+        });
+        addCustomTimeButton.addEventListener("click", function () {
+          setCustomTimeEntryVisibility(customTimeEntry.hasAttribute("hidden"));
+        });
+        confirmCustomTimeButton.addEventListener("click", addCustomTimeRow);
+        cancelCustomTimeButton.addEventListener("click", function () {
+          setCustomTimeEntryVisibility(false);
         });
 
         // ==================== INITIALIZATION ====================
@@ -865,6 +1095,7 @@
 
         updateSeekUnits();
         setSeekPanelVisibility(false);
+        setCustomTimeEntryVisibility(false);
         calculate();
       })();
     </script>
