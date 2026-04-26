@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Ohm's Law Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --danger: #b42318;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --danger: #ff8d8d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        align-items: start;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      #cards {
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+
+      .add-card-btn {
+        border-style: dashed;
+        width: fit-content;
+        min-width: 12rem;
+        min-height: 21.35rem;
+        align-self: start;
+        margin-top: calc(0.9rem * 1.5 + 1rem);
+        padding: 0.55rem 1rem;
+      }
+
+      .card {
+        display: grid;
+        gap: 1rem;
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+
+      .calculator-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .card-section {
+        margin-top: 0;
+      }
+
+      .grid {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 1fr;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .input-row {
+        display: flex;
+        align-items: stretch;
+        gap: 0.4rem;
+      }
+
+      .unit-select {
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+        padding: 0.75rem 0.6rem;
+        min-width: 5.2rem;
+      }
+
+      .unit-select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      label {
+        font-weight: 600;
+      }
+
+      input {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      input.input-used {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .clear-input-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.85rem;
+        min-width: 2rem;
+        padding: 0 0.5rem;
+        cursor: pointer;
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+      }
+
+      .clear-input-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .clear-input-btn.is-visible {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .status {
+        margin-top: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      .formula-note {
+        margin-top: 0;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      @media (max-width: 560px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .cards {
+          grid-template-columns: 1fr;
+        }
+
+        .add-card-btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Ohm's Law Calculator</h1>
+        <p class="subtitle">
+          Live calculator cards for V = I x R and P = I x V. Enter any two values
+          and the rest are solved in real time.
+        </p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <section id="cards" class="cards" aria-live="polite">
+        <button id="add-card" class="action-btn add-card-btn" type="button">
+          Add calculator
+        </button>
+      </section>
+
+      <section class="formulas-section" aria-label="Formulas used">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>V = I x R</span>
+          <span>P = I x V</span>
+          <span>Minimum two known values are required to solve.</span>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+        var cardsContainer = document.getElementById("cards");
+        var addCardButton = document.getElementById("add-card");
+        var cardCount = 0;
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        function toNullableNonNegativeNumber(value) {
+          if (value == null) return null;
+          var trimmed = String(value).trim();
+          if (!trimmed) return null;
+          var parsed = parseFloat(trimmed);
+          if (!Number.isFinite(parsed)) return null;
+          return Math.max(0, parsed);
+        }
+
+        function ensureSuppressedMap(card) {
+          if (!card._suppressedKeys) {
+            card._suppressedKeys = { v: false, i: false, r: false, p: false };
+          }
+          return card._suppressedKeys;
+        }
+
+        function ensureManualMap(card) {
+          if (!card._manualKeys) {
+            card._manualKeys = { v: false, i: false, r: false, p: false };
+          }
+          return card._manualKeys;
+        }
+
+        function isSuppressed(card, key) {
+          return Boolean(ensureSuppressedMap(card)[key]);
+        }
+
+        function setSuppressed(card, key, suppressed) {
+          ensureSuppressedMap(card)[key] = Boolean(suppressed);
+        }
+
+        function isManual(card, key) {
+          return Boolean(ensureManualMap(card)[key]);
+        }
+
+        function setManual(card, key, manual) {
+          ensureManualMap(card)[key] = Boolean(manual);
+        }
+
+        var UNIT_FACTORS = {
+          v: {
+            uV: 1e-6,
+            mV: 1e-3,
+            V: 1,
+            kV: 1e3,
+          },
+          i: {
+            uA: 1e-6,
+            mA: 1e-3,
+            A: 1,
+            kA: 1e3,
+          },
+          r: {
+            mOhm: 1e-3,
+            Ohm: 1,
+            kOhm: 1e3,
+            MOhm: 1e6,
+          },
+          p: {
+            uW: 1e-6,
+            mW: 1e-3,
+            W: 1,
+            kW: 1e3,
+            MW: 1e6,
+          },
+        };
+
+        function getUnitFactor(key, unit) {
+          var table = UNIT_FACTORS[key] || {};
+          return table[unit] || 1;
+        }
+
+        function formatNumber(value) {
+          if (!Number.isFinite(value)) return "";
+          var fixed = value.toFixed(6);
+          return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+        }
+
+        function approximatelyEqual(a, b) {
+          var diff = Math.abs(a - b);
+          var scale = Math.max(1, Math.abs(a), Math.abs(b));
+          return diff <= scale * 0.005;
+        }
+
+        function solveFrom(values, manualMap) {
+          var v = values.v;
+          var i = values.i;
+          var r = values.r;
+          var p = values.p;
+          var solved = null;
+          var source = "";
+          var usedKeys = [];
+
+          function hasBoth(a, b) {
+            return values[a] != null && values[b] != null;
+          }
+
+          var manualOrder = [
+            ["v", "i"],
+            ["v", "r"],
+            ["i", "r"],
+            ["v", "p"],
+            ["i", "p"],
+            ["r", "p"],
+          ];
+          var preferredPair = null;
+
+          if (manualMap) {
+            manualOrder.forEach(function (pair) {
+              if (preferredPair) return;
+              var a = pair[0];
+              var b = pair[1];
+              if (manualMap[a] && manualMap[b] && hasBoth(a, b)) {
+                preferredPair = pair;
+              }
+            });
+          }
+
+          if (
+            (preferredPair && preferredPair[0] === "v" && preferredPair[1] === "i") ||
+            (!preferredPair && v != null && i != null)
+          ) {
+            solved = { v: v, i: i, r: i === 0 ? 0 : v / i, p: v * i };
+            source = "Solved from V and I";
+            usedKeys = ["v", "i"];
+          } else if (
+            (preferredPair && preferredPair[0] === "v" && preferredPair[1] === "r") ||
+            (!preferredPair && v != null && r != null)
+          ) {
+            solved = {
+              v: v,
+              i: r === 0 ? 0 : v / r,
+              r: r,
+              p: r === 0 ? 0 : v * (v / r),
+            };
+            source = "Solved from V and R";
+            usedKeys = ["v", "r"];
+          } else if (
+            (preferredPair && preferredPair[0] === "i" && preferredPair[1] === "r") ||
+            (!preferredPair && i != null && r != null)
+          ) {
+            solved = { v: i * r, i: i, r: r, p: i * i * r };
+            source = "Solved from I and R";
+            usedKeys = ["i", "r"];
+          } else if (
+            (preferredPair && preferredPair[0] === "v" && preferredPair[1] === "p") ||
+            (!preferredPair && v != null && p != null && v !== 0)
+          ) {
+            var iFromVP = p / v;
+            solved = {
+              v: v,
+              i: iFromVP,
+              r: iFromVP === 0 ? 0 : v / iFromVP,
+              p: p,
+            };
+            source = "Solved from V and P";
+            usedKeys = ["v", "p"];
+          } else if (
+            (preferredPair && preferredPair[0] === "i" && preferredPair[1] === "p") ||
+            (!preferredPair && i != null && p != null && i !== 0)
+          ) {
+            var vFromIP = p / i;
+            solved = { v: vFromIP, i: i, r: i === 0 ? 0 : vFromIP / i, p: p };
+            source = "Solved from I and P";
+            usedKeys = ["i", "p"];
+          } else if (
+            (preferredPair && preferredPair[0] === "r" && preferredPair[1] === "p") ||
+            (!preferredPair && r != null && p != null && r !== 0)
+          ) {
+            var iFromRP = Math.sqrt(p / r);
+            solved = { v: iFromRP * r, i: iFromRP, r: r, p: p };
+            source = "Solved from R and P";
+            usedKeys = ["r", "p"];
+          }
+
+          return { solved: solved, source: source, usedKeys: usedKeys };
+        }
+
+        function readValues(card) {
+          function readScaledValue(key) {
+            if (isSuppressed(card, key)) return null;
+            var input = card.querySelector(".input-" + key);
+            var unitSelect = card.querySelector(".unit-" + key);
+            var rawValue = toNullableNonNegativeNumber(input.value);
+            if (rawValue == null) return null;
+            var unit = unitSelect ? unitSelect.value : null;
+            return rawValue * getUnitFactor(key, unit);
+          }
+
+          return {
+            v: readScaledValue("v"),
+            i: readScaledValue("i"),
+            r: readScaledValue("r"),
+            p: readScaledValue("p"),
+          };
+        }
+
+        function writeValues(card, solved) {
+          function writeScaledValue(key, baseValue) {
+            if (isSuppressed(card, key)) return;
+            var input = card.querySelector(".input-" + key);
+            var unitSelect = card.querySelector(".unit-" + key);
+            var unit = unitSelect ? unitSelect.value : null;
+            var factor = getUnitFactor(key, unit);
+            input.value = formatNumber(baseValue / factor);
+          }
+
+          writeScaledValue("v", solved.v);
+          writeScaledValue("i", solved.i);
+          writeScaledValue("r", solved.r);
+          writeScaledValue("p", solved.p);
+        }
+
+        function clearUsedInputHighlights(card) {
+          var inputs = card.querySelectorAll("input");
+          inputs.forEach(function (input) {
+            input.classList.remove("input-used");
+          });
+        }
+
+        function updateClearButtonsVisibility(card, usedKeys) {
+          var activeUsedKeys = usedKeys || [];
+          var clearButtons = card.querySelectorAll(".clear-input-btn");
+          clearButtons.forEach(function (button) {
+            var key = button.getAttribute("data-key");
+            var shouldShow =
+              activeUsedKeys.indexOf(key) !== -1 ||
+              (isManual(card, key) && !isSuppressed(card, key));
+
+            if (shouldShow) {
+              button.classList.add("is-visible");
+            } else {
+              button.classList.remove("is-visible");
+            }
+          });
+        }
+
+        function highlightUsedInputs(card, usedKeys) {
+          clearUsedInputHighlights(card);
+          usedKeys.forEach(function (key) {
+            var input = card.querySelector(".input-" + key);
+            if (input) {
+              input.classList.add("input-used");
+            }
+          });
+          updateClearButtonsVisibility(card, usedKeys);
+        }
+
+        function checkConsistency(values, solved) {
+          var keys = ["v", "i", "r", "p"];
+          for (var idx = 0; idx < keys.length; idx += 1) {
+            var key = keys[idx];
+            if (values[key] == null) continue;
+            if (!approximatelyEqual(values[key], solved[key])) {
+              return false;
+            }
+          }
+          return true;
+        }
+
+        function calculateCard(card) {
+          var values = readValues(card);
+          var knownCount = 0;
+          [values.v, values.i, values.r, values.p].forEach(function (n) {
+            if (n != null) knownCount += 1;
+          });
+
+          var status = card.querySelector(".status");
+          status.classList.remove("error");
+
+          if (knownCount < 2) {
+            card._lastUsedKeys = [];
+            clearUsedInputHighlights(card);
+            updateClearButtonsVisibility(card, []);
+            status.textContent = "Enter at least two values to solve the others.";
+            return;
+          }
+
+          var result = solveFrom(values, ensureManualMap(card));
+          if (!result.solved) {
+            card._lastUsedKeys = [];
+            clearUsedInputHighlights(card);
+            updateClearButtonsVisibility(card, []);
+            status.classList.add("error");
+            status.textContent = "These values cannot be solved (check for zero-division).";
+            return;
+          }
+
+          var consistent = checkConsistency(values, result.solved);
+          writeValues(card, result.solved);
+          highlightUsedInputs(card, result.usedKeys || []);
+          card._lastUsedKeys = (result.usedKeys || []).slice();
+
+          if (!consistent) {
+            status.classList.add("error");
+            status.textContent =
+              result.source +
+              ". Inputs were inconsistent, so this priority pair was used.";
+            return;
+          }
+
+          status.textContent = result.source + ".";
+        }
+
+        function buildCard() {
+          cardCount += 1;
+          var card = document.createElement("section");
+          card.className = "card";
+          card.innerHTML =
+            '<p class="calculator-label">Calculator ' +
+            cardCount +
+            '</p>' +
+            '<section class="card-section">' +
+            "<h2>Inputs</h2>" +
+            '<div class="grid">' +
+            '<label class="field">Voltage V<span class="input-row"><input class="input-v" data-key="v" type="number" min="0" step="any" placeholder="e.g. 12" /><select class="unit-select unit-v" aria-label="Voltage unit" data-key="v" data-prev-unit="V"><option value="uV">uV</option><option value="mV">mV</option><option value="V" selected>V</option><option value="kV">kV</option></select><button type="button" class="clear-input-btn" data-key="v" aria-label="Clear voltage input">X</button></span></label>' +
+            '<label class="field">Current I<span class="input-row"><input class="input-i" data-key="i" type="number" min="0" step="any" placeholder="e.g. 2" /><select class="unit-select unit-i" aria-label="Current unit" data-key="i" data-prev-unit="A"><option value="uA">uA</option><option value="mA">mA</option><option value="A" selected>A</option><option value="kA">kA</option></select><button type="button" class="clear-input-btn" data-key="i" aria-label="Clear current input">X</button></span></label>' +
+            '<label class="field">Resistance R<span class="input-row"><input class="input-r" data-key="r" type="number" min="0" step="any" placeholder="e.g. 6" /><select class="unit-select unit-r" aria-label="Resistance unit" data-key="r" data-prev-unit="Ohm"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select><button type="button" class="clear-input-btn" data-key="r" aria-label="Clear resistance input">X</button></span></label>' +
+            '<label class="field">Power P<span class="input-row"><input class="input-p" data-key="p" type="number" min="0" step="any" placeholder="e.g. 24" /><select class="unit-select unit-p" aria-label="Power unit" data-key="p" data-prev-unit="W"><option value="uW">uW</option><option value="mW">mW</option><option value="W" selected>W</option><option value="kW">kW</option><option value="MW">MW</option></select><button type="button" class="clear-input-btn" data-key="p" aria-label="Clear power input">X</button></span></label>' +
+            "</div>" +
+            "</section>" +
+            '<section class="card-section">' +
+            "<h2>Outputs</h2>" +
+            '<div class="status" aria-live="polite">Enter at least two values to solve the others.</div>' +
+            "</section>";
+
+          ensureSuppressedMap(card);
+          ensureManualMap(card);
+
+          var fields = card.querySelectorAll("input");
+          fields.forEach(function (input) {
+            input.addEventListener("input", function () {
+              var key = input.getAttribute("data-key");
+              if (key) {
+                setManual(card, key, toNullableNonNegativeNumber(input.value) != null);
+                setSuppressed(
+                  card,
+                  key,
+                  toNullableNonNegativeNumber(input.value) == null,
+                );
+              }
+              calculateCard(card);
+            });
+            input.addEventListener("focus", function () {
+              var key = input.getAttribute("data-key");
+              var previousKey = card._lastFocusedKey;
+
+              if (key && previousKey && previousKey !== key) {
+                setSuppressed(card, "v", false);
+                setSuppressed(card, "i", false);
+                setSuppressed(card, "r", false);
+                setSuppressed(card, "p", false);
+                card._lastUsedKeys = [];
+                clearUsedInputHighlights(card);
+                updateClearButtonsVisibility(card, []);
+                var status = card.querySelector(".status");
+                if (status) {
+                  status.classList.remove("error");
+                  status.textContent = "Enter at least two values to solve the others.";
+                }
+              }
+
+              card._lastFocusedKey = key;
+            });
+            input.addEventListener("change", function () {
+              var key = input.getAttribute("data-key");
+              if (key) {
+                setManual(card, key, toNullableNonNegativeNumber(input.value) != null);
+                setSuppressed(
+                  card,
+                  key,
+                  toNullableNonNegativeNumber(input.value) == null,
+                );
+              }
+              calculateCard(card);
+            });
+          });
+
+          var unitSelects = card.querySelectorAll(".unit-select");
+          unitSelects.forEach(function (select) {
+            select.addEventListener("change", function () {
+              var key = select.getAttribute("data-key");
+              var input = card.querySelector(".input-" + key);
+              if (!input) return;
+
+              var prevUnit = select.getAttribute("data-prev-unit") || select.value;
+              var nextUnit = select.value;
+              var rawValue = toNullableNonNegativeNumber(input.value);
+
+              if (rawValue != null && prevUnit !== nextUnit) {
+                var valueInBase = rawValue * getUnitFactor(key, prevUnit);
+                var converted = valueInBase / getUnitFactor(key, nextUnit);
+                input.value = formatNumber(converted);
+              }
+
+              select.setAttribute("data-prev-unit", nextUnit);
+              calculateCard(card);
+            });
+          });
+
+          var clearButtons = card.querySelectorAll(".clear-input-btn");
+          clearButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+              var key = button.getAttribute("data-key");
+              var input = card.querySelector(".input-" + key);
+              if (!input) return;
+              var lastUsedKeys = card._lastUsedKeys || [];
+              setManual(card, key, false);
+              setSuppressed(card, key, true);
+              input.value = "";
+
+              ["v", "i", "r", "p"].forEach(function (otherKey) {
+                if (otherKey === key) return;
+                if (lastUsedKeys.indexOf(otherKey) !== -1) return;
+                var otherInput = card.querySelector(".input-" + otherKey);
+                if (!otherInput) return;
+                setManual(card, otherKey, false);
+                setSuppressed(card, otherKey, true);
+                otherInput.value = "";
+              });
+
+              calculateCard(card);
+              input.focus();
+            });
+          });
+
+          cardsContainer.insertBefore(card, addCardButton);
+          cardsContainer.appendChild(addCardButton);
+          calculateCard(card);
+        }
+
+        addCardButton.addEventListener("click", function () {
+          buildCard();
+        });
+
+        applyThemeMode(getStoredThemeMode(), false);
+
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) {
+            hostedNote.hidden = true;
+          }
+        }
+
+        buildCard();
+      })();
+    </script>
+  </body>
+</html>
