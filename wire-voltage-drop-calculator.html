@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Wire Voltage Drop Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --danger: #b42318;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --danger: #ff8d8d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 84rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 0.85rem;
+        margin-top: 0.75rem;
+      }
+
+      .calc-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 0.75rem;
+        align-items: start;
+        margin-top: 0.75rem;
+      }
+
+      .calc-grid section {
+        margin-top: 0;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      .input-split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      .input-column {
+        display: grid;
+        align-content: start;
+      }
+
+      .input-column:last-child {
+        padding-right: 0.22rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.55rem;
+      }
+
+      .compact-input-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.45rem;
+      }
+
+      .inline-label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+      }
+
+      .inline-label-row .inline-label {
+        font-weight: 600;
+      }
+
+      .chip-group {
+        display: inline-flex;
+        gap: 0.3rem;
+        flex-wrap: nowrap;
+      }
+
+      .chip-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        padding: 0.26rem 0.5rem;
+        cursor: pointer;
+      }
+
+      .chip-btn[aria-pressed="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .length-panel-stack {
+        display: grid;
+      }
+
+      .length-system-panel {
+        grid-area: 1 / 1;
+      }
+
+      .length-system-panel[hidden] {
+        display: block !important;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .length-system-panel .field {
+        margin-bottom: 0;
+      }
+
+      .metric-placeholder {
+        visibility: hidden;
+      }
+
+      .field[hidden] {
+        display: none !important;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.56rem 0.68rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .result-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .result-note.warn {
+        color: var(--danger);
+      }
+
+      .formula-note {
+        margin: 0;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      @media (max-width: 900px) {
+        .calc-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .field-row {
+          grid-template-columns: 1fr;
+        }
+
+        .input-split {
+          grid-template-columns: 1fr;
+        }
+
+        .input-column:last-child {
+          padding-right: 0;
+        }
+
+        .inline-label-row {
+          align-items: start;
+          flex-wrap: wrap;
+        }
+
+        #panel-length-metric {
+          padding-top: 0;
+        }
+
+        .chip-group {
+          flex-wrap: wrap;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Wire Voltage Drop Calculator</h1>
+        <p class="subtitle">
+          Estimate line voltage drop and cable losses from current, run length,
+          wire size, material, and temperature.
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">
+            Theme: Auto
+          </button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 - By NomDeTom -
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            -
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <div class="calc-grid">
+      <section>
+        <h2>Inputs</h2>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="input-supply-v">Supply voltage (V)</label>
+            <input id="input-supply-v" type="number" inputmode="decimal" step="any" min="0" value="12" />
+          </div>
+          <div class="field">
+            <label for="input-current-a">Load current</label>
+            <div class="compact-input-row">
+              <input id="input-current-a" type="number" inputmode="decimal" step="any" min="0" value="5" />
+              <select id="input-current-unit" aria-label="Load current unit">
+                <option value="A" selected>A</option>
+                <option value="mA">mA</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-split">
+          <div class="input-column">
+            <div class="field">
+              <div class="inline-label-row">
+                <span class="inline-label">Run length</span>
+                <span class="chip-group" role="group" aria-label="Length units">
+                  <button id="chip-length-metric" class="chip-btn" type="button" aria-pressed="true">Metric</button>
+                  <button id="chip-length-imperial" class="chip-btn" type="button" aria-pressed="false">Imperial</button>
+                </span>
+              </div>
+              <div class="length-panel-stack">
+                <div id="panel-length-metric" class="length-system-panel">
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="input-length-m">Meters (m)</label>
+                      <input id="input-length-m" type="number" inputmode="decimal" step="any" min="0" value="10" />
+                    </div>
+                    <div class="field metric-placeholder" aria-hidden="true"></div>
+                  </div>
+                </div>
+                <div id="panel-length-imperial" class="length-system-panel" hidden>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="input-length-ft">Feet (ft)</label>
+                      <input id="input-length-ft" type="number" inputmode="decimal" step="any" min="0" value="32" />
+                    </div>
+                    <div class="field">
+                      <label for="input-length-in">Inches (in)</label>
+                      <input id="input-length-in" type="number" inputmode="decimal" step="any" min="0" value="9.7" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="input-length-mode">Length mode</label>
+              <select id="input-length-mode">
+                <option value="one-way" selected>One-way run (round-trip resistance used)</option>
+                <option value="loop">Loop length already provided</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-column">
+            <div class="field">
+              <label for="input-wire-type">Wire type / size</label>
+              <select id="input-wire-type"></select>
+            </div>
+            <div class="field">
+              <label for="input-material">Conductor material</label>
+              <select id="input-material">
+                <option value="copper" selected>Copper</option>
+                <option value="aluminum">Aluminum</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div id="field-custom-resistivity" class="field" hidden>
+              <label for="input-custom-resistivity">Custom resistivity at 20 °C (Ohm mm²/m)</label>
+              <input
+                id="input-custom-resistivity"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                min="0"
+                value="0.1"
+              />
+            </div>
+            <div class="field">
+              <label for="output-material-resistivity">Material resistivity at 20 °C</label>
+              <output id="output-material-resistivity">0.017241 Ohm mm²/m</output>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="input-temp-c">Conductor temperature (°C)</label>
+          <input id="input-temp-c" type="number" inputmode="decimal" step="any" value="20" />
+        </div>
+      </section>
+
+      <section>
+        <h2>Outputs</h2>
+        <output class="results" aria-live="polite" aria-atomic="true">
+          <div class="result">
+            <span class="result-label">Conductor resistance (per meter, single core)</span>
+            <span class="result-value" id="output-r-per-m">0 Ohm/m</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Total loop resistance</span>
+            <span class="result-value" id="output-r-total">0 Ohm</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Voltage drop</span>
+            <span class="result-value" id="output-v-drop">0 V</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Voltage drop percent</span>
+            <span class="result-value" id="output-v-drop-pct">0 %</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Load voltage</span>
+            <span class="result-value" id="output-v-load">0 V</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Cable power loss</span>
+            <span class="result-value" id="output-p-loss">0 W</span>
+          </div>
+        </output>
+        <p id="output-note" class="result-note">Values are estimates at DC / low frequency.</p>
+      </section>
+      </div>
+
+      <section aria-label="Formulas used">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>Base resistivity input: ρ<sub>20</sub> in Ω·mm²/m at 20 °C</span>
+          <span>Temperature-adjusted resistivity: ρ(T) = ρ<sub>20</sub> × (1 + α × (T - 20 °C))</span>
+          <span>Temperature coefficient: α in 1/°C</span>
+          <span>Conductor resistance per meter: R<sub>m</sub> = ρ(T) / A</span>
+          <span>Total resistance: R<sub>total</sub> = R<sub>m</sub> × length factor × run length</span>
+          <span>Voltage drop: V<sub>drop</sub> = I × R<sub>total</sub></span>
+          <span>Load voltage: V<sub>load</sub> = V<sub>supply</sub> - V<sub>drop</sub></span>
+          <span>Cable loss: P<sub>loss</sub> = I<sup>2</sup> × R<sub>total</sub></span>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+
+        var inputSupplyV = document.getElementById("input-supply-v");
+        var inputCurrentA = document.getElementById("input-current-a");
+        var inputCurrentUnit = document.getElementById("input-current-unit");
+        var inputWireType = document.getElementById("input-wire-type");
+        var inputMaterial = document.getElementById("input-material");
+        var fieldCustomResistivity = document.getElementById("field-custom-resistivity");
+        var inputCustomResistivity = document.getElementById("input-custom-resistivity");
+        var chipLengthMetric = document.getElementById("chip-length-metric");
+        var chipLengthImperial = document.getElementById("chip-length-imperial");
+        var panelLengthMetric = document.getElementById("panel-length-metric");
+        var panelLengthImperial = document.getElementById("panel-length-imperial");
+        var inputLengthM = document.getElementById("input-length-m");
+        var inputLengthFt = document.getElementById("input-length-ft");
+        var inputLengthIn = document.getElementById("input-length-in");
+        var inputLengthMode = document.getElementById("input-length-mode");
+        var inputTempC = document.getElementById("input-temp-c");
+
+        var outputRPerM = document.getElementById("output-r-per-m");
+        var outputRTotal = document.getElementById("output-r-total");
+        var outputVDrop = document.getElementById("output-v-drop");
+        var outputVDropPct = document.getElementById("output-v-drop-pct");
+        var outputVLoad = document.getElementById("output-v-load");
+        var outputPLoss = document.getElementById("output-p-loss");
+        var outputMaterialResistivity = document.getElementById("output-material-resistivity");
+        var outputNote = document.getElementById("output-note");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        var COPPER_RESISTIVITY_OHM_MM2_PER_M = 0.017241;
+        var ALUMINUM_RESISTIVITY_RATIO = 1.64;
+        var RESISTIVITY_UNIT_LABEL = "Ohm mm²/m";
+        var TEMP_COEFF = {
+          copper: 0.00393,
+          aluminum: 0.00403,
+          custom: 0.00393,
+        };
+        var lengthSystemMode = "metric";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function toNonNegativeNumber(value) {
+          return Math.max(0, toNumber(value));
+        }
+
+        function formatNumber(value, digits) {
+          if (!Number.isFinite(value)) return "0";
+          return String(Number(value.toFixed(digits || 3)));
+        }
+
+        function formatPowerLoss(valueWatts) {
+          if (!Number.isFinite(valueWatts)) return "0 W";
+          if (valueWatts > 0 && valueWatts < 1) {
+            return formatNumber(valueWatts * 1000, 3) + " mW";
+          }
+          return formatNumber(valueWatts, 4) + " W";
+        }
+
+        function awgAreaMm2(awg) {
+          return 0.012668 * Math.pow(92, (36 - awg) / 19.5);
+        }
+
+        function buildWireCatalog() {
+          var options = [];
+
+          for (var awg = 30; awg >= 10; awg -= 1) {
+            var areaAwg = awgAreaMm2(awg);
+            options.push({
+              id: "awg-" + awg,
+              label: awg + " AWG",
+              areaMm2: areaAwg,
+            });
+          }
+
+          [0.5, 0.75, 1.0, 1.5, 2.5, 4.0].forEach(function (mm2) {
+            options.push({
+              id: "eu-" + String(mm2).replace(".", "_"),
+              label: mm2 + " mm² (EU domestic)",
+              areaMm2: mm2,
+            });
+          });
+
+          return options;
+        }
+
+        var wireCatalog = buildWireCatalog();
+
+        function fillWireTypeSelect() {
+          wireCatalog.forEach(function (item) {
+            var option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.label;
+            inputWireType.appendChild(option);
+          });
+
+          inputWireType.value = "eu-2_5";
+        }
+
+        function getSelectedWire() {
+          var selectedId = inputWireType.value;
+          for (var i = 0; i < wireCatalog.length; i += 1) {
+            if (wireCatalog[i].id === selectedId) return wireCatalog[i];
+          }
+          return wireCatalog[0];
+        }
+
+        function setLengthSystem(mode) {
+          lengthSystemMode = mode === "imperial" ? "imperial" : "metric";
+          var isMetric = lengthSystemMode === "metric";
+
+          chipLengthMetric.setAttribute("aria-pressed", isMetric ? "true" : "false");
+          chipLengthImperial.setAttribute("aria-pressed", isMetric ? "false" : "true");
+          panelLengthMetric.hidden = !isMetric;
+          panelLengthImperial.hidden = isMetric;
+        }
+
+        function getRunLengthMeters() {
+          if (lengthSystemMode === "imperial") {
+            var feet = toNonNegativeNumber(inputLengthFt.value);
+            var inches = toNonNegativeNumber(inputLengthIn.value);
+            return feet * 0.3048 + inches * 0.0254;
+          }
+          return toNonNegativeNumber(inputLengthM.value);
+        }
+
+        function getCurrentAmps() {
+          var current = toNonNegativeNumber(inputCurrentA.value);
+          return inputCurrentUnit.value === "mA" ? current / 1000 : current;
+        }
+
+        function getBaseResistivity(material) {
+          if (material === "aluminum") {
+            return COPPER_RESISTIVITY_OHM_MM2_PER_M * ALUMINUM_RESISTIVITY_RATIO;
+          }
+          if (material === "custom") {
+            return toNonNegativeNumber(inputCustomResistivity.value);
+          }
+          return COPPER_RESISTIVITY_OHM_MM2_PER_M;
+        }
+
+        function updateMaterialControls() {
+          var isCustom = inputMaterial.value === "custom";
+          fieldCustomResistivity.hidden = !isCustom;
+          outputMaterialResistivity.textContent =
+            formatNumber(getBaseResistivity(inputMaterial.value), 6) + " " + RESISTIVITY_UNIT_LABEL;
+        }
+
+        function calculate() {
+          var supplyV = toNonNegativeNumber(inputSupplyV.value);
+          var currentA = getCurrentAmps();
+          var runLengthM = getRunLengthMeters();
+          var tempC = toNumber(inputTempC.value);
+          var material = inputMaterial.value;
+          if (material !== "aluminum" && material !== "custom") {
+            material = "copper";
+          }
+          var lengthFactor = inputLengthMode.value === "loop" ? 1 : 2;
+
+          var wire = getSelectedWire();
+          var baseRPerM = getBaseResistivity(material) / wire.areaMm2;
+
+          var alpha = TEMP_COEFF[material];
+          var tempFactor = 1 + alpha * (tempC - 20);
+          if (tempFactor < 0) tempFactor = 0;
+
+          var rPerM = baseRPerM * tempFactor;
+          var rTotal = rPerM * runLengthM * lengthFactor;
+          var vDrop = currentA * rTotal;
+          var vDropPct = supplyV > 0 ? (vDrop / supplyV) * 100 : 0;
+          var vLoad = supplyV - vDrop;
+          var pLoss = currentA * currentA * rTotal;
+
+          outputRPerM.textContent = formatNumber(rPerM, 6) + " Ohm/m";
+          outputRTotal.textContent = formatNumber(rTotal, 5) + " Ohm";
+          outputVDrop.textContent = formatNumber(vDrop, 4) + " V";
+          outputVDropPct.textContent = formatNumber(vDropPct, 3) + " %";
+          outputVLoad.textContent = formatNumber(vLoad, 4) + " V";
+          outputPLoss.textContent = formatPowerLoss(pLoss);
+          outputMaterialResistivity.textContent =
+            formatNumber(getBaseResistivity(material), 6) + " " + RESISTIVITY_UNIT_LABEL;
+
+          outputNote.classList.remove("warn");
+          if (vDropPct > 5) {
+            outputNote.classList.add("warn");
+            outputNote.textContent =
+              "High drop warning: above 5%. Consider a larger wire size or shorter run.";
+          } else if (vDropPct > 3) {
+            outputNote.textContent =
+              "Design note: above 3% drop. This may be acceptable for some loads but can be high.";
+          } else {
+            outputNote.textContent = "Values are estimates at DC / low frequency.";
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        chipLengthMetric.addEventListener("click", function () {
+          setLengthSystem("metric");
+          calculate();
+        });
+
+        chipLengthImperial.addEventListener("click", function () {
+          setLengthSystem("imperial");
+          calculate();
+        });
+
+        inputMaterial.addEventListener("change", function () {
+          updateMaterialControls();
+          calculate();
+        });
+
+        [
+          inputSupplyV,
+          inputCurrentA,
+          inputCurrentUnit,
+          inputWireType,
+          inputCustomResistivity,
+          inputLengthM,
+          inputLengthFt,
+          inputLengthIn,
+          inputLengthMode,
+          inputTempC,
+        ].forEach(function (el) {
+          el.addEventListener("input", calculate);
+          el.addEventListener("change", calculate);
+        });
+
+        fillWireTypeSelect();
+        setLengthSystem("metric");
+        applyThemeMode(getStoredThemeMode(), false);
+  updateMaterialControls();
+
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) {
+            hostedNote.hidden = true;
+          }
+        }
+
+        calculate();
+      })();
+    </script>
+  </body>
+</html>
