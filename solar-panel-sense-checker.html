@@ -103,6 +103,10 @@
         text-decoration: none;
       }
 
+      .export-card-row {
+        margin-top: 1rem;
+      }
+
       .hosted-note {
         margin: 0.55rem 0 0;
         color: var(--muted);
@@ -741,6 +745,7 @@
                     type="number"
                     inputmode="decimal"
                     step="any"
+                    min="0"
                     value="40"
                   />
                 </label>
@@ -754,6 +759,7 @@
                     type="number"
                     inputmode="decimal"
                     step="any"
+                    min="0"
                     value="40"
                   />
                 </label>
@@ -767,6 +773,7 @@
                     type="number"
                     inputmode="decimal"
                     step="any"
+                    min="0"
                     placeholder="e.g. 5"
                   />
                 </label>
@@ -780,6 +787,7 @@
                   type="number"
                   inputmode="decimal"
                   step="any"
+                  min="0"
                   value="10"
                   aria-label="Claimed efficiency percent"
                 />
@@ -789,6 +797,7 @@
                     type="number"
                     inputmode="decimal"
                     step="any"
+                    min="0"
                     value="0.2"
                     aria-label="Claimed output value"
                   />
@@ -874,7 +883,7 @@
                 </div>
               </div>
               <div class="result-group">
-                <p class="result-group-title">Expected Output At STC</p>
+                <p class="result-group-title">Expected Output At STC based on area</p>
                 <div class="result-grid-stc">
                   <div class="result">
                     <span class="result-label">10% efficiency</span>
@@ -900,6 +909,11 @@
                 </div>
               </div>
             </output>
+            <div class="export-card-row">
+              <button class="action-btn export-card-btn" type="button">
+                Export this calculator
+              </button>
+            </div>
           </section>
         </article>
       </template>
@@ -1050,6 +1064,10 @@
         function toNumber(value) {
           var parsed = parseFloat(value);
           return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function toNonNegativeNumber(value) {
+          return Math.max(0, toNumber(value));
         }
 
         function normalizeLengthUnit(unit) {
@@ -1429,14 +1447,16 @@
           lastParsedCandidates = parsed;
           ensureSelectedParserCandidates();
           renderAllParserCandidates();
-          applyParserButton.disabled =
+          applyParserButton.disabled = false;
+          if (
             parsed.lengths.length === 0 &&
             parsed.widths.length === 0 &&
             parsed.voltages.length === 0 &&
             parsed.powers.length === 0 &&
-            parsed.efficiencies.length === 0;
-          if (applyParserButton.disabled) {
-            parserStatus.textContent = "No candidates found.";
+            parsed.efficiencies.length === 0
+          ) {
+            parserStatus.textContent =
+              "No candidates found. Apply will write 0 to parser-driven fields.";
           } else {
             parserStatus.textContent =
               "Click a candidate chip to select values, then apply to newest calculator.";
@@ -1507,21 +1527,15 @@
               selectedParserCandidateKeys.efficiency,
             ) || lastParsedCandidates.efficiencies[0] || null;
 
-          if (chosenLength) {
-            card.querySelector(".input-length").value = String(
-              Number(chosenLength.mm.toFixed(3)),
-            );
-          }
-          if (chosenWidth) {
-            card.querySelector(".input-width").value = String(
-              Number(chosenWidth.mm.toFixed(3)),
-            );
-          }
-          if (chosenVoltage) {
-            card.querySelector(".input-voltage").value = String(
-              Number(chosenVoltage.value.toFixed(3)),
-            );
-          }
+          card.querySelector(".input-length").value = chosenLength
+            ? String(Number(chosenLength.mm.toFixed(3)))
+            : "0";
+          card.querySelector(".input-width").value = chosenWidth
+            ? String(Number(chosenWidth.mm.toFixed(3)))
+            : "0";
+          card.querySelector(".input-voltage").value = chosenVoltage
+            ? String(Number(chosenVoltage.value.toFixed(3)))
+            : "0";
           if (chosenPower) {
             var outputInput = card.querySelector(".input-claimed-output");
             var outputUnit = card.querySelector(".input-claimed-output-unit");
@@ -1530,12 +1544,13 @@
             );
             outputUnit.value =
               chosenPower.unit === "μW" ? "uW" : chosenPower.unit;
+          } else {
+            card.querySelector(".input-claimed-output").value = "0";
+            card.querySelector(".input-claimed-output-unit").value = "W";
           }
-          if (chosenEfficiency) {
-            card.querySelector(".input-claimed-efficiency").value = String(
-              Number(chosenEfficiency.value.toFixed(3)),
-            );
-          }
+          card.querySelector(".input-claimed-efficiency").value = chosenEfficiency
+            ? String(Number(chosenEfficiency.value.toFixed(3)))
+            : "0";
 
           [
             ".input-length",
@@ -1582,22 +1597,102 @@
             .trim();
         }
 
+        function repeatChar(char, count) {
+          return new Array(count + 1).join(char);
+        }
+
+        function padCell(value, width, align) {
+          if (align === "right") {
+            return value.padStart(width, " ");
+          }
+          return value.padEnd(width, " ");
+        }
+
+        function buildDividerCell(width, align) {
+          var safeWidth = Math.max(3, width);
+          if (align === "right") {
+            return repeatChar("-", safeWidth - 1) + ":";
+          }
+          return repeatChar("-", safeWidth);
+        }
+
+        function buildMarkdownTableFromCells(headers, rows, alignments) {
+          var widths = headers.map(function (header, index) {
+            var dataWidth = rows.reduce(function (maxWidth, row) {
+              return Math.max(maxWidth, row[index].length);
+            }, 0);
+            return Math.max(header.length, dataWidth);
+          });
+
+          var headerLine =
+            "| " +
+            headers
+              .map(function (header, index) {
+                return padCell(header, widths[index], alignments[index]);
+              })
+              .join(" | ") +
+            " |";
+
+          var dividerLine =
+            "| " +
+            widths
+              .map(function (width, index) {
+                return buildDividerCell(width, alignments[index]);
+              })
+              .join(" | ") +
+            " |";
+
+          var bodyLines = rows.map(function (row) {
+            return (
+              "| " +
+              row
+                .map(function (cell, index) {
+                  return padCell(cell, widths[index], alignments[index]);
+                })
+                .join(" | ") +
+              " |"
+            );
+          });
+
+          return [headerLine, dividerLine].concat(bodyLines).join("\n");
+        }
+
         function buildMarkdownTable() {
           var cards = Array.prototype.slice.call(
             calculatorGrid.querySelectorAll(".calculator-card"),
           );
-          var header =
-            "| Calculator | Free text | Length (mm) | Width (mm) | Area (mm^2) | Claimed efficiency (%) | Claimed output | Expected efficiency (%) |";
-          var divider =
-            "| --- | --- | ---: | ---: | ---: | ---: | --- | ---: |";
+          var headers = [
+            "Calculator",
+            "Free text",
+            "Length (mm)",
+            "Width (mm)",
+            "Area (mm^2)",
+            "Claimed efficiency (%)",
+            "Claimed output",
+            "Expected efficiency (%)",
+          ];
+          var alignments = [
+            "left",
+            "left",
+            "right",
+            "right",
+            "right",
+            "right",
+            "left",
+            "right",
+          ];
           var rows = cards.map(function (card, index) {
-            var length = toNumber(card.querySelector(".input-length").value);
-            var width = toNumber(card.querySelector(".input-width").value);
+            var length = toNonNegativeNumber(
+              card.querySelector(".input-length").value,
+            );
+            var width = toNonNegativeNumber(
+              card.querySelector(".input-width").value,
+            );
             var area = length * width;
-            var claimedEfficiency = toNumber(
+            var claimedEfficiency = toNonNegativeNumber(
               card.querySelector(".input-claimed-efficiency").value,
             );
-            var claimedOutput = toNumber(
+            var claimedOutput = toNonNegativeNumber(
               card.querySelector(".input-claimed-output").value,
             );
             var claimedOutputUnit = card.querySelector(
@@ -1610,38 +1705,223 @@
                 : 0;
             var freeTextValue = card.querySelector(".input-free-text").value;
 
-            return (
-              "| " +
-              escapeMarkdownCell("Calculator " + (index + 1)) +
-              " | " +
-              escapeMarkdownCell(freeTextValue) +
-              " | " +
-              escapeMarkdownCell(formatNumber(length, 3)) +
-              " | " +
-              escapeMarkdownCell(formatNumber(width, 3)) +
-              " | " +
-              escapeMarkdownCell(formatNumber(area, 2)) +
-              " | " +
-              escapeMarkdownCell(formatNumber(claimedEfficiency, 3)) +
-              " | " +
+            return [
+              escapeMarkdownCell("Calculator " + (index + 1)),
+              escapeMarkdownCell(freeTextValue),
+              escapeMarkdownCell(formatNumber(length, 3)),
+              escapeMarkdownCell(formatNumber(width, 3)),
+              escapeMarkdownCell(formatNumber(area, 2)),
+              escapeMarkdownCell(formatNumber(claimedEfficiency, 3)),
               escapeMarkdownCell(
                 formatNumber(claimedOutput, 4) + " " + claimedOutputUnit,
-              ) +
-              " | " +
-              escapeMarkdownCell(formatNumber(expectedEfficiency, 2)) +
-              " |"
-            );
+              ),
+              escapeMarkdownCell(formatNumber(expectedEfficiency, 2)),
+            ];
           });
 
-          return [header, divider].concat(rows).join("\n");
+          return buildMarkdownTableFromCells(headers, rows, alignments);
+        }
+
+        function formatPowerText(valueWatts) {
+          var power = formatPower(valueWatts);
+          return power.number + " " + power.unit;
+        }
+
+        function formatCurrentText(amps) {
+          var current = formatCurrent(amps);
+          return current.number + " " + current.unit;
+        }
+
+        function collectCalculatorMetrics(card) {
+          var length = toNonNegativeNumber(
+            card.querySelector(".input-length").value,
+          );
+          var width = toNonNegativeNumber(card.querySelector(".input-width").value);
+          var voltageRaw = card.querySelector(".input-voltage").value;
+          var voltage =
+            voltageRaw !== "" ? toNonNegativeNumber(voltageRaw) : 0;
+          var claimedEfficiency = toNonNegativeNumber(
+            card.querySelector(".input-claimed-efficiency").value,
+          );
+          var claimedOutput = toNonNegativeNumber(
+            card.querySelector(".input-claimed-output").value,
+          );
+          var claimedOutputUnit = card.querySelector(
+            ".input-claimed-output-unit",
+          ).value;
+          var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
+          var freeTextValue = card.querySelector(".input-free-text").value;
+
+          var area = length * width;
+          var areaSquareMeters = area / 1000000;
+          var incidentPowerAtStc = areaSquareMeters * 1000;
+          var idealOutputFromEfficiency = incidentPowerAtStc * (claimedEfficiency / 100);
+          var adjustedOutputFromEfficiency = idealOutputFromEfficiency * 0.8;
+          var expectedEfficiencyFromOutput =
+            incidentPowerAtStc > 0
+              ? (claimedOutputWatts / incidentPowerAtStc) * 100
+              : 0;
+          var adjustedOutputFromClaimedOutput = claimedOutputWatts * 0.8;
+
+          var idealCurrentFromEfficiency =
+            voltage > 0 ? formatCurrentText(idealOutputFromEfficiency / voltage) : "N/A";
+          var idealCurrentFromClaimedOutput =
+            voltage > 0 ? formatCurrentText(claimedOutputWatts / voltage) : "N/A";
+
+          return {
+            label: card.querySelector(".calculator-label").textContent,
+            freeText: freeTextValue,
+            length: length,
+            width: width,
+            area: area,
+            voltage: voltage,
+            claimedEfficiency: claimedEfficiency,
+            claimedOutput: claimedOutput,
+            claimedOutputUnit: claimedOutputUnit,
+            claimedOutputWatts: claimedOutputWatts,
+            idealOutputFromEfficiency: idealOutputFromEfficiency,
+            idealCurrentFromEfficiency: idealCurrentFromEfficiency,
+            adjustedOutputFromEfficiency: adjustedOutputFromEfficiency,
+            expectedEfficiencyFromOutput: expectedEfficiencyFromOutput,
+            idealCurrentFromClaimedOutput: idealCurrentFromClaimedOutput,
+            adjustedOutputFromClaimedOutput: adjustedOutputFromClaimedOutput,
+            stc10: incidentPowerAtStc * 0.1,
+            stc15: incidentPowerAtStc * 0.15,
+            stc20: incidentPowerAtStc * 0.2,
+          };
+        }
+
+        function buildSingleCalculatorMarkdownTable(card) {
+          var metrics = collectCalculatorMetrics(card);
+          var contextTable = buildMarkdownTableFromCells(
+            ["Field", "Value"],
+            [
+              ["Calculator", escapeMarkdownCell(metrics.label)],
+              [
+                "Free text",
+                escapeMarkdownCell(metrics.freeText || "-"),
+              ],
+              ["Length (mm)", escapeMarkdownCell(formatNumber(metrics.length, 3))],
+              ["Width (mm)", escapeMarkdownCell(formatNumber(metrics.width, 3))],
+              [
+                "Voltage (V)",
+                escapeMarkdownCell(formatNumber(metrics.voltage, 3)),
+              ],
+              [
+                "Claimed efficiency (%)",
+                escapeMarkdownCell(formatNumber(metrics.claimedEfficiency, 3)),
+              ],
+              [
+                "Claimed output",
+                escapeMarkdownCell(
+                  formatNumber(metrics.claimedOutput, 4) +
+                    " " +
+                    metrics.claimedOutputUnit,
+                ),
+              ],
+            ],
+            ["left", "left"],
+          );
+
+          var outputRows = [
+            ["Area (mm^2)", escapeMarkdownCell(formatNumber(metrics.area, 2))],
+          ];
+
+          if (metrics.claimedEfficiency > 0) {
+            outputRows.push(
+              [
+                "From efficiency: ideal output",
+                escapeMarkdownCell(formatPowerText(metrics.idealOutputFromEfficiency)),
+              ],
+              [
+                "From efficiency: ideal current",
+                escapeMarkdownCell(metrics.idealCurrentFromEfficiency),
+              ],
+              [
+                "From efficiency: adjusted output (80%)",
+                escapeMarkdownCell(
+                  formatPowerText(metrics.adjustedOutputFromEfficiency),
+                ),
+              ],
+            );
+          }
+
+          if (metrics.claimedOutputWatts > 0) {
+            outputRows.push(
+              [
+                "From output: expected efficiency (%)",
+                escapeMarkdownCell(
+                  formatNumber(metrics.expectedEfficiencyFromOutput, 2),
+                ),
+              ],
+              [
+                "From output: ideal current",
+                escapeMarkdownCell(metrics.idealCurrentFromClaimedOutput),
+              ],
+              [
+                "From output: adjusted output (80%)",
+                escapeMarkdownCell(
+                  formatPowerText(metrics.adjustedOutputFromClaimedOutput),
+                ),
+              ],
+            );
+          }
+
+          var outputTable = buildMarkdownTableFromCells(
+            ["Output", "Value"],
+            outputRows,
+            ["left", "left"],
+          );
+
+          var stcTable = buildMarkdownTableFromCells(
+            ["Output", "Value"],
+            [
+              [
+                "STC expected output (10%)",
+                escapeMarkdownCell(formatPowerText(metrics.stc10)),
+              ],
+              [
+                "STC expected output (15%)",
+                escapeMarkdownCell(formatPowerText(metrics.stc15)),
+              ],
+              [
+                "STC expected output (20%)",
+                escapeMarkdownCell(formatPowerText(metrics.stc20)),
+              ],
+            ],
+            ["left", "left"],
+          );
+
+          return [
+            contextTable,
+            "",
+            outputTable,
+            "",
+            "Based on the panel area:",
+            "",
+            stcTable,
+          ].join("\n");
+        }
+
+        function showExporterWithMarkdown(markdown, statusText) {
+          exportOutput.value = markdown;
+          exportPanel.removeAttribute("hidden");
+          exportResultsButton.textContent = "Hide exporter";
+          exportStatus.textContent = statusText;
+        }
+
+        function exportSingleCalculator(card) {
+          var markdown = buildSingleCalculatorMarkdownTable(card);
+          var cardLabel = card.querySelector(".calculator-label").textContent;
+          showExporterWithMarkdown(
+            markdown,
+            "Markdown exported from " + cardLabel + " with all outputs.",
+          );
         }
 
         function exportMarkdownTable() {
           var markdown = buildMarkdownTable();
-          exportOutput.value = markdown;
-          exportPanel.removeAttribute("hidden");
-          exportResultsButton.textContent = "Hide exporter";
-          exportStatus.textContent = "Markdown table generated below.";
+          showExporterWithMarkdown(markdown, "Markdown table generated below.");
         }
 
         function toggleExportPanel() {
@@ -1750,6 +2030,12 @@
         function initCalculator(card, number, customLabel) {
           card.querySelector(".calculator-label").textContent =
             customLabel || "Calculator " + number;
+          var exportCardButton = card.querySelector(".export-card-btn");
+          if (exportCardButton) {
+            exportCardButton.addEventListener("click", function () {
+              exportSingleCalculator(card);
+            });
+          }
 
           var fields = {
             length: card.querySelector(".input-length"),
@@ -1788,12 +2074,16 @@
           };
 
           function calculate() {
-            var length = toNumber(fields.length.value);
-            var width = toNumber(fields.width.value);
+            var length = toNonNegativeNumber(fields.length.value);
+            var width = toNonNegativeNumber(fields.width.value);
             var voltage =
-              fields.voltage.value !== "" ? toNumber(fields.voltage.value) : 0;
-            var claimedEfficiency = toNumber(fields.claimedEfficiency.value);
-            var claimedOutput = toNumber(fields.claimedOutput.value);
+              fields.voltage.value !== ""
+                ? toNonNegativeNumber(fields.voltage.value)
+                : 0;
+            var claimedEfficiency = toNonNegativeNumber(
+              fields.claimedEfficiency.value,
+            );
+            var claimedOutput = toNonNegativeNumber(fields.claimedOutput.value);
             var claimedOutputUnit = fields.claimedOutputUnit.value;
             var claimedOutputWatts = toWatts(claimedOutput, claimedOutputUnit);
 
