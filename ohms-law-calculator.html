@@ -135,14 +135,23 @@
         padding: 0;
       }
 
+      .add-card-actions {
+        display: grid;
+        gap: 0.6rem;
+        align-self: start;
+        justify-self: start;
+        width: 50%;
+        margin-top: calc(0.9rem * 1.5 + 1rem);
+        min-height: 21.35rem;
+      }
+
       .add-card-btn {
         border-style: dashed;
-        width: fit-content;
+        width: 100%;
         min-width: 12rem;
-        min-height: 21.35rem;
-        align-self: start;
-        margin-top: calc(0.9rem * 1.5 + 1rem);
-        padding: 0.55rem 1rem;
+        min-height: 6.6rem;
+        padding: 0.8rem 1rem;
+        text-align: left;
       }
 
       .card {
@@ -260,6 +269,22 @@
         color: var(--danger);
       }
 
+      .output-value {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+        min-height: 2.65rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
       .formulas-section {
         margin-top: 1.5rem;
       }
@@ -288,6 +313,10 @@
         }
 
         .add-card-btn {
+          width: 100%;
+        }
+
+        .add-card-actions {
           width: 100%;
         }
       }
@@ -341,9 +370,25 @@
       </header>
 
       <section id="cards" class="cards" aria-live="polite">
-        <button id="add-card" class="action-btn add-card-btn" type="button">
-          Add calculator
-        </button>
+        <div id="add-card-actions" class="add-card-actions">
+          <button id="add-ohm-card" class="action-btn add-card-btn" type="button">
+            Add Ohm's Law Calculator
+          </button>
+          <button
+            id="add-series-card"
+            class="action-btn add-card-btn"
+            type="button"
+          >
+            Add Series Resistor Calculator
+          </button>
+          <button
+            id="add-parallel-card"
+            class="action-btn add-card-btn"
+            type="button"
+          >
+            Add Parallel Resistor Calculator
+          </button>
+        </div>
       </section>
 
       <section class="formulas-section" aria-label="Formulas used">
@@ -351,7 +396,8 @@
         <p class="formula-note">
           <span>V = I x R</span>
           <span>P = I x V</span>
-          <span>Minimum two known values are required to solve.</span>
+          <span>Series equivalent resistance: R(eq) = R1 + R2 + R3 + ...</span>
+          <span>Parallel equivalent resistance: 1 / R(eq) = 1/R1 + 1/R2 + 1/R3 + ...</span>
         </p>
       </section>
     </main>
@@ -364,7 +410,10 @@
           "toggle-attribution-btn",
         );
         var cardsContainer = document.getElementById("cards");
-        var addCardButton = document.getElementById("add-card");
+        var addCardActions = document.getElementById("add-card-actions");
+        var addOhmCardButton = document.getElementById("add-ohm-card");
+        var addSeriesCardButton = document.getElementById("add-series-card");
+        var addParallelCardButton = document.getElementById("add-parallel-card");
         var cardCount = 0;
 
         var THEME_STORAGE_KEY = "nomdetom-theme-mode";
@@ -526,9 +575,64 @@
           },
         };
 
+        var E_SERIES = {
+          any: null,
+          e6: [1.0, 1.5, 2.2, 3.3, 4.7, 6.8],
+          e12: [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2],
+          e24: [
+            1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0,
+            3.3, 3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1,
+          ],
+        };
+
         function getUnitFactor(key, unit) {
           var table = UNIT_FACTORS[key] || {};
           return table[unit] || 1;
+        }
+
+        function snapToSeries(value, seriesKey, mode) {
+          var series = E_SERIES[seriesKey];
+          if (!series || !Number.isFinite(value) || value <= 0) {
+            return value;
+          }
+
+          var exponent = Math.floor(Math.log10(value));
+          var best = value;
+          var bestDiff = Infinity;
+          var bestUp = Infinity;
+          var bestDown = -Infinity;
+          var decadeOffset;
+          var index;
+
+          for (decadeOffset = -1; decadeOffset <= 1; decadeOffset += 1) {
+            var scale = Math.pow(10, exponent + decadeOffset);
+            for (index = 0; index < series.length; index += 1) {
+              var candidate = series[index] * scale;
+              var diff = Math.abs(candidate - value);
+              if (diff < bestDiff) {
+                best = candidate;
+                bestDiff = diff;
+              }
+
+              if (candidate >= value && candidate < bestUp) {
+                bestUp = candidate;
+              }
+
+              if (candidate <= value && candidate > bestDown) {
+                bestDown = candidate;
+              }
+            }
+          }
+
+          if (mode === "up" && Number.isFinite(bestUp)) {
+            return bestUp;
+          }
+
+          if (mode === "down" && Number.isFinite(bestDown)) {
+            return bestDown;
+          }
+
+          return best;
         }
 
         function formatNumber(value) {
@@ -763,12 +867,12 @@
           status.textContent = result.source + ".";
         }
 
-        function buildCard() {
+        function buildOhmCard() {
           cardCount += 1;
           var card = document.createElement("section");
           card.className = "card";
           card.innerHTML =
-            '<p class="calculator-label">Calculator ' +
+            '<p class="calculator-label">Ohm\'s Law Calculator ' +
             cardCount +
             '</p>' +
             '<section class="card-section">' +
@@ -885,13 +989,202 @@
             });
           });
 
-          cardsContainer.insertBefore(card, addCardButton);
-          cardsContainer.appendChild(addCardButton);
+          cardsContainer.insertBefore(card, addCardActions);
+          cardsContainer.appendChild(addCardActions);
           calculateCard(card);
         }
 
-        addCardButton.addEventListener("click", function () {
-          buildCard();
+        function readResistanceValue(card, inputSelector, unitSelector) {
+          var input = card.querySelector(inputSelector);
+          var unitSelect = card.querySelector(unitSelector);
+          var rawValue = toNullableNonNegativeNumber(input.value);
+          if (rawValue == null) return null;
+          return rawValue * getUnitFactor("r", unitSelect.value);
+        }
+
+        function updateEquivalentResistanceOutput(card, resistanceOhm) {
+          var outputUnit = card.querySelector(".unit-r-out").value;
+          var outputFactor = getUnitFactor("r", outputUnit);
+          var output = card.querySelector(".output-r-eq");
+          output.textContent =
+            resistanceOhm == null ? "—" : formatNumber(resistanceOhm / outputFactor);
+        }
+
+        function calculateSeriesCard(card) {
+          var values = [
+            readResistanceValue(card, ".input-r1", ".unit-r1"),
+            readResistanceValue(card, ".input-r2", ".unit-r2"),
+            readResistanceValue(card, ".input-r3", ".unit-r3"),
+          ].filter(function (value) {
+            return value != null;
+          });
+          var status = card.querySelector(".status");
+          status.classList.remove("error");
+
+          if (values.length === 0) {
+            updateEquivalentResistanceOutput(card, null);
+            status.textContent = "Enter at least one resistor value.";
+            return;
+          }
+
+          var equivalent = values.reduce(function (acc, value) {
+            return acc + value;
+          }, 0);
+          updateEquivalentResistanceOutput(card, equivalent);
+          status.textContent = "Equivalent resistance calculated for series network.";
+        }
+
+        function calculateParallelCard(card) {
+          var values = [
+            readResistanceValue(card, ".input-r1", ".unit-r1"),
+            readResistanceValue(card, ".input-r2", ".unit-r2"),
+            readResistanceValue(card, ".input-r3", ".unit-r3"),
+          ].filter(function (value) {
+            return value != null;
+          });
+          var status = card.querySelector(".status");
+          status.classList.remove("error");
+
+          if (values.length === 0) {
+            updateEquivalentResistanceOutput(card, null);
+            status.textContent = "Enter at least one resistor value.";
+            return;
+          }
+
+          if (values.some(function (value) { return value === 0; })) {
+            updateEquivalentResistanceOutput(card, 0);
+            status.textContent =
+              "Equivalent resistance calculated for parallel network.";
+            return;
+          }
+
+          var inverseSum = values.reduce(function (acc, value) {
+            return acc + 1 / value;
+          }, 0);
+
+          if (!Number.isFinite(inverseSum) || inverseSum === 0) {
+            updateEquivalentResistanceOutput(card, null);
+            status.classList.add("error");
+            status.textContent = "Unable to calculate equivalent resistance.";
+            return;
+          }
+
+          updateEquivalentResistanceOutput(card, 1 / inverseSum);
+          status.textContent = "Equivalent resistance calculated for parallel network.";
+        }
+
+        function buildResistorCard(type) {
+          cardCount += 1;
+          var isSeries = type === "series";
+          var card = document.createElement("section");
+          card.className = "card";
+          card.innerHTML =
+            '<p class="calculator-label">' +
+            (isSeries ? "Series" : "Parallel") +
+            " Resistor Calculator " +
+            cardCount +
+            '</p>' +
+            '<section class="card-section">' +
+            "<h2>Inputs</h2>" +
+            '<div class="grid">' +
+            '<label class="field">Resistor Series Offering<select class="unit-select input-series-offering" aria-label="Resistor series offering"><option value="any" selected>Any (No Snap)</option><option value="e6">E6 Only</option><option value="e12">E12 Only</option><option value="e24">E24 Only</option></select></label>' +
+            '<label class="field">R1<span class="input-row"><input class="input-r1" type="number" min="0" step="any" placeholder="e.g. 100" /><select class="unit-select unit-r1" aria-label="R1 unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></span></label>' +
+            '<label class="field">R2<span class="input-row"><input class="input-r2" type="number" min="0" step="any" placeholder="e.g. 220" /><select class="unit-select unit-r2" aria-label="R2 unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></span></label>' +
+            '<label class="field">R3<span class="input-row"><input class="input-r3" type="number" min="0" step="any" placeholder="e.g. 330" /><select class="unit-select unit-r3" aria-label="R3 unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></span></label>' +
+            "</div>" +
+            "</section>" +
+            '<section class="card-section">' +
+            "<h2>Outputs</h2>" +
+            '<div class="field">' +
+            "<label>Equivalent resistance</label>" +
+            '<div class="input-row"><span class="output-value output-r-eq">—</span><select class="unit-select unit-r-out" aria-label="Equivalent resistance output unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></div>' +
+            "</div>" +
+            '<div class="status" aria-live="polite">Enter at least one resistor value.</div>' +
+            "</section>";
+
+          var recalculate = function () {
+            if (isSeries) {
+              calculateSeriesCard(card);
+            } else {
+              calculateParallelCard(card);
+            }
+          };
+
+          function snapResistorInput(inputSelector, unitSelector) {
+            var input = card.querySelector(inputSelector);
+            var unitSelect = card.querySelector(unitSelector);
+            var seriesSelect = card.querySelector(".input-series-offering");
+            if (!input || !unitSelect || !seriesSelect) return;
+            var rawValue = toNullableNonNegativeNumber(input.value);
+            if (rawValue == null) {
+              input.dataset.lastSeriesBase = "";
+              return;
+            }
+            var baseValue = rawValue * getUnitFactor("r", unitSelect.value);
+            var previousBase = toNullableNonNegativeNumber(input.dataset.lastSeriesBase);
+            var mode = "nearest";
+            if (previousBase != null) {
+              if (baseValue > previousBase) {
+                mode = "up";
+              } else if (baseValue < previousBase) {
+                mode = "down";
+              }
+            }
+
+            var snappedBase = snapToSeries(baseValue, seriesSelect.value, mode);
+            input.value = formatNumber(snappedBase / getUnitFactor("r", unitSelect.value));
+            input.dataset.lastSeriesBase = formatNumber(snappedBase);
+          }
+
+          function snapAllResistorInputs() {
+            snapResistorInput(".input-r1", ".unit-r1");
+            snapResistorInput(".input-r2", ".unit-r2");
+            snapResistorInput(".input-r3", ".unit-r3");
+          }
+
+          [
+            [".input-r1", ".unit-r1"],
+            [".input-r2", ".unit-r2"],
+            [".input-r3", ".unit-r3"],
+          ].forEach(function (pair) {
+            var input = card.querySelector(pair[0]);
+            if (input) {
+              input.addEventListener("change", function () {
+                snapResistorInput(pair[0], pair[1]);
+                recalculate();
+              });
+            }
+          });
+
+          var seriesOfferingSelect = card.querySelector(".input-series-offering");
+          if (seriesOfferingSelect) {
+            seriesOfferingSelect.addEventListener("change", function () {
+              snapAllResistorInputs();
+              recalculate();
+            });
+          }
+
+          var inputsAndUnits = card.querySelectorAll("input, select");
+          inputsAndUnits.forEach(function (el) {
+            el.addEventListener("input", recalculate);
+            el.addEventListener("change", recalculate);
+          });
+
+          cardsContainer.insertBefore(card, addCardActions);
+          cardsContainer.appendChild(addCardActions);
+          recalculate();
+        }
+
+        addOhmCardButton.addEventListener("click", function () {
+          buildOhmCard();
+        });
+
+        addSeriesCardButton.addEventListener("click", function () {
+          buildResistorCard("series");
+        });
+
+        addParallelCardButton.addEventListener("click", function () {
+          buildResistorCard("parallel");
         });
 
         applyThemeMode(getStoredThemeMode(), false);
@@ -909,7 +1202,6 @@
           }
         }
 
-        buildCard();
       })();
     </script>
   </body>
