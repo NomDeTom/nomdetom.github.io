@@ -200,10 +200,23 @@
       .parser-chip {
         border: 1px solid var(--border);
         background: var(--accent-soft);
+        color: var(--text);
         padding: 0.15rem 0.45rem;
         font-size: 0.9rem;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .parser-chip:hover {
+        border-color: var(--accent);
+      }
+
+      .parser-chip[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--panel-bg);
       }
 
       .parser-empty {
@@ -618,7 +631,7 @@
           <label for="parser-input">Pasted product text</label>
           <textarea
             id="parser-input"
-            placeholder="Paste listing text here, then extract likely length, width, and power values."
+            placeholder="Paste listing text here, then extract likely length, width, voltage, power, and efficiency values."
           ></textarea>
         </div>
         <div>
@@ -649,8 +662,20 @@
             </div>
           </div>
           <div class="parser-result-row">
+            <div class="parser-result-label">Possible voltages</div>
+            <div class="parser-result-values" id="parser-voltage-results">
+              <span class="parser-empty">No matches yet</span>
+            </div>
+          </div>
+          <div class="parser-result-row">
             <div class="parser-result-label">Possible power outputs</div>
             <div class="parser-result-values" id="parser-power-results">
+              <span class="parser-empty">No matches yet</span>
+            </div>
+          </div>
+          <div class="parser-result-row">
+            <div class="parser-result-label">Possible efficiencies</div>
+            <div class="parser-result-values" id="parser-efficiency-results">
               <span class="parser-empty">No matches yet</span>
             </div>
           </div>
@@ -910,15 +935,34 @@
         var parserWidthResults = document.getElementById(
           "parser-width-results",
         );
+        var parserVoltageResults = document.getElementById(
+          "parser-voltage-results",
+        );
         var parserPowerResults = document.getElementById(
           "parser-power-results",
+        );
+        var parserEfficiencyResults = document.getElementById(
+          "parser-efficiency-results",
         );
         var exportPanel = document.getElementById("export-panel");
         var exportOutput = document.getElementById("export-output");
         var copyExportButton = document.getElementById("copy-export-btn");
         var exportStatus = document.getElementById("export-status");
         var calculatorCount = 0;
-        var lastParsedCandidates = { lengths: [], widths: [], powers: [] };
+        var lastParsedCandidates = {
+          lengths: [],
+          widths: [],
+          voltages: [],
+          powers: [],
+          efficiencies: [],
+        };
+        var selectedParserCandidateKeys = {
+          length: null,
+          width: null,
+          voltage: null,
+          power: null,
+          efficiency: null,
+        };
         var notesVisible = false;
         var THEME_STORAGE_KEY = "nomdetom-theme-mode";
         var autoThemeMediaQuery = window.matchMedia
@@ -1081,6 +1125,22 @@
           };
         }
 
+        function makeVoltageCandidate(value) {
+          return {
+            key: formatNumber(value, 3) + "|V",
+            text: formatNumber(value, 3) + " V",
+            value: value,
+          };
+        }
+
+        function makeEfficiencyCandidate(value) {
+          return {
+            key: formatNumber(value, 3) + "|%",
+            text: formatNumber(value, 3) + "%",
+            value: value,
+          };
+        }
+
         function uniqueCandidates(candidates) {
           var seen = {};
           return candidates.filter(function (candidate) {
@@ -1096,12 +1156,18 @@
           var text = rawText || "";
           var lengths = [];
           var widths = [];
+          var voltages = [];
           var powers = [];
+          var efficiencies = [];
           var match;
           var dimensionTripletRegex =
             /(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*\*\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+          var dimensionPairSharedUnitRegex =
+            /(\d+(?:\.\d+)?)\s*[*x×]\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+          var dimensionPairUnitlessRegex =
+            /\b(\d+(?:\.\d+)?)\s*[*x×]\s*(\d+(?:\.\d+)?)\b/g;
           var dimensionRegex =
-            /(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")\s*[x×]\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
+            /(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")\s*[*x×]\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
           var lengthRegex =
             /\b(?:length|long(?:er)?|l)\b\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(mm|millimeters?|cm|centimeters?|m|meters?|in|inch(?:es)?|")/gi;
           var widthRegex =
@@ -1109,6 +1175,8 @@
           var powerKeywordRegex =
             /\b(?:power|output|pmax|max(?:imum)?\s*power|rated)\b[^\d]{0,24}(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
           var powerLooseRegex = /(\d+(?:\.\d+)?)\s*(w|mw|uw|μw)\b/gi;
+          var voltageRegex = /(\d+(?:\.\d+)?)\s*v\b/gi;
+          var efficiencyRegex = /\b(\d+(?:\.\d+)?)\s*%/g;
 
           while ((match = dimensionTripletRegex.exec(text)) !== null) {
             var t1 = toNumber(match[1]);
@@ -1141,6 +1209,48 @@
                 makeLengthCandidate(d2, u2, formatNumber(d2, 3) + " " + u2),
               );
             }
+          }
+
+          while ((match = dimensionPairSharedUnitRegex.exec(text)) !== null) {
+            var p1 = toNumber(match[1]);
+            var p2 = toNumber(match[2]);
+            var pu = normalizeLengthUnit(match[3]);
+            if (p1 > 0 && pu) {
+              lengths.push(
+                makeLengthCandidate(p1, pu, formatNumber(p1, 3) + " " + pu),
+              );
+            }
+            if (p2 > 0 && pu) {
+              widths.push(
+                makeLengthCandidate(p2, pu, formatNumber(p2, 3) + " " + pu),
+              );
+            }
+          }
+
+          while ((match = dimensionPairUnitlessRegex.exec(text)) !== null) {
+            var ul1 = toNumber(match[1]);
+            var ul2 = toNumber(match[2]);
+            var plausibleUnitlessPair =
+              ul1 >= 15 && ul1 <= 5000 && ul2 >= 15 && ul2 <= 5000;
+
+            if (!plausibleUnitlessPair) {
+              continue;
+            }
+
+            lengths.push(
+              makeLengthCandidate(
+                ul1,
+                "mm",
+                formatNumber(ul1, 3) + "*" + formatNumber(ul2, 3) + " (assumed mm)",
+              ),
+            );
+            widths.push(
+              makeLengthCandidate(
+                ul2,
+                "mm",
+                formatNumber(ul1, 3) + "*" + formatNumber(ul2, 3) + " (assumed mm)",
+              ),
+            );
           }
 
           while ((match = lengthRegex.exec(text)) !== null) {
@@ -1181,14 +1291,88 @@
             }
           }
 
+          while ((match = voltageRegex.exec(text)) !== null) {
+            var vv = toNumber(match[1]);
+            if (vv > 0 && vv <= 200) {
+              voltages.push(makeVoltageCandidate(vv));
+            }
+          }
+
+          while ((match = efficiencyRegex.exec(text)) !== null) {
+            var ev = toNumber(match[1]);
+            if (ev > 0 && ev <= 100) {
+              efficiencies.push(makeEfficiencyCandidate(ev));
+            }
+          }
+
           return {
             lengths: uniqueCandidates(lengths),
             widths: uniqueCandidates(widths),
+            voltages: uniqueCandidates(voltages),
             powers: uniqueCandidates(powers),
+            efficiencies: uniqueCandidates(efficiencies),
           };
         }
 
-        function renderCandidates(container, candidates) {
+        function pickCandidateByKey(candidates, key) {
+          if (!candidates || candidates.length === 0 || !key) {
+            return null;
+          }
+          return (
+            candidates.find(function (candidate) {
+              return candidate.key === key;
+            }) || null
+          );
+        }
+
+        function ensureSelectedParserCandidates() {
+          selectedParserCandidateKeys.length = pickCandidateByKey(
+            lastParsedCandidates.lengths,
+            selectedParserCandidateKeys.length,
+          )
+            ? selectedParserCandidateKeys.length
+            : lastParsedCandidates.lengths[0]
+              ? lastParsedCandidates.lengths[0].key
+              : null;
+
+          selectedParserCandidateKeys.width = pickCandidateByKey(
+            lastParsedCandidates.widths,
+            selectedParserCandidateKeys.width,
+          )
+            ? selectedParserCandidateKeys.width
+            : lastParsedCandidates.widths[0]
+              ? lastParsedCandidates.widths[0].key
+              : null;
+
+          selectedParserCandidateKeys.voltage = pickCandidateByKey(
+            lastParsedCandidates.voltages,
+            selectedParserCandidateKeys.voltage,
+          )
+            ? selectedParserCandidateKeys.voltage
+            : lastParsedCandidates.voltages[0]
+              ? lastParsedCandidates.voltages[0].key
+              : null;
+
+          selectedParserCandidateKeys.power = pickCandidateByKey(
+            lastParsedCandidates.powers,
+            selectedParserCandidateKeys.power,
+          )
+            ? selectedParserCandidateKeys.power
+            : lastParsedCandidates.powers[0]
+              ? lastParsedCandidates.powers[0].key
+              : null;
+
+          selectedParserCandidateKeys.efficiency = pickCandidateByKey(
+            lastParsedCandidates.efficiencies,
+            selectedParserCandidateKeys.efficiency,
+          )
+            ? selectedParserCandidateKeys.efficiency
+            : lastParsedCandidates.efficiencies[0]
+              ? lastParsedCandidates.efficiencies[0].key
+              : null;
+        }
+
+        function renderCandidates(container, candidates, selectionKey) {
           container.innerHTML = "";
           if (!candidates || candidates.length === 0) {
             container.innerHTML =
@@ -1197,24 +1381,66 @@
           }
 
           candidates.slice(0, 8).forEach(function (candidate) {
-            var chip = document.createElement("span");
+            var chip = document.createElement("button");
+            var isSelected =
+              selectedParserCandidateKeys[selectionKey] === candidate.key;
             chip.className = "parser-chip";
+            chip.type = "button";
             chip.textContent = candidate.text;
+            chip.setAttribute("aria-pressed", isSelected ? "true" : "false");
+            chip.addEventListener("click", function () {
+              selectedParserCandidateKeys[selectionKey] = candidate.key;
+              renderAllParserCandidates();
+            });
             container.appendChild(chip);
           });
+        }
+
+        function renderAllParserCandidates() {
+          renderCandidates(
+            parserLengthResults,
+            lastParsedCandidates.lengths,
+            "length",
+          );
+          renderCandidates(
+            parserWidthResults,
+            lastParsedCandidates.widths,
+            "width",
+          );
+          renderCandidates(
+            parserVoltageResults,
+            lastParsedCandidates.voltages,
+            "voltage",
+          );
+          renderCandidates(
+            parserPowerResults,
+            lastParsedCandidates.powers,
+            "power",
+          );
+          renderCandidates(
+            parserEfficiencyResults,
+            lastParsedCandidates.efficiencies,
+            "efficiency",
+          );
         }
 
         function runParser() {
           var parsed = parseCandidates(parserInput.value);
           lastParsedCandidates = parsed;
-          renderCandidates(parserLengthResults, parsed.lengths);
-          renderCandidates(parserWidthResults, parsed.widths);
-          renderCandidates(parserPowerResults, parsed.powers);
+          ensureSelectedParserCandidates();
+          renderAllParserCandidates();
           applyParserButton.disabled =
             parsed.lengths.length === 0 &&
             parsed.widths.length === 0 &&
-            parsed.powers.length === 0;
-          parserStatus.textContent = "";
+            parsed.voltages.length === 0 &&
+            parsed.powers.length === 0 &&
+            parsed.efficiencies.length === 0;
+          if (applyParserButton.disabled) {
+            parserStatus.textContent = "No candidates found.";
+          } else {
+            parserStatus.textContent =
+              "Click a candidate chip to select values, then apply to newest calculator.";
+          }
         }
 
         function getNewestCalculatorCard() {
@@ -1248,14 +1474,38 @@
             !lastParsedCandidates ||
             (lastParsedCandidates.lengths.length === 0 &&
               lastParsedCandidates.widths.length === 0 &&
-              lastParsedCandidates.powers.length === 0)
+              lastParsedCandidates.voltages.length === 0 &&
+              lastParsedCandidates.powers.length === 0 &&
+              lastParsedCandidates.efficiencies.length === 0)
           ) {
             runParser();
           }
 
-          var chosenLength = pickPreferredLength(lastParsedCandidates.lengths);
-          var chosenWidth = pickPreferredLength(lastParsedCandidates.widths);
-          var chosenPower = lastParsedCandidates.powers[0] || null;
+          var chosenLength =
+            pickCandidateByKey(
+              lastParsedCandidates.lengths,
+              selectedParserCandidateKeys.length,
+            ) || pickPreferredLength(lastParsedCandidates.lengths);
+          var chosenWidth =
+            pickCandidateByKey(
+              lastParsedCandidates.widths,
+              selectedParserCandidateKeys.width,
+            ) || pickPreferredLength(lastParsedCandidates.widths);
+          var chosenVoltage =
+            pickCandidateByKey(
+              lastParsedCandidates.voltages,
+              selectedParserCandidateKeys.voltage,
+            ) || lastParsedCandidates.voltages[0] || null;
+          var chosenPower =
+            pickCandidateByKey(
+              lastParsedCandidates.powers,
+              selectedParserCandidateKeys.power,
+            ) || lastParsedCandidates.powers[0] || null;
+          var chosenEfficiency =
+            pickCandidateByKey(
+              lastParsedCandidates.efficiencies,
+              selectedParserCandidateKeys.efficiency,
+            ) || lastParsedCandidates.efficiencies[0] || null;
 
           if (chosenLength) {
             card.querySelector(".input-length").value = String(
@@ -1267,6 +1517,11 @@
               Number(chosenWidth.mm.toFixed(3)),
             );
           }
+          if (chosenVoltage) {
+            card.querySelector(".input-voltage").value = String(
+              Number(chosenVoltage.value.toFixed(3)),
+            );
+          }
           if (chosenPower) {
             var outputInput = card.querySelector(".input-claimed-output");
             var outputUnit = card.querySelector(".input-claimed-output-unit");
@@ -1276,10 +1531,17 @@
             outputUnit.value =
               chosenPower.unit === "μW" ? "uW" : chosenPower.unit;
           }
+          if (chosenEfficiency) {
+            card.querySelector(".input-claimed-efficiency").value = String(
+              Number(chosenEfficiency.value.toFixed(3)),
+            );
+          }
 
           [
             ".input-length",
             ".input-width",
+            ".input-voltage",
+            ".input-claimed-efficiency",
             ".input-claimed-output",
             ".input-claimed-output-unit",
           ].forEach(function (selector) {
