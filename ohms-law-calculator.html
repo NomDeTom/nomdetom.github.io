@@ -185,6 +185,17 @@
         gap: 0.35rem;
       }
 
+      .resistor-row-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .resistor-row-btn {
+        padding: 0.4rem 0.65rem;
+        font-size: 0.86rem;
+      }
+
       .input-row {
         display: flex;
         align-items: stretch;
@@ -994,9 +1005,10 @@
           calculateCard(card);
         }
 
-        function readResistanceValue(card, inputSelector, unitSelector) {
-          var input = card.querySelector(inputSelector);
-          var unitSelect = card.querySelector(unitSelector);
+        function readResistanceValueFromRow(row) {
+          var input = row.querySelector(".input-r");
+          var unitSelect = row.querySelector(".unit-r");
+          if (!input || !unitSelect) return null;
           var rawValue = toNullableNonNegativeNumber(input.value);
           if (rawValue == null) return null;
           return rawValue * getUnitFactor("r", unitSelect.value);
@@ -1011,11 +1023,11 @@
         }
 
         function calculateSeriesCard(card) {
-          var values = [
-            readResistanceValue(card, ".input-r1", ".unit-r1"),
-            readResistanceValue(card, ".input-r2", ".unit-r2"),
-            readResistanceValue(card, ".input-r3", ".unit-r3"),
-          ].filter(function (value) {
+          var values = Array.from(card.querySelectorAll(".resistor-row")).map(
+            function (row) {
+              return readResistanceValueFromRow(row);
+            },
+          ).filter(function (value) {
             return value != null;
           });
           var status = card.querySelector(".status");
@@ -1035,11 +1047,11 @@
         }
 
         function calculateParallelCard(card) {
-          var values = [
-            readResistanceValue(card, ".input-r1", ".unit-r1"),
-            readResistanceValue(card, ".input-r2", ".unit-r2"),
-            readResistanceValue(card, ".input-r3", ".unit-r3"),
-          ].filter(function (value) {
+          var values = Array.from(card.querySelectorAll(".resistor-row")).map(
+            function (row) {
+              return readResistanceValueFromRow(row);
+            },
+          ).filter(function (value) {
             return value != null;
           });
           var status = card.querySelector(".status");
@@ -1088,9 +1100,11 @@
             "<h2>Inputs</h2>" +
             '<div class="grid">' +
             '<label class="field">Resistor Series Offering<select class="unit-select input-series-offering" aria-label="Resistor series offering"><option value="any" selected>Any (No Snap)</option><option value="e6">E6 Only</option><option value="e12">E12 Only</option><option value="e24">E24 Only</option></select></label>' +
-            '<label class="field">R1<span class="input-row"><input class="input-r1" type="number" min="0" step="any" placeholder="e.g. 100" /><select class="unit-select unit-r1" aria-label="R1 unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></span></label>' +
-            '<label class="field">R2<span class="input-row"><input class="input-r2" type="number" min="0" step="any" placeholder="e.g. 220" /><select class="unit-select unit-r2" aria-label="R2 unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></span></label>' +
-            '<label class="field">R3<span class="input-row"><input class="input-r3" type="number" min="0" step="any" placeholder="e.g. 330" /><select class="unit-select unit-r3" aria-label="R3 unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></span></label>' +
+            '<div class="resistor-rows" aria-label="Resistor inputs"></div>' +
+            '<div class="resistor-row-actions">' +
+            '<button type="button" class="action-btn resistor-row-btn add-resistor-row-btn">+ Add resistor</button>' +
+            '<button type="button" class="action-btn resistor-row-btn remove-resistor-row-btn">- Remove resistor</button>' +
+            '</div>' +
             "</div>" +
             "</section>" +
             '<section class="card-section">' +
@@ -1110,9 +1124,60 @@
             }
           };
 
-          function snapResistorInput(inputSelector, unitSelector) {
-            var input = card.querySelector(inputSelector);
-            var unitSelect = card.querySelector(unitSelector);
+          var resistorRowsContainer = card.querySelector(".resistor-rows");
+          var addResistorRowButton = card.querySelector(".add-resistor-row-btn");
+          var removeResistorRowButton = card.querySelector(".remove-resistor-row-btn");
+
+          function buildResistorRow() {
+            var row = document.createElement("label");
+            row.className = "field resistor-row";
+            row.innerHTML =
+              '<span class="resistor-label">R1</span>' +
+              '<span class="input-row">' +
+              '<input class="input-r" type="number" min="0" step="any" placeholder="e.g. 100" />' +
+              '<select class="unit-select unit-r" aria-label="Resistor unit">' +
+              '<option value="mOhm">mOhm</option>' +
+              '<option value="Ohm" selected>Ohm</option>' +
+              '<option value="kOhm">kOhm</option>' +
+              '<option value="MOhm">MOhm</option>' +
+              '</select>' +
+              '</span>';
+            return row;
+          }
+
+          function updateResistorRowLabels() {
+            var rows = card.querySelectorAll(".resistor-row");
+            rows.forEach(function (row, index) {
+              var label = row.querySelector(".resistor-label");
+              var unit = row.querySelector(".unit-r");
+              if (label) {
+                label.textContent = "R" + (index + 1);
+              }
+              if (unit) {
+                unit.setAttribute("aria-label", "R" + (index + 1) + " unit");
+              }
+            });
+
+            removeResistorRowButton.disabled = rows.length <= 1;
+          }
+
+          function addResistorRow() {
+            resistorRowsContainer.appendChild(buildResistorRow());
+            updateResistorRowLabels();
+          }
+
+          function removeResistorRow() {
+            var rows = card.querySelectorAll(".resistor-row");
+            if (rows.length <= 1) return;
+            resistorRowsContainer.removeChild(rows[rows.length - 1]);
+            updateResistorRowLabels();
+          }
+
+          function snapResistorInput(input) {
+            if (!input) return;
+            var row = input.closest(".resistor-row");
+            if (!row) return;
+            var unitSelect = row.querySelector(".unit-r");
             var seriesSelect = card.querySelector(".input-series-offering");
             if (!input || !unitSelect || !seriesSelect) return;
             var rawValue = toNullableNonNegativeNumber(input.value);
@@ -1137,24 +1202,11 @@
           }
 
           function snapAllResistorInputs() {
-            snapResistorInput(".input-r1", ".unit-r1");
-            snapResistorInput(".input-r2", ".unit-r2");
-            snapResistorInput(".input-r3", ".unit-r3");
+            var resistorInputs = card.querySelectorAll(".resistor-row .input-r");
+            resistorInputs.forEach(function (input) {
+              snapResistorInput(input);
+            });
           }
-
-          [
-            [".input-r1", ".unit-r1"],
-            [".input-r2", ".unit-r2"],
-            [".input-r3", ".unit-r3"],
-          ].forEach(function (pair) {
-            var input = card.querySelector(pair[0]);
-            if (input) {
-              input.addEventListener("change", function () {
-                snapResistorInput(pair[0], pair[1]);
-                recalculate();
-              });
-            }
-          });
 
           var seriesOfferingSelect = card.querySelector(".input-series-offering");
           if (seriesOfferingSelect) {
@@ -1164,11 +1216,52 @@
             });
           }
 
-          var inputsAndUnits = card.querySelectorAll("input, select");
-          inputsAndUnits.forEach(function (el) {
-            el.addEventListener("input", recalculate);
-            el.addEventListener("change", recalculate);
+          addResistorRowButton.addEventListener("click", function () {
+            addResistorRow();
+            recalculate();
           });
+
+          removeResistorRowButton.addEventListener("click", function () {
+            removeResistorRow();
+            recalculate();
+          });
+
+          card.addEventListener("input", function (event) {
+            var target = event.target;
+            if (target && target.matches(".resistor-row .input-r")) {
+              recalculate();
+              return;
+            }
+
+            if (target && target.matches(".unit-r-out")) {
+              recalculate();
+            }
+          });
+
+          card.addEventListener("change", function (event) {
+            var target = event.target;
+            if (target && target.matches(".resistor-row .input-r")) {
+              snapResistorInput(target);
+              recalculate();
+              return;
+            }
+
+            if (target && target.matches(".resistor-row .unit-r")) {
+              var rowInput = target.closest(".resistor-row").querySelector(".input-r");
+              snapResistorInput(rowInput);
+              recalculate();
+              return;
+            }
+
+            if (target && target.matches(".input-series-offering, .unit-r-out")) {
+              recalculate();
+            }
+          });
+
+          addResistorRow();
+          addResistorRow();
+          addResistorRow();
+          updateResistorRowLabels();
 
           cardsContainer.insertBefore(card, addCardActions);
           cardsContainer.appendChild(addCardActions);
