@@ -114,6 +114,17 @@
         margin-top: 1rem;
       }
 
+      .calc-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .calc-grid section {
+        margin-top: 0;
+      }
+
       .formulas-section {
         margin-top: 1.5rem;
       }
@@ -320,6 +331,12 @@
           padding: 0.4rem 0.5rem;
         }
       }
+
+      @media (max-width: 900px) {
+        .calc-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
@@ -377,6 +394,7 @@
         </div>
       </header>
 
+      <div class="calc-grid">
       <section>
         <h2>Inputs</h2>
         <form id="calculator-form">
@@ -468,6 +486,7 @@
           </div>
         </output>
       </section>
+      </div>
 
       <section id="seek-panel" class="seek-panel" hidden>
         <h2>Target Seek</h2>
