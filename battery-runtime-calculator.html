@@ -1,0 +1,1812 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Battery Runtime Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .disclaimer-banner {
+        margin: 0.9rem 0 0;
+        padding: 0.85rem 1rem;
+        border: 2px solid var(--accent);
+        background: var(--accent-soft);
+        color: var(--text);
+        font-size: 1.02rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+
+      .section-header h2 {
+        margin: 0;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .mode-group {
+        border-top: 1px solid var(--border);
+        padding-top: 0.9rem;
+        margin-top: 0.25rem;
+      }
+
+      .split-phases {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+      }
+
+      .split-phase {
+        border: 1px solid var(--border);
+        padding: 0.75rem;
+      }
+
+      .split-phase-title {
+        margin: 0 0 0.6rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .mode-group[hidden] {
+        display: none !important;
+      }
+
+      .field[hidden] {
+        display: none !important;
+      }
+
+      .curve-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+      }
+
+      .curve-header h2 {
+        margin: 0;
+      }
+
+      .curve-modified-badge {
+        font-size: 0.82rem;
+        color: var(--accent);
+        padding: 0.15rem 0.5rem;
+        border: 1px solid var(--accent);
+      }
+
+      .curve-modified-badge[hidden] {
+        display: none !important;
+      }
+
+      .curve-point-row {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto auto;
+        align-items: center;
+        gap: 0.4rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .curve-sep,
+      .curve-unit {
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 0 0.1rem;
+        white-space: nowrap;
+      }
+
+      .curve-remove-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        padding: 0.72rem 0.7rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .curve-remove-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .curve-remove-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+
+      .curve-note {
+        margin: 0.6rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .curve-table-wrap[hidden],
+      .curve-points-wrap[hidden],
+      .curve-content[hidden],
+      .curve-chart-content[hidden],
+      .all-curves-wrap[hidden] {
+        display: none !important;
+      }
+
+      .curve-chart-svg {
+        width: 100%;
+        height: auto;
+        display: block;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+      }
+
+      .curve-axis {
+        stroke: var(--muted);
+        stroke-width: 1;
+      }
+
+      .curve-grid {
+        stroke: var(--border);
+        stroke-width: 1;
+        stroke-dasharray: 3 3;
+      }
+
+      .curve-path {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.25;
+      }
+
+      .curve-area {
+        fill: var(--accent);
+        opacity: 0.18;
+      }
+
+      .curve-dot {
+        fill: var(--accent);
+      }
+
+      .curve-chart-caption {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .curve-markdown-input {
+        width: 100%;
+        min-height: 14rem;
+        resize: vertical;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: 0.9rem/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+
+      .curve-table-actions {
+        margin-top: 0.65rem;
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .curve-table-status {
+        margin: 0.65rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .result-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      @media (max-width: 780px) {
+        .field-row {
+          grid-template-columns: 1fr;
+        }
+
+        .split-phases {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Battery Runtime Calculator</h1>
+        <p class="subtitle">
+          Estimate runtime for common chemistries using constant current, constant
+          power, or split duty cycle load patterns.
+        </p>
+        <p class="disclaimer-banner">
+          Disclaimer: All values, defaults, and example curves on this page are
+          placeholders only. Validate with real datasheets and measured data.
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <div class="section-header">
+          <h2>Inputs</h2>
+          <button id="reload-inputs-btn" class="action-btn" type="button">Reload defaults</button>
+        </div>
+        <form id="calculator-form">
+          <div class="field">
+            <label for="input-chemistry"
+              >Chemistry / Pack
+              <select id="input-chemistry">
+                <option value="liion" selected>Li-ion (3.6V nominal)</option>
+                <option value="lifepo4">LiFePO4 (3.2V nominal)</option>
+                <option value="sodiumion">Na+ Ion (3.0V nominal)</option>
+                <option value="lto">LTO (2.3V nominal)</option>
+                <option value="nimh1">NiMH 1 cell (1.2V nominal)</option>
+                <option value="nimh2">NiMH 2 cells (2.4V nominal)</option>
+                <option value="nimh3">NiMH 3 cells (3.6V nominal)</option>
+                <option value="lisocl2">LiSOCl2 (3.6V nominal)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="input-capacity">Capacity</label>
+              <input
+                id="input-capacity"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                min="0"
+                value="3000"
+              />
+            </div>
+            <div class="field">
+              <label for="input-capacity-unit">Capacity unit</label>
+              <select id="input-capacity-unit">
+                <option value="mAh" selected>mAh</option>
+                <option value="Ah">Ah</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="input-initial-soc"
+                >Initial SoC (%)
+                <input
+                  id="input-initial-soc"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value="100"
+                />
+              </label>
+            </div>
+            <div class="field">
+              <label for="input-final-soc"
+                >Final SoC (%)
+                <input
+                  id="input-final-soc"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  min="0"
+                  max="100"
+                  value="0"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="input-drain-mode"
+              >Drain pattern
+              <select id="input-drain-mode">
+                <option value="constant-current" selected>
+                  Constant current draw
+                </option>
+                <option value="constant-power">Constant power draw</option>
+                <option value="split-duty">Split duty cycle</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="mode-constant-current" class="mode-group">
+            <div class="field-row">
+              <div class="field">
+                <label for="input-current-draw">Current draw</label>
+                <input
+                  id="input-current-draw"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  min="0"
+                  value="10"
+                />
+              </div>
+              <div class="field">
+                <label for="input-current-unit">Current unit</label>
+                <select id="input-current-unit">
+                  <option value="mA" selected>mA</option>
+                  <option value="A">A</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="mode-constant-power" class="mode-group" hidden>
+            <div class="field-row">
+              <div class="field">
+                <label for="input-power-draw">Power draw</label>
+                <input
+                  id="input-power-draw"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  min="0"
+                  value="0.2"
+                />
+              </div>
+              <div class="field">
+                <label for="input-power-unit">Power unit</label>
+                <select id="input-power-unit">
+                  <option value="mW" selected>mW</option>
+                  <option value="W">W</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="mode-split-duty" class="mode-group" hidden>
+            <div class="split-phases">
+              <div class="split-phase">
+                <p class="split-phase-title">Phase A</p>
+                <div class="field">
+                  <label for="input-split-a-percent">Duty (%)</label>
+                  <input
+                    id="input-split-a-percent"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    min="0"
+                    max="100"
+                    value="10"
+                  />
+                </div>
+                <div class="field">
+                  <label for="input-split-a-type">Type</label>
+                  <select id="input-split-a-type">
+                    <option value="current" selected>Constant current</option>
+                    <option value="power">Constant power</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="input-split-a-value">Draw</label>
+                  <input
+                    id="input-split-a-value"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    min="0"
+                    value="120"
+                  />
+                </div>
+                <div class="field" id="split-a-unit-current-field">
+                  <label for="input-split-a-current-unit">Unit</label>
+                  <select id="input-split-a-current-unit">
+                    <option value="mA" selected>mA</option>
+                    <option value="A">A</option>
+                  </select>
+                </div>
+                <div class="field" id="split-a-unit-power-field" hidden>
+                  <label for="input-split-a-power-unit">Unit</label>
+                  <select id="input-split-a-power-unit">
+                    <option value="mW" selected>mW</option>
+                    <option value="W">W</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="split-phase">
+                <p class="split-phase-title">Phase B</p>
+                <div class="field">
+                  <label for="input-split-b-percent">Duty (%)</label>
+                  <input
+                    id="input-split-b-percent"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    min="0"
+                    max="100"
+                    value="90"
+                  />
+                </div>
+                <div class="field">
+                  <label for="input-split-b-type">Type</label>
+                  <select id="input-split-b-type">
+                    <option value="current" selected>Constant current</option>
+                    <option value="power">Constant power</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="input-split-b-value">Draw</label>
+                  <input
+                    id="input-split-b-value"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    min="0"
+                    value="10"
+                  />
+                </div>
+                <div class="field" id="split-b-unit-current-field">
+                  <label for="input-split-b-current-unit">Unit</label>
+                  <select id="input-split-b-current-unit">
+                    <option value="mA" selected>mA</option>
+                    <option value="A">A</option>
+                  </select>
+                </div>
+                <div class="field" id="split-b-unit-power-field" hidden>
+                  <label for="input-split-b-power-unit">Unit</label>
+                  <select id="input-split-b-power-unit">
+                    <option value="mW" selected>mW</option>
+                    <option value="W">W</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section>
+        <div class="curve-header">
+          <h2>Discharge curve chart</h2>
+          <button id="curve-chart-toggle-btn" class="action-btn" type="button" aria-expanded="false">Show discharge curve chart</button>
+        </div>
+        <div id="curve-chart-content" class="curve-chart-content" hidden>
+          <svg
+            id="curve-chart-svg"
+            class="curve-chart-svg"
+            viewBox="0 0 760 320"
+            role="img"
+            aria-label="Discharge curve chart"
+            preserveAspectRatio="none"
+          ></svg>
+          <p class="curve-chart-caption">X axis: state of charge (%). Y axis: voltage (V).</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="curve-header">
+          <h2>Discharge curve editor</h2>
+          <button id="curve-toggle-btn" class="action-btn" type="button" aria-expanded="false">Show discharge curve editor</button>
+        </div>
+        <div id="curve-content" class="curve-content" hidden>
+          <div class="curve-header">
+            <button id="curve-swap-view-btn" class="action-btn" type="button">Switch to Markdown table</button>
+            <button id="curve-reset-btn" class="action-btn" type="button">Reset to defaults</button>
+            <span id="curve-modified-badge" class="curve-modified-badge" hidden>Modified</span>
+          </div>
+          <div id="curve-points-wrap" class="curve-points-wrap">
+            <div id="curve-points-container"></div>
+            <button id="curve-add-btn" class="action-btn" type="button">+ Add point</button>
+          </div>
+          <div id="curve-table-wrap" class="curve-table-wrap" hidden>
+            <textarea
+              id="curve-markdown-input"
+              class="curve-markdown-input"
+              spellcheck="false"
+              aria-label="Discharge curve markdown table"
+            ></textarea>
+            <div class="curve-table-actions">
+              <button id="curve-import-btn" class="action-btn" type="button">Import table</button>
+            </div>
+            <p id="curve-table-status" class="curve-table-status">
+              Edit the Markdown table then choose Import table.
+            </p>
+          </div>
+          <p class="curve-note">
+            SoC% → voltage pairs, sorted automatically. Min 2, max 20 points.
+            Voltages are pack voltages as labelled for the selected chemistry.
+            The curve is used to compute average voltage via trapezoidal integration
+            (affects usable energy and constant-power runtime). Use the swap button
+            for markdown export/import.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Outputs</h2>
+        <output class="results" aria-live="polite" aria-atomic="true">
+          <div class="result">
+            <span class="result-label">Nominal pack voltage</span>
+            <span class="result-value" id="output-pack-voltage">0 V</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Usable capacity</span>
+            <span class="result-value" id="output-usable-capacity">0 Ah</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Usable energy</span>
+            <span class="result-value" id="output-usable-energy">0 Wh</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Average current draw</span>
+            <span class="result-value" id="output-average-current">0 mA</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Average power draw</span>
+            <span class="result-value" id="output-average-power">0 mW</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Estimated runtime</span>
+            <span class="result-value" id="output-runtime">0 h</span>
+          </div>
+        </output>
+        <p id="output-note" class="result-note">
+          Assumes nominal pack voltage and 100% conversion efficiency.
+        </p>
+      </section>
+
+      <section class="formulas-section">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span>SoC window = max(0, initial SoC − final SoC)</span>
+          <span>usable Ah = capacity Ah × SoC window</span>
+          <span>avg voltage = ∫ V(SoC) dSoC over SoC window (trapezoidal)</span>
+          <span>usable Wh = usable Ah × avg voltage</span>
+          <span>constant current: runtime h = usable Ah ÷ current A</span>
+          <span>constant power: runtime h = usable Wh ÷ power W</span>
+          <span>
+            split duty: each phase contributes (duty % × phase current A) ÷ 100;
+            CP phases are converted to current via avg voltage
+          </span>
+        </p>
+      </section>
+
+      <section>
+        <div class="curve-header">
+          <h2>All chemistry curves</h2>
+          <button id="all-curves-toggle-btn" class="action-btn" type="button" aria-expanded="false">
+            Show all curves markdown
+          </button>
+        </div>
+        <div id="all-curves-wrap" class="all-curves-wrap" hidden>
+          <textarea
+            id="all-curves-markdown"
+            class="curve-markdown-input"
+            readonly
+            spellcheck="false"
+            aria-label="All chemistry curves markdown"
+          ></textarea>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var calculatorForm = document.getElementById("calculator-form");
+        var reloadInputsBtn = document.getElementById("reload-inputs-btn");
+        var inputChemistry = document.getElementById("input-chemistry");
+        var inputCapacity = document.getElementById("input-capacity");
+        var inputCapacityUnit = document.getElementById("input-capacity-unit");
+        var inputInitialSoc = document.getElementById("input-initial-soc");
+        var inputFinalSoc = document.getElementById("input-final-soc");
+        var inputDrainMode = document.getElementById("input-drain-mode");
+
+        var modeConstantCurrent = document.getElementById("mode-constant-current");
+        var modeConstantPower = document.getElementById("mode-constant-power");
+        var modeSplitDuty = document.getElementById("mode-split-duty");
+
+        var inputCurrentDraw = document.getElementById("input-current-draw");
+        var inputCurrentUnit = document.getElementById("input-current-unit");
+        var inputPowerDraw = document.getElementById("input-power-draw");
+        var inputPowerUnit = document.getElementById("input-power-unit");
+        var inputSplitAPercent = document.getElementById("input-split-a-percent");
+        var inputSplitAType = document.getElementById("input-split-a-type");
+        var inputSplitAValue = document.getElementById("input-split-a-value");
+        var inputSplitACurrentUnit = document.getElementById("input-split-a-current-unit");
+        var inputSplitAPowerUnit = document.getElementById("input-split-a-power-unit");
+        var splitAUnitCurrentField = document.getElementById("split-a-unit-current-field");
+        var splitAUnitPowerField = document.getElementById("split-a-unit-power-field");
+        var inputSplitBPercent = document.getElementById("input-split-b-percent");
+        var inputSplitBType = document.getElementById("input-split-b-type");
+        var inputSplitBValue = document.getElementById("input-split-b-value");
+        var inputSplitBCurrentUnit = document.getElementById("input-split-b-current-unit");
+        var inputSplitBPowerUnit = document.getElementById("input-split-b-power-unit");
+        var splitBUnitCurrentField = document.getElementById("split-b-unit-current-field");
+        var splitBUnitPowerField = document.getElementById("split-b-unit-power-field");
+
+        var curvePointsContainer = document.getElementById("curve-points-container");
+        var curveChartContent = document.getElementById("curve-chart-content");
+        var curveChartToggleBtn = document.getElementById("curve-chart-toggle-btn");
+        var curveChartSvg = document.getElementById("curve-chart-svg");
+        var curveContent = document.getElementById("curve-content");
+        var curveToggleBtn = document.getElementById("curve-toggle-btn");
+        var curvePointsWrap = document.getElementById("curve-points-wrap");
+        var curveTableWrap = document.getElementById("curve-table-wrap");
+        var curveSwapViewBtn = document.getElementById("curve-swap-view-btn");
+        var curveResetBtn = document.getElementById("curve-reset-btn");
+        var curveAddBtn = document.getElementById("curve-add-btn");
+        var curveImportBtn = document.getElementById("curve-import-btn");
+        var curveMarkdownInput = document.getElementById("curve-markdown-input");
+        var curveTableStatus = document.getElementById("curve-table-status");
+        var curveModifiedBadge = document.getElementById("curve-modified-badge");
+
+        var outputPackVoltage = document.getElementById("output-pack-voltage");
+        var outputUsableCapacity = document.getElementById("output-usable-capacity");
+        var outputUsableEnergy = document.getElementById("output-usable-energy");
+        var outputAverageCurrent = document.getElementById("output-average-current");
+        var outputAveragePower = document.getElementById("output-average-power");
+        var outputRuntime = document.getElementById("output-runtime");
+        var outputNote = document.getElementById("output-note");
+
+        var allCurvesToggleBtn = document.getElementById("all-curves-toggle-btn");
+        var allCurvesWrap = document.getElementById("all-curves-wrap");
+        var allCurvesMarkdown = document.getElementById("all-curves-markdown");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        var CHEMISTRY_VOLTAGE = {
+          liion: 3.6,
+          lifepo4: 3.2,
+          sodiumion: 3.0,
+          lto: 2.3,
+          nimh1: 1.2,
+          nimh2: 2.4,
+          nimh3: 3.6,
+          lisocl2: 3.6,
+        };
+
+        // Discharge curves: [SoC%, voltage] pairs, representative values
+        var DEFAULT_CURVES = {
+          liion:     [[100,4.20],[90,4.06],[80,3.98],[70,3.90],[60,3.83],[50,3.75],[40,3.68],[30,3.58],[20,3.45],[10,3.30],[0,3.00]],
+          lifepo4:   [[100,3.65],[90,3.33],[80,3.28],[70,3.26],[60,3.25],[50,3.23],[40,3.22],[30,3.20],[20,3.18],[10,3.10],[0,2.50]],
+          sodiumion: [[100,3.80],[80,3.40],[60,3.20],[40,3.05],[20,2.85],[0,2.50]],
+          lto:       [[100,2.85],[80,2.42],[60,2.38],[40,2.34],[20,2.28],[0,1.80]],
+          nimh1:     [[100,1.45],[80,1.26],[60,1.22],[40,1.20],[20,1.12],[0,1.00]],
+          nimh2:     [[100,2.90],[80,2.52],[60,2.44],[40,2.40],[20,2.24],[0,2.00]],
+          nimh3:     [[100,4.35],[80,3.78],[60,3.66],[40,3.60],[20,3.36],[0,3.00]],
+          lisocl2:   [[100,3.67],[90,3.62],[70,3.60],[50,3.58],[30,3.55],[10,3.40],[0,2.70]],
+        };
+
+        var currentCurve = DEFAULT_CURVES.liion.map(function(p) { return [p[0], p[1]]; });
+        var curveModified = false;
+        var curveEditorMode = "points";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ── Curve helpers ──────────────────────────────────────────────────
+
+        function cloneCurve(curve) {
+          return curve.map(function(p) { return [p[0], p[1]]; });
+        }
+
+        function sortedCurve(curve) {
+          return curve.slice().sort(function(a, b) { return b[0] - a[0]; });
+        }
+
+        function buildCurveMarkdownTable(curve) {
+          var sorted = sortedCurve(curve);
+          var lines = [
+            "| SoC (%) | Voltage (V) |",
+            "|---:|---:|",
+          ];
+          sorted.forEach(function (p) {
+            lines.push(
+              "| " + formatNumber(p[0], 4) + " | " + formatNumber(p[1], 4) + " |",
+            );
+          });
+          return lines.join("\n");
+        }
+
+        function buildCurveMarkdownTableHorizontal(curve) {
+          var sorted = sortedCurve(curve);
+          var headerCells = ["Metric"];
+          var socCells = ["SoC (%)"];
+          var vCells = ["Voltage (V)"];
+
+          sorted.forEach(function (p, idx) {
+            headerCells.push("P" + (idx + 1));
+            socCells.push(formatNumber(p[0], 4));
+            vCells.push(formatNumber(p[1], 4));
+          });
+
+          var colWidths = headerCells.map(function (header, idx) {
+            var maxLen = header.length;
+            maxLen = Math.max(maxLen, socCells[idx].length);
+            maxLen = Math.max(maxLen, vCells[idx].length);
+            return Math.max(4, maxLen);
+          });
+
+          function padRight(value, width) {
+            var text = String(value);
+            if (text.length >= width) return text;
+            return text + " ".repeat(width - text.length);
+          }
+
+          function buildPaddedRow(cells) {
+            var padded = cells.map(function (cell, idx) {
+              return " " + padRight(cell, colWidths[idx]) + " ";
+            });
+            return "|" + padded.join("|") + "|";
+          }
+
+          var sepCells = colWidths.map(function (width, idx) {
+            if (idx === 0) {
+              // First column is a text label column.
+              return ":" + "-".repeat(width - 1);
+            }
+            // Data columns are right-aligned numeric values.
+            return "-".repeat(width - 1) + ":";
+          });
+
+          return [
+            buildPaddedRow(headerCells),
+            buildPaddedRow(sepCells),
+            buildPaddedRow(socCells),
+            buildPaddedRow(vCells),
+          ].join("\n");
+        }
+
+        function parseCurveMarkdownTable(text) {
+          var lines = text.split(/\r?\n/);
+          var points = [];
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line || line.indexOf("|") === -1) continue;
+
+            var cells = line
+              .split("|")
+              .map(function (cell) { return cell.trim(); })
+              .filter(function (cell) { return cell.length > 0; });
+
+            if (cells.length < 2) continue;
+            if (/^[-: ]+$/.test(cells[0]) || /^[-: ]+$/.test(cells[1])) continue;
+
+            var soc = parseFloat(cells[0]);
+            var voltage = parseFloat(cells[1]);
+            if (!Number.isFinite(soc) || !Number.isFinite(voltage)) continue;
+
+            points.push([
+              Math.max(0, Math.min(100, soc)),
+              Math.max(0, voltage),
+            ]);
+          }
+
+          if (points.length < 2) {
+            return { ok: false, error: "Need at least 2 numeric rows (SoC and voltage)." };
+          }
+
+          points = sortedCurve(points).slice(0, 20);
+          return { ok: true, points: points };
+        }
+
+        function setCurveTableStatus(message) {
+          curveTableStatus.textContent = message;
+        }
+
+        function setCurveVisibility(isVisible) {
+          curveContent.hidden = !isVisible;
+          curveToggleBtn.textContent = isVisible
+            ? "Hide discharge curve editor"
+            : "Show discharge curve editor";
+          curveToggleBtn.setAttribute("aria-expanded", isVisible ? "true" : "false");
+        }
+
+        function setCurveChartVisibility(isVisible) {
+          curveChartContent.hidden = !isVisible;
+          curveChartToggleBtn.textContent = isVisible
+            ? "Hide discharge curve chart"
+            : "Show discharge curve chart";
+          curveChartToggleBtn.setAttribute("aria-expanded", isVisible ? "true" : "false");
+        }
+
+        function syncSplitUnitVisibility() {
+          var isPowerA = inputSplitAType.value === "power";
+          splitAUnitCurrentField.hidden = isPowerA;
+          splitAUnitPowerField.hidden = !isPowerA;
+
+          var isPowerB = inputSplitBType.value === "power";
+          splitBUnitCurrentField.hidden = isPowerB;
+          splitBUnitPowerField.hidden = !isPowerB;
+        }
+
+        function renderCurveChart() {
+          var sorted = sortedCurve(currentCurve);
+          if (!curveChartSvg || sorted.length < 2) {
+            if (curveChartSvg) curveChartSvg.innerHTML = "";
+            return;
+          }
+
+          var width = 760;
+          var height = 320;
+          var left = 48;
+          var right = 16;
+          var top = 18;
+          var bottom = 36;
+          var plotW = width - left - right;
+          var plotH = height - top - bottom;
+
+          var minV = sorted.reduce(function (m, p) { return Math.min(m, p[1]); }, Infinity);
+          var maxV = sorted.reduce(function (m, p) { return Math.max(m, p[1]); }, -Infinity);
+          if (!Number.isFinite(minV) || !Number.isFinite(maxV)) return;
+          if (Math.abs(maxV - minV) < 0.001) {
+            maxV += 0.05;
+            minV -= 0.05;
+          }
+          var padV = (maxV - minV) * 0.08;
+          minV -= padV;
+          maxV += padV;
+
+          function xForSoc(soc) {
+            return left + ((100 - soc) / 100) * plotW;
+          }
+
+          function yForV(v) {
+            return top + (1 - (v - minV) / (maxV - minV)) * plotH;
+          }
+
+          function voltageAtSoc(targetSoc) {
+            if (targetSoc >= sorted[0][0]) return sorted[0][1];
+            if (targetSoc <= sorted[sorted.length - 1][0]) return sorted[sorted.length - 1][1];
+
+            for (var si = 0; si < sorted.length - 1; si++) {
+              var a = sorted[si];
+              var b = sorted[si + 1];
+              if (a[0] >= targetSoc && targetSoc >= b[0]) {
+                var spanSoc = a[0] - b[0];
+                if (spanSoc <= 0) return a[1];
+                var t = (a[0] - targetSoc) / spanSoc;
+                return a[1] + (b[1] - a[1]) * t;
+              }
+            }
+
+            return sorted[sorted.length - 1][1];
+          }
+
+          var path = sorted
+            .map(function (p, idx) {
+              var cmd = idx === 0 ? "M" : "L";
+              return cmd + xForSoc(p[0]).toFixed(2) + " " + yForV(p[1]).toFixed(2);
+            })
+            .join(" ");
+
+          var axisX = '<line class="curve-axis" x1="' + left + '" y1="' + (height - bottom) + '" x2="' + (width - right) + '" y2="' + (height - bottom) + '" />';
+          var axisY = '<line class="curve-axis" x1="' + left + '" y1="' + top + '" x2="' + left + '" y2="' + (height - bottom) + '" />';
+
+          var xTickSocValues = [100, 75, 50, 25, 0];
+          var xTicksAndLabels = "";
+          var xGridLines = "";
+          for (var xt = 0; xt < xTickSocValues.length; xt++) {
+            var socTick = xTickSocValues[xt];
+            var xTick = xForSoc(socTick);
+            if (socTick !== 100 && socTick !== 0) {
+              xGridLines +=
+                '<line class="curve-grid" x1="' + xTick.toFixed(2) + '" y1="' + top + '" x2="' + xTick.toFixed(2) + '" y2="' + (height - bottom) + '" />';
+            }
+            xTicksAndLabels +=
+              '<line class="curve-axis" x1="' + xTick.toFixed(2) + '" y1="' + (height - bottom) + '" x2="' + xTick.toFixed(2) + '" y2="' + (height - bottom + 6) + '" />' +
+              '<text x="' + xTick.toFixed(2) + '" y="' + (height - bottom + 19) + '" text-anchor="middle" fill="currentColor" font-size="11">' + socTick + '</text>';
+          }
+
+          var yTicksAndLabels = "";
+          var yGridLines = "";
+          var yTickCount = 5;
+          for (var yt = 0; yt < yTickCount; yt++) {
+            var ratio = yt / (yTickCount - 1);
+            var value = maxV - ratio * (maxV - minV);
+            var yTick = top + ratio * plotH;
+            if (yt !== 0 && yt !== yTickCount - 1) {
+              yGridLines +=
+                '<line class="curve-grid" x1="' + left + '" y1="' + yTick.toFixed(2) + '" x2="' + (width - right) + '" y2="' + yTick.toFixed(2) + '" />';
+            }
+            yTicksAndLabels +=
+              '<line class="curve-axis" x1="' + (left - 6) + '" y1="' + yTick.toFixed(2) + '" x2="' + left + '" y2="' + yTick.toFixed(2) + '" />' +
+              '<text x="' + (left - 9) + '" y="' + (yTick + 4).toFixed(2) + '" text-anchor="end" fill="currentColor" font-size="11">' + formatNumber(value, 3) + '</text>';
+          }
+
+          var labels =
+            '<text x="' + ((left + (width - right)) / 2).toFixed(2) + '" y="' + (height - 4) + '" text-anchor="middle" fill="currentColor" font-size="11">State of Charge (%)</text>' +
+            '<text x="18" y="' + ((top + (height - bottom)) / 2).toFixed(2) + '" text-anchor="middle" fill="currentColor" font-size="11" transform="rotate(-90 18 ' + ((top + (height - bottom)) / 2).toFixed(2) + ')">Voltage (V)</text>';
+
+          var initialSocPct = clampPercent(inputInitialSoc.value);
+          var finalSocPct = clampPercent(inputFinalSoc.value);
+          var highSoc = Math.max(initialSocPct, finalSocPct);
+          var lowSoc = Math.min(initialSocPct, finalSocPct);
+          var areaPath = "";
+          if (highSoc > lowSoc) {
+            var windowPoints = [[highSoc, voltageAtSoc(highSoc)]];
+            for (var wi = 0; wi < sorted.length; wi++) {
+              if (sorted[wi][0] < highSoc && sorted[wi][0] > lowSoc) {
+                windowPoints.push([sorted[wi][0], sorted[wi][1]]);
+              }
+            }
+            windowPoints.push([lowSoc, voltageAtSoc(lowSoc)]);
+
+            var areaCmd = [];
+            areaCmd.push(
+              "M" + xForSoc(windowPoints[0][0]).toFixed(2) + " " + (height - bottom).toFixed(2),
+            );
+            for (var wp = 0; wp < windowPoints.length; wp++) {
+              areaCmd.push(
+                "L" + xForSoc(windowPoints[wp][0]).toFixed(2) + " " + yForV(windowPoints[wp][1]).toFixed(2),
+              );
+            }
+            areaCmd.push(
+              "L" + xForSoc(windowPoints[windowPoints.length - 1][0]).toFixed(2) + " " + (height - bottom).toFixed(2),
+            );
+            areaCmd.push("Z");
+            areaPath = '<path class="curve-area" d="' + areaCmd.join(" ") + '" />';
+          }
+
+          var points = sorted
+            .map(function (p) {
+              return '<circle class="curve-dot" cx="' + xForSoc(p[0]).toFixed(2) + '" cy="' + yForV(p[1]).toFixed(2) + '" r="3" />';
+            })
+            .join("");
+
+          curveChartSvg.innerHTML =
+            xGridLines +
+            yGridLines +
+            axisX +
+            axisY +
+            xTicksAndLabels +
+            yTicksAndLabels +
+            areaPath +
+            '<path class="curve-path" d="' + path + '" />' +
+            points +
+            labels;
+        }
+
+        function setCurveEditorMode(mode) {
+          curveEditorMode = mode === "table" ? "table" : "points";
+          var isTable = curveEditorMode === "table";
+          curvePointsWrap.hidden = isTable;
+          curveTableWrap.hidden = !isTable;
+          curveSwapViewBtn.textContent = isTable
+            ? "Switch to point editor"
+            : "Switch to Markdown table";
+
+          if (isTable) {
+            curveMarkdownInput.value = buildCurveMarkdownTable(currentCurve);
+            setCurveTableStatus("Edit the Markdown table then choose Import table.");
+          }
+        }
+
+        function applyCurveTableEditsIfValid() {
+          var parsed = parseCurveMarkdownTable(curveMarkdownInput.value || "");
+          if (!parsed.ok) {
+            setCurveTableStatus("Import failed: " + parsed.error);
+            return false;
+          }
+
+          currentCurve = parsed.points;
+          markCurveModified();
+          renderCurvePoints();
+          curveMarkdownInput.value = buildCurveMarkdownTable(currentCurve);
+          setCurveTableStatus(
+            "Imported " + currentCurve.length + " point" +
+              (currentCurve.length === 1 ? "" : "s") + ".",
+          );
+          calculate();
+          return true;
+        }
+
+        function buildAllCurvesMarkdown() {
+          var names = {
+            liion: "Li-ion",
+            lifepo4: "LiFePO4",
+            sodiumion: "Na+ Ion",
+            lto: "LTO",
+            nimh1: "NiMH 1 cell",
+            nimh2: "NiMH 2 cells",
+            nimh3: "NiMH 3 cells",
+            lisocl2: "LiSOCl2",
+          };
+
+          var keyOrder = [
+            "liion",
+            "lifepo4",
+            "sodiumion",
+            "lto",
+            "nimh1",
+            "nimh2",
+            "nimh3",
+            "lisocl2",
+          ];
+
+          var sections = [];
+          keyOrder.forEach(function (key) {
+            var curve = key === inputChemistry.value ? currentCurve : DEFAULT_CURVES[key];
+            sections.push("### " + (names[key] || key));
+            sections.push(buildCurveMarkdownTableHorizontal(curve));
+            sections.push("");
+          });
+
+          return sections.join("\n");
+        }
+
+        function updateAllCurvesMarkdown() {
+          allCurvesMarkdown.value = buildAllCurvesMarkdown();
+        }
+
+        // Trapezoidal-integration average voltage over a SoC window.
+        // Returns the weighted-average voltage (V).
+        function integrateCurveAvgV(curve, socStart, socEnd) {
+          var sorted = sortedCurve(curve);
+          if (sorted.length < 2) return sorted.length === 1 ? sorted[0][1] : 0;
+
+          var highSoc = Math.max(clampPercent(socStart), clampPercent(socEnd));
+          var lowSoc = Math.min(clampPercent(socStart), clampPercent(socEnd));
+          if (highSoc <= lowSoc) {
+            return 0;
+          }
+
+          function voltageAtSoc(targetSoc) {
+            if (targetSoc >= sorted[0][0]) return sorted[0][1];
+            if (targetSoc <= sorted[sorted.length - 1][0]) return sorted[sorted.length - 1][1];
+
+            for (var idx = 0; idx < sorted.length - 1; idx++) {
+              var a = sorted[idx];
+              var b = sorted[idx + 1];
+              if (a[0] >= targetSoc && targetSoc >= b[0]) {
+                var spanSoc = a[0] - b[0];
+                if (spanSoc <= 0) return a[1];
+                var t = (a[0] - targetSoc) / spanSoc;
+                return a[1] + (b[1] - a[1]) * t;
+              }
+            }
+
+            return sorted[sorted.length - 1][1];
+          }
+
+          var clipped = [[highSoc, voltageAtSoc(highSoc)]];
+          for (var i = 0; i < sorted.length; i++) {
+            if (sorted[i][0] < highSoc && sorted[i][0] > lowSoc) {
+              clipped.push([sorted[i][0], sorted[i][1]]);
+            }
+          }
+          clipped.push([lowSoc, voltageAtSoc(lowSoc)]);
+
+          var area = 0;
+          for (var j = 0; j < clipped.length - 1; j++) {
+            var dSoc = (clipped[j][0] - clipped[j + 1][0]) / 100;
+            area += dSoc * (clipped[j][1] + clipped[j + 1][1]) / 2;
+          }
+          var span = (highSoc - lowSoc) / 100;
+          return span > 0 ? area / span : sorted[0][1];
+        }
+
+        function renderCurvePoints() {
+          curvePointsContainer.innerHTML = "";
+          var snapshot = currentCurve; // reference; closure captures by index
+          snapshot.forEach(function(point, idx) {
+            var row = document.createElement("div");
+            row.className = "curve-point-row";
+
+            var socInput = document.createElement("input");
+            socInput.type = "number";
+            socInput.setAttribute("inputmode", "decimal");
+            socInput.step = "any";
+            socInput.min = "0";
+            socInput.max = "100";
+            socInput.value = point[0];
+            socInput.setAttribute("aria-label", "SoC % for point " + (idx + 1));
+
+            var sep = document.createElement("span");
+            sep.className = "curve-sep";
+            sep.textContent = "→";
+
+            var vInput = document.createElement("input");
+            vInput.type = "number";
+            vInput.setAttribute("inputmode", "decimal");
+            vInput.step = "any";
+            vInput.min = "0";
+            vInput.value = point[1];
+            vInput.setAttribute("aria-label", "Voltage for point " + (idx + 1));
+
+            var unitSpan = document.createElement("span");
+            unitSpan.className = "curve-unit";
+            unitSpan.textContent = "V";
+
+            var removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "curve-remove-btn";
+            removeBtn.textContent = "×";
+            removeBtn.setAttribute("aria-label", "Remove point " + (idx + 1));
+            removeBtn.disabled = currentCurve.length <= 2;
+
+            socInput.addEventListener("input", function() {
+              currentCurve[idx][0] = Math.max(0, Math.min(100, toNumber(socInput.value)));
+              markCurveModified();
+              calculate();
+            });
+            vInput.addEventListener("input", function() {
+              currentCurve[idx][1] = Math.max(0, toNumber(vInput.value));
+              markCurveModified();
+              calculate();
+            });
+            removeBtn.addEventListener("click", function() {
+              if (currentCurve.length > 2) {
+                currentCurve.splice(idx, 1);
+                markCurveModified();
+                renderCurvePoints();
+                calculate();
+              }
+            });
+
+            row.appendChild(socInput);
+            row.appendChild(sep);
+            row.appendChild(vInput);
+            row.appendChild(unitSpan);
+            row.appendChild(removeBtn);
+            curvePointsContainer.appendChild(row);
+          });
+          curveAddBtn.disabled = currentCurve.length >= 20;
+        }
+
+        function markCurveModified() {
+          curveModified = true;
+          curveModifiedBadge.hidden = false;
+          renderCurveChart();
+          updateAllCurvesMarkdown();
+        }
+
+        function loadDefaultCurve(chemistry) {
+          var defaults = DEFAULT_CURVES[chemistry];
+          if (defaults) {
+            currentCurve = cloneCurve(defaults);
+          }
+          curveModified = false;
+          curveModifiedBadge.hidden = true;
+          renderCurvePoints();
+          if (curveEditorMode === "table") {
+            curveMarkdownInput.value = buildCurveMarkdownTable(currentCurve);
+            setCurveTableStatus("Reset to default curve for selected chemistry.");
+          }
+          renderCurveChart();
+          updateAllCurvesMarkdown();
+        }
+
+        curveResetBtn.addEventListener("click", function() {
+          loadDefaultCurve(inputChemistry.value);
+          calculate();
+        });
+
+        curveSwapViewBtn.addEventListener("click", function () {
+          if (curveEditorMode === "table") {
+            if (!applyCurveTableEditsIfValid()) {
+              return;
+            }
+            setCurveEditorMode("points");
+            return;
+          }
+          setCurveEditorMode("table");
+        });
+
+        curveToggleBtn.addEventListener("click", function () {
+          setCurveVisibility(curveContent.hidden);
+        });
+
+        curveChartToggleBtn.addEventListener("click", function () {
+          setCurveChartVisibility(curveChartContent.hidden);
+        });
+
+        reloadInputsBtn.addEventListener("click", function () {
+          calculatorForm.reset();
+          loadDefaultCurve(inputChemistry.value);
+          syncSplitUnitVisibility();
+          calculate();
+        });
+
+        curveAddBtn.addEventListener("click", function() {
+          if (currentCurve.length >= 20) return;
+          // Insert midpoint into the largest SoC gap
+          var sorted = sortedCurve(currentCurve);
+          var bestIdx = 0, bestGap = 0;
+          for (var i = 0; i < sorted.length - 1; i++) {
+            var gap = sorted[i][0] - sorted[i + 1][0];
+            if (gap > bestGap) { bestGap = gap; bestIdx = i; }
+          }
+          var newSoc = Math.round(((sorted[bestIdx][0] + sorted[bestIdx + 1][0]) / 2) * 10) / 10;
+          var newV   = Math.round(((sorted[bestIdx][1] + sorted[bestIdx + 1][1]) / 2) * 1000) / 1000;
+          currentCurve.push([newSoc, newV]);
+          markCurveModified();
+          renderCurvePoints();
+          if (curveEditorMode === "table") {
+            curveMarkdownInput.value = buildCurveMarkdownTable(currentCurve);
+          }
+          updateAllCurvesMarkdown();
+          calculate();
+        });
+
+        curveImportBtn.addEventListener("click", function () {
+          applyCurveTableEditsIfValid();
+        });
+
+        allCurvesToggleBtn.addEventListener("click", function () {
+          var willShow = allCurvesWrap.hidden;
+          allCurvesWrap.hidden = !willShow;
+          allCurvesToggleBtn.textContent = willShow
+            ? "Hide all curves markdown"
+            : "Show all curves markdown";
+          allCurvesToggleBtn.setAttribute("aria-expanded", willShow ? "true" : "false");
+          if (willShow) {
+            updateAllCurvesMarkdown();
+          }
+        });
+
+        // ── Utility functions ──────────────────────────────────────────────
+
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function clampPercent(value) {
+          return Math.max(0, Math.min(100, toNumber(value)));
+        }
+
+        function toCapacityAh(value, unit) {
+          var raw = Math.max(0, toNumber(value));
+          return unit === "Ah" ? raw : raw / 1000;
+        }
+
+        function toCurrentA(value, unit) {
+          var raw = Math.max(0, toNumber(value));
+          return unit === "A" ? raw : raw / 1000;
+        }
+
+        function toPowerW(value, unit) {
+          var raw = Math.max(0, toNumber(value));
+          return unit === "W" ? raw : raw / 1000;
+        }
+
+        function formatNumber(value, digits) {
+          if (!Number.isFinite(value)) return "0";
+          return String(Number(value.toFixed(digits || 3)));
+        }
+
+        function formatCurrentAuto(currentA) {
+          if (currentA >= 1) {
+            return formatNumber(currentA, 3) + " A";
+          }
+          return formatNumber(currentA * 1000, 3) + " mA";
+        }
+
+        function formatPowerAuto(powerW) {
+          if (powerW >= 1) {
+            return formatNumber(powerW, 3) + " W";
+          }
+          return formatNumber(powerW * 1000, 3) + " mW";
+        }
+
+        function formatRuntime(hours) {
+          if (!Number.isFinite(hours) || hours <= 0) {
+            return "0 h";
+          }
+          if (hours < 24) {
+            return formatNumber(hours, 2) + " h";
+          }
+
+          var days = hours / 24;
+          if (days < 30) {
+            return formatNumber(days, 2) + " days";
+          }
+
+          var months = days / 30;
+          return (
+            formatNumber(months, 2) + " months (" + formatNumber(days, 1) + " days)"
+          );
+        }
+
+        function setModeVisibility(mode) {
+          modeConstantCurrent.hidden = mode !== "constant-current";
+          modeConstantPower.hidden = mode !== "constant-power";
+          modeSplitDuty.hidden = mode !== "split-duty";
+        }
+
+        function calculate() {
+          var chemistry = inputChemistry.value;
+          var packVoltage = CHEMISTRY_VOLTAGE[chemistry] || 0;
+          var mode = inputDrainMode.value;
+
+          // Keep chart overlays (including integrated SoC area) in sync with inputs.
+          renderCurveChart();
+
+          setModeVisibility(mode);
+
+          var capacityAh = toCapacityAh(inputCapacity.value, inputCapacityUnit.value);
+          var initialSocPct = clampPercent(inputInitialSoc.value);
+          var finalSocPct = clampPercent(inputFinalSoc.value);
+          var socWindowFraction = Math.max(0, initialSocPct - finalSocPct) / 100;
+          var usableAh = capacityAh * socWindowFraction;
+
+          var avgVoltage = integrateCurveAvgV(currentCurve, initialSocPct, finalSocPct);
+          var usableWh = usableAh * avgVoltage;
+
+          var avgCurrentA = 0, avgPowerW = 0, runtimeHours = 0;
+
+          if (mode === "constant-current") {
+            avgCurrentA = toCurrentA(inputCurrentDraw.value, inputCurrentUnit.value);
+            avgPowerW = avgCurrentA * avgVoltage;
+            runtimeHours = avgCurrentA > 0 ? usableAh / avgCurrentA : 0;
+
+          } else if (mode === "constant-power") {
+            var powerW = toPowerW(inputPowerDraw.value, inputPowerUnit.value);
+            avgPowerW = powerW;
+            runtimeHours = powerW > 0 ? usableWh / powerW : 0;
+            avgCurrentA = avgVoltage > 0 ? powerW / avgVoltage : 0;
+
+          } else if (mode === "split-duty") {
+            var aPct = clampPercent(inputSplitAPercent.value);
+            var bPct = clampPercent(inputSplitBPercent.value);
+
+            var aCurrentA;
+            if (inputSplitAType.value === "power") {
+              var aPowerW = toPowerW(inputSplitAValue.value, inputSplitAPowerUnit.value);
+              aCurrentA = avgVoltage > 0 ? aPowerW / avgVoltage : 0;
+            } else {
+              aCurrentA = toCurrentA(inputSplitAValue.value, inputSplitACurrentUnit.value);
+            }
+
+            var bCurrentA;
+            if (inputSplitBType.value === "power") {
+              var bPowerW = toPowerW(inputSplitBValue.value, inputSplitBPowerUnit.value);
+              bCurrentA = avgVoltage > 0 ? bPowerW / avgVoltage : 0;
+            } else {
+              bCurrentA = toCurrentA(inputSplitBValue.value, inputSplitBCurrentUnit.value);
+            }
+
+            avgCurrentA = (aCurrentA * aPct + bCurrentA * bPct) / 100;
+            avgPowerW = avgCurrentA * avgVoltage;
+            runtimeHours = avgCurrentA > 0 ? usableAh / avgCurrentA : 0;
+          }
+
+          outputPackVoltage.textContent = formatNumber(packVoltage, 3) + " V";
+          outputUsableCapacity.textContent = formatNumber(usableAh, 4) + " Ah";
+          outputUsableEnergy.textContent = formatNumber(usableWh, 4) + " Wh";
+          outputAverageCurrent.textContent = formatCurrentAuto(avgCurrentA);
+          outputAveragePower.textContent = formatPowerAuto(avgPowerW);
+          outputRuntime.textContent = formatRuntime(runtimeHours);
+
+          var notes = [];
+          if (mode === "split-duty") {
+            var dutySum = clampPercent(inputSplitAPercent.value) + clampPercent(inputSplitBPercent.value);
+            if (Math.abs(dutySum - 100) > 0.001) {
+              notes.push("Split duty does not sum to 100%.");
+            }
+          }
+          notes.push("Curve-integrated average voltage: " + formatNumber(avgVoltage, 3) + " V. 100% conversion efficiency assumed.");
+          if (initialSocPct <= finalSocPct) {
+            notes.push("Initial SoC must be greater than final SoC for usable energy.");
+          }
+          outputNote.textContent = notes.join(" ");
+        }
+
+        inputSplitAType.addEventListener("change", function () {
+          syncSplitUnitVisibility();
+          calculate();
+        });
+
+        inputSplitBType.addEventListener("change", function () {
+          syncSplitUnitVisibility();
+          calculate();
+        });
+
+        inputChemistry.addEventListener("change", function() {
+          loadDefaultCurve(inputChemistry.value);
+          if (curveEditorMode === "table") {
+            curveMarkdownInput.value = buildCurveMarkdownTable(currentCurve);
+            setCurveTableStatus("Loaded default curve for selected chemistry.");
+          }
+          calculate();
+        });
+
+        [
+          inputCapacity,
+          inputCapacityUnit,
+          inputInitialSoc,
+          inputFinalSoc,
+          inputDrainMode,
+          inputCurrentDraw,
+          inputCurrentUnit,
+          inputPowerDraw,
+          inputPowerUnit,
+          inputSplitAPercent,
+          inputSplitAValue,
+          inputSplitACurrentUnit,
+          inputSplitAPowerUnit,
+          inputSplitBPercent,
+          inputSplitBValue,
+          inputSplitBCurrentUnit,
+          inputSplitBPowerUnit,
+        ].forEach(function (el) {
+          el.addEventListener("input", calculate);
+          el.addEventListener("change", calculate);
+        });
+
+        // Initialise split-duty unit visibility to match default selected types
+        syncSplitUnitVisibility();
+
+        loadDefaultCurve(inputChemistry.value);
+        setCurveEditorMode("points");
+        setCurveChartVisibility(false);
+        setCurveVisibility(false);
+        updateAllCurvesMarkdown();
+        applyThemeMode(getStoredThemeMode(), false);
+
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) {
+            hostedNote.hidden = true;
+          }
+        }
+
+        calculate();
+      })();
+    </script>
+  </body>
+</html>
