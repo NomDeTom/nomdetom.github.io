@@ -164,6 +164,10 @@
         border-color: var(--accent);
       }
 
+      .export-panel textarea {
+        font-family: monospace;
+      }
+
       .results {
         display: grid;
         gap: 0.75rem;
@@ -441,6 +445,28 @@
         function toNumber(value) {
           var parsed = parseFloat(value);
           return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function toNonNegativeNumber(value) {
+          return Math.max(0, toNumber(value));
+        }
+
+        // Optional: markdown table builder for export functionality
+        function buildMarkdownTableFromCells(headers, rows, alignments) {
+          if (!rows || rows.length === 0) return "";
+          var colWidths = headers.map(function () { return 0; });
+          rows.forEach(function (row) {
+            row.forEach(function (cell, i) {
+              colWidths[i] = Math.max(colWidths[i], String(cell).length);
+            });
+          });
+          headers.forEach(function (cell, i) {
+            colWidths[i] = Math.max(colWidths[i], cell.length);
+          });
+          var headerRow = "| " + headers.map(function (h, i) { return String(h).padEnd(colWidths[i]); }).join(" | ") + " |";
+          var dividerRow = "|" + colWidths.map(function (w, i) { var align = alignments && alignments[i]; var dashes = "-".repeat(w); return align === "right" ? " " + dashes.slice(0, -1) + ":" : align === "center" ? ":" + dashes.slice(0, -1) + ":" : " " + dashes + " "; }).join("|") + "|";
+          var dataRows = rows.map(function (row) { return "| " + row.map(function (cell, i) { return String(cell).padEnd(colWidths[i]); }).join(" | ") + " |"; });
+          return [headerRow, dividerRow].concat(dataRows).join("\n");
         }
 
         function calculate() {
