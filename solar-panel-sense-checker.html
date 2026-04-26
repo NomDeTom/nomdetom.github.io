@@ -1793,33 +1793,41 @@
 
         function buildSingleCalculatorMarkdownTable(card) {
           var metrics = collectCalculatorMetrics(card);
+          var contextRows = [
+            ["Calculator", escapeMarkdownCell(metrics.label)],
+          ];
+
+          if (metrics.freeText) {
+            contextRows.push([
+              "Free text",
+              escapeMarkdownCell(metrics.freeText),
+            ]);
+          }
+
+          contextRows.push(
+            ["Length (mm)", escapeMarkdownCell(formatNumber(metrics.length, 3))],
+            ["Width (mm)", escapeMarkdownCell(formatNumber(metrics.width, 3))],
+            [
+              "Voltage (V)",
+              escapeMarkdownCell(formatNumber(metrics.voltage, 3)),
+            ],
+            [
+              "Claimed efficiency (%)",
+              escapeMarkdownCell(formatNumber(metrics.claimedEfficiency, 3)),
+            ],
+            [
+              "Claimed output",
+              escapeMarkdownCell(
+                formatNumber(metrics.claimedOutput, 4) +
+                  " " +
+                  metrics.claimedOutputUnit,
+              ),
+            ],
+          );
+
           var contextTable = buildMarkdownTableFromCells(
             ["Field", "Value"],
-            [
-              ["Calculator", escapeMarkdownCell(metrics.label)],
-              [
-                "Free text",
-                escapeMarkdownCell(metrics.freeText || "-"),
-              ],
-              ["Length (mm)", escapeMarkdownCell(formatNumber(metrics.length, 3))],
-              ["Width (mm)", escapeMarkdownCell(formatNumber(metrics.width, 3))],
-              [
-                "Voltage (V)",
-                escapeMarkdownCell(formatNumber(metrics.voltage, 3)),
-              ],
-              [
-                "Claimed efficiency (%)",
-                escapeMarkdownCell(formatNumber(metrics.claimedEfficiency, 3)),
-              ],
-              [
-                "Claimed output",
-                escapeMarkdownCell(
-                  formatNumber(metrics.claimedOutput, 4) +
-                    " " +
-                    metrics.claimedOutputUnit,
-                ),
-              ],
-            ],
+            contextRows,
             ["left", "left"],
           );
 
