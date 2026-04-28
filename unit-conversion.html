@@ -579,7 +579,7 @@
         }
       }
     </style>
-    <script src="custom-units-conversion.js"></script>
+    <script src="unit-conversion-custom-units.js"></script>
     <script src="unit-conversion-formulas.js"></script>
   </head>
   <body>
@@ -878,7 +878,7 @@
 
         var CONVERSION_REFERENCES = {
           generic:
-            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>custom-units-conversion.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. Use import/export below to work with the active table.</span>",
+            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. Use import/export below to work with the active table.</span>",
           formulas:
             '<span><strong>Formula Calculator:</strong> Formula groups are defined in <code>unit-conversion-formulas.js</code> where each <code>##</code> heading is a group. The 5-column table maps each variable to its name, formula, units, and Output only mode. Set Output only to <code>yes</code> to make a row computed-only, or <code>hidden</code> to compute it without showing an input row. The solver can back-solve equations when exactly one variable in a row is unknown, so dependent values can propagate from a single driving input. Output-only rows can use <code>if ... then ... else ...</code> formulas with numeric or string outputs. String branches can be direct literals (for example <code>"OK"</code>) or references to string variables defined in the same group. Formulas may reference any other variable by its Variable column value, and may use standard math functions (sqrt, pow, sin, cos, PI, E, etc.).</span>',
         };
@@ -935,7 +935,7 @@
           }
         }
 
-        var GENERIC_UNITS_CATALOG_FILE = "custom-units-conversion.js";
+        var GENERIC_UNITS_CATALOG_FILE = "unit-conversion-custom-units.js";
         var genericCatalog = { order: [], map: {} };
         var genericCatalogLoadPromise = null;
         var genericCatalogLoadError = null;
@@ -1023,7 +1023,7 @@
           if (genericCatalogLoadPromise) return genericCatalogLoadPromise;
 
           // When opened as a file:// URL, fetch() is blocked by browsers.
-          // custom-units-conversion.js (loaded via <script src>) sets this global
+          // unit-conversion-custom-units.js (loaded via <script src>) sets this global
           // as a reliable fallback.
           if (window.GENERIC_UNITS_CATALOG_MARKDOWN) {
             genericCatalogLoadPromise = Promise.resolve(
