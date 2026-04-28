@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>ASCII and Unicode Converter</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-bg: #fff1f1;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-bg: #402226;
+        --error-text: #ffb4b4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .field-grid {
+        display: flex;
+        gap: 0.9rem;
+        flex-wrap: nowrap;
+        align-items: start;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        align-items: start;
+        min-height: 9rem;
+        flex: 1;
+      }
+
+      label {
+        font-weight: 600;
+      }
+
+      textarea,
+      input {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input {
+        min-height: 2.75rem;
+      }
+
+      textarea {
+        min-height: 6.25rem;
+        resize: vertical;
+      }
+
+      textarea:focus,
+      input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .status {
+        margin-top: 0.8rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      .inspector-wrap {
+        overflow-x: auto;
+      }
+
+      .inspector-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .inspector-table th,
+      .inspector-table td {
+        border: 1px solid var(--border);
+        padding: 0.45rem 0.55rem;
+        vertical-align: top;
+      }
+
+      .inspector-table th {
+        text-align: left;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>ASCII and Unicode Converter</h1>
+        <p class="subtitle">Convert between plain text, code points, UTF-8 bytes, UTF-16 units, and escaped representations.</p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">Hide attribution</button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">Did you know: this converter can be saved and used locally!</p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 - By NomDeTom -
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            -
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <h2>Converter</h2>
+        <div class="field-grid">
+          <div class="field">
+            <label for="input-text">Text</label>
+            <textarea id="input-text" spellcheck="false">A</textarea>
+            <div class="hint">Source text. Supports full Unicode.</div>
+          </div>
+
+          <div class="field">
+            <label for="input-codepoints">Code points</label>
+            <textarea id="input-codepoints" class="mono" spellcheck="false">U+0041</textarea>
+            <div class="hint">Space or comma separated. Accepts U+0041, u+0041, 0041, or 0x41.</div>
+          </div>
+
+          <div class="field">
+            <label for="input-utf8">UTF-8 bytes (hex)</label>
+            <textarea id="input-utf8" class="mono" spellcheck="false">41</textarea>
+            <div class="hint">Space or comma separated bytes. Example: E2 82 AC</div>
+          </div>
+
+          <div class="field">
+            <label for="input-utf16">UTF-16 units (hex)</label>
+            <textarea id="input-utf16" class="mono" spellcheck="false">0041</textarea>
+            <div class="hint">Space or comma separated 16-bit words. Example: D83D DE00</div>
+          </div>
+
+          <div class="field">
+            <label for="input-escapes">Escaped form</label>
+            <textarea id="input-escapes" class="mono" spellcheck="false">A</textarea>
+            <div class="hint">Supports mixed text and escapes: \xNN, \uXXXX, \u{XXXXX}, \n, \t, \\</div>
+          </div>
+        </div>
+        <p id="status" class="status">Live conversion ready.</p>
+      </section>
+
+      <section>
+        <h2>Character Inspector</h2>
+        <div class="inspector-wrap">
+          <table class="inspector-table">
+            <thead>
+              <tr>
+                <th>Index</th>
+                <th>Glyph</th>
+                <th>Code point</th>
+                <th>UTF-8 bytes</th>
+                <th>UTF-16 units</th>
+                <th>ASCII</th>
+                <th>Class</th>
+              </tr>
+            </thead>
+            <tbody id="inspector-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Escape Quick Reference</h2>
+        <p class="formula-note mono">
+          <span>\xNN: one byte (00-FF)</span>
+          <span>\uXXXX: one UTF-16 code unit</span>
+          <span>\u{XXXXX}: one Unicode code point</span>
+          <span>Named escapes: \n \r \t \\</span>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+
+        var textEl = document.getElementById("input-text");
+        var codePointsEl = document.getElementById("input-codepoints");
+        var utf8El = document.getElementById("input-utf8");
+        var utf16El = document.getElementById("input-utf16");
+        var escapesEl = document.getElementById("input-escapes");
+        var statusEl = document.getElementById("status");
+        var inspectorRowsEl = document.getElementById("inspector-rows");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+        var themeMode = "auto";
+        var activeSource = "text";
+
+        var enc = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+        var dec = typeof TextDecoder !== "undefined" ? new TextDecoder("utf-8", { fatal: true }) : null;
+
+        var SOURCE_FIELDS = {
+          text: textEl,
+          codepoints: codePointsEl,
+          utf8: utf8El,
+          utf16: utf16El,
+          escapes: escapesEl
+        };
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") return stored;
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute("aria-label", "Theme mode " + mode + ". Activate to switch mode.");
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          document.documentElement.setAttribute("data-theme", getResolvedTheme(themeMode));
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+          if (shouldPersist) localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+        }
+
+        function cpToToken(cp) {
+          return "U+" + cp.toString(16).toUpperCase().padStart(cp <= 0xFFFF ? 4 : 5, "0");
+        }
+
+        function byteToHex(byteValue) {
+          return byteValue.toString(16).toUpperCase().padStart(2, "0");
+        }
+
+        function wordToHex(wordValue) {
+          return wordValue.toString(16).toUpperCase().padStart(4, "0");
+        }
+
+        function classifyCodePoint(cp) {
+          if (cp <= 0x1F || cp === 0x7F) return "control";
+          if (cp === 0x20) return "space";
+          return "printable";
+        }
+
+        function isScalarValue(cp) {
+          return cp >= 0 && cp <= 0x10FFFF && !(cp >= 0xD800 && cp <= 0xDFFF);
+        }
+
+        function textToCodePoints(str) {
+          var out = [];
+          for (var i = 0; i < str.length; ) {
+            var cp = str.codePointAt(i);
+            out.push(cp);
+            i += cp > 0xFFFF ? 2 : 1;
+          }
+          return out;
+        }
+
+        function codePointsToText(cpList) {
+          var out = "";
+          for (var i = 0; i < cpList.length; i++) {
+            var cp = cpList[i];
+            if (!isScalarValue(cp)) throw new Error("Invalid Unicode scalar value: U+" + cp.toString(16).toUpperCase());
+            out += String.fromCodePoint(cp);
+          }
+          return out;
+        }
+
+        function textToUtf8Bytes(str) {
+          if (!enc) throw new Error("TextEncoder is not available in this browser.");
+          return Array.from(enc.encode(str));
+        }
+
+        function utf8BytesToText(bytes) {
+          if (!dec) throw new Error("TextDecoder is not available in this browser.");
+          return dec.decode(Uint8Array.from(bytes));
+        }
+
+        function textToUtf16Units(str) {
+          var out = [];
+          for (var i = 0; i < str.length; i++) out.push(str.charCodeAt(i));
+          return out;
+        }
+
+        function utf16UnitsToText(units) {
+          var out = "";
+          for (var i = 0; i < units.length; i++) {
+            var u = units[i];
+            if (u >= 0xD800 && u <= 0xDBFF) {
+              if (i + 1 >= units.length) throw new Error("Isolated high surrogate at unit index " + i + ".");
+              var low = units[i + 1];
+              if (low < 0xDC00 || low > 0xDFFF) throw new Error("Malformed UTF-16 surrogate pair at unit index " + i + ".");
+              var cp = ((u - 0xD800) << 10) + (low - 0xDC00) + 0x10000;
+              out += String.fromCodePoint(cp);
+              i += 1;
+              continue;
+            }
+            if (u >= 0xDC00 && u <= 0xDFFF) {
+              throw new Error("Isolated low surrogate at unit index " + i + ".");
+            }
+            out += String.fromCharCode(u);
+          }
+          return out;
+        }
+
+        function splitTokens(raw) {
+          var trimmed = String(raw || "").trim();
+          if (!trimmed) return [];
+          return trimmed.split(/[\s,]+/);
+        }
+
+        function parseHexIntToken(token, max, label) {
+          var t = String(token || "").trim();
+          if (!t) throw new Error("Empty " + label + " token.");
+          var clean = t.replace(/^0x/i, "");
+          if (!/^[0-9a-f]+$/i.test(clean)) throw new Error("Invalid hex " + label + " token: " + token);
+          var value = parseInt(clean, 16);
+          if (value > max) throw new Error(label + " out of range: " + token);
+          return value;
+        }
+
+        function parseHexByteStream(raw) {
+          var tokens = splitTokens(raw);
+          var out = [];
+          for (var i = 0; i < tokens.length; i++) out.push(parseHexIntToken(tokens[i], 0xFF, "byte"));
+          return out;
+        }
+
+        function parseHexWordStream(raw) {
+          var tokens = splitTokens(raw);
+          var out = [];
+          for (var i = 0; i < tokens.length; i++) out.push(parseHexIntToken(tokens[i], 0xFFFF, "UTF-16 unit"));
+          return out;
+        }
+
+        function parseCodePointStream(raw) {
+          var tokens = splitTokens(raw);
+          var out = [];
+          for (var i = 0; i < tokens.length; i++) {
+            var token = tokens[i];
+            var clean = token.replace(/^u\+/i, "").replace(/^0x/i, "");
+            if (!/^[0-9a-f]+$/i.test(clean)) throw new Error("Invalid code point token: " + token);
+            var cp = parseInt(clean, 16);
+            if (!isScalarValue(cp)) throw new Error("Code point out of range or surrogate: " + token);
+            out.push(cp);
+          }
+          return out;
+        }
+
+        function parseEscapes(raw) {
+          var s = String(raw || "");
+          var out = "";
+          for (var i = 0; i < s.length; i++) {
+            var ch = s.charAt(i);
+            if (ch !== "\\") {
+              out += ch;
+              continue;
+            }
+
+            if (i + 1 >= s.length) throw new Error("Trailing backslash in escape input.");
+            var n = s.charAt(i + 1);
+
+            if (n === "n") {
+              out += "\n";
+              i += 1;
+              continue;
+            }
+            if (n === "r") {
+              out += "\r";
+              i += 1;
+              continue;
+            }
+            if (n === "t") {
+              out += "\t";
+              i += 1;
+              continue;
+            }
+            if (n === "\\") {
+              out += "\\";
+              i += 1;
+              continue;
+            }
+            if (n === "x") {
+              var hex2 = s.slice(i + 2, i + 4);
+              if (!/^[0-9a-f]{2}$/i.test(hex2)) throw new Error("Invalid \\x escape near index " + i + ".");
+              out += String.fromCharCode(parseInt(hex2, 16));
+              i += 3;
+              continue;
+            }
+            if (n === "u") {
+              if (s.charAt(i + 2) === "{") {
+                var close = s.indexOf("}", i + 3);
+                if (close === -1) throw new Error("Missing } for \\u{...} escape near index " + i + ".");
+                var hexCp = s.slice(i + 3, close);
+                if (!/^[0-9a-f]{1,6}$/i.test(hexCp)) throw new Error("Invalid \\u{...} escape near index " + i + ".");
+                var cp = parseInt(hexCp, 16);
+                if (!isScalarValue(cp)) throw new Error("Code point above U+10FFFF or surrogate near index " + i + ".");
+                out += String.fromCodePoint(cp);
+                i = close;
+                continue;
+              }
+
+              var hex4 = s.slice(i + 2, i + 6);
+              if (!/^[0-9a-f]{4}$/i.test(hex4)) throw new Error("Invalid \\uXXXX escape near index " + i + ".");
+              out += String.fromCharCode(parseInt(hex4, 16));
+              i += 5;
+              continue;
+            }
+
+            throw new Error("Unsupported escape sequence \\" + n + " near index " + i + ".");
+          }
+          return out;
+        }
+
+        function toEscapes(str) {
+          var out = "";
+          for (var i = 0; i < str.length; ) {
+            var cp = str.codePointAt(i);
+            var ch = String.fromCodePoint(cp);
+            if (ch === "\\") out += "\\\\";
+            else if (cp === 10) out += "\\n";
+            else if (cp === 13) out += "\\r";
+            else if (cp === 9) out += "\\t";
+            else if (cp >= 0x20 && cp <= 0x7E) out += ch;
+            else if (cp <= 0xFF) out += "\\x" + cp.toString(16).toUpperCase().padStart(2, "0");
+            else if (cp <= 0xFFFF) out += "\\u" + cp.toString(16).toUpperCase().padStart(4, "0");
+            else out += "\\u{" + cp.toString(16).toUpperCase() + "}";
+            i += cp > 0xFFFF ? 2 : 1;
+          }
+          return out;
+        }
+
+        function formatCodePointsFromText(text) {
+          var cps = textToCodePoints(text);
+          var tokens = [];
+          for (var i = 0; i < cps.length; i++) tokens.push(cpToToken(cps[i]));
+          return tokens.join(" ");
+        }
+
+        function formatUtf8FromText(text) {
+          var bytes = textToUtf8Bytes(text);
+          var tokens = [];
+          for (var i = 0; i < bytes.length; i++) tokens.push(byteToHex(bytes[i]));
+          return tokens.join(" ");
+        }
+
+        function formatUtf16FromText(text) {
+          var units = textToUtf16Units(text);
+          var tokens = [];
+          for (var i = 0; i < units.length; i++) tokens.push(wordToHex(units[i]));
+          return tokens.join(" ");
+        }
+
+        function textFromSource(sourceKey, rawValue) {
+          if (sourceKey === "text") return String(rawValue || "");
+          if (sourceKey === "codepoints") return codePointsToText(parseCodePointStream(rawValue));
+          if (sourceKey === "utf8") return utf8BytesToText(parseHexByteStream(rawValue));
+          if (sourceKey === "utf16") return utf16UnitsToText(parseHexWordStream(rawValue));
+          if (sourceKey === "escapes") return parseEscapes(rawValue);
+          throw new Error("Unknown source key.");
+        }
+
+        function setOutputsFromText(text, sourceKey) {
+          if (sourceKey !== "text") textEl.value = text;
+          if (sourceKey !== "codepoints") codePointsEl.value = formatCodePointsFromText(text);
+          if (sourceKey !== "utf8") utf8El.value = formatUtf8FromText(text);
+          if (sourceKey !== "utf16") utf16El.value = formatUtf16FromText(text);
+          if (sourceKey !== "escapes") escapesEl.value = toEscapes(text);
+          renderInspector(text);
+        }
+
+        function normalizeSourceField(sourceKey, text) {
+          if (sourceKey === "codepoints") codePointsEl.value = formatCodePointsFromText(text);
+          else if (sourceKey === "utf8") utf8El.value = formatUtf8FromText(text);
+          else if (sourceKey === "utf16") utf16El.value = formatUtf16FromText(text);
+          else if (sourceKey === "escapes") escapesEl.value = toEscapes(text);
+        }
+
+        function glyphForCodePoint(cp) {
+          if (cp === 32) return "[space]";
+          if (cp <= 0x1F || cp === 0x7F) return "[ctrl]";
+          return String.fromCodePoint(cp);
+        }
+
+        function renderInspector(text) {
+          inspectorRowsEl.innerHTML = "";
+          var cps = textToCodePoints(text);
+          for (var i = 0; i < cps.length; i++) {
+            var cp = cps[i];
+            var ch = String.fromCodePoint(cp);
+            var utf8 = formatUtf8FromText(ch);
+            var utf16 = formatUtf16FromText(ch);
+            var tr = document.createElement("tr");
+
+            var c0 = document.createElement("td");
+            var c1 = document.createElement("td");
+            var c2 = document.createElement("td");
+            var c3 = document.createElement("td");
+            var c4 = document.createElement("td");
+            var c5 = document.createElement("td");
+            var c6 = document.createElement("td");
+
+            c0.textContent = String(i);
+            c1.textContent = glyphForCodePoint(cp);
+            c2.textContent = cpToToken(cp);
+            c3.textContent = utf8;
+            c4.textContent = utf16;
+            c5.textContent = cp <= 0x7F ? "yes" : "no";
+            c6.textContent = classifyCodePoint(cp);
+
+            c2.className = "mono";
+            c3.className = "mono";
+            c4.className = "mono";
+
+            tr.appendChild(c0);
+            tr.appendChild(c1);
+            tr.appendChild(c2);
+            tr.appendChild(c3);
+            tr.appendChild(c4);
+            tr.appendChild(c5);
+            tr.appendChild(c6);
+            inspectorRowsEl.appendChild(tr);
+          }
+        }
+
+        function setStatusOk(message) {
+          statusEl.className = "status";
+          statusEl.textContent = message;
+        }
+
+        function setStatusError(message) {
+          statusEl.className = "status error";
+          statusEl.textContent = message;
+        }
+
+        function handleSourceInput(sourceKey) {
+          activeSource = sourceKey;
+          var srcEl = SOURCE_FIELDS[sourceKey];
+          var raw = srcEl.value;
+          try {
+            var text = textFromSource(sourceKey, raw);
+            setOutputsFromText(text, sourceKey);
+            setStatusOk("Updated from " + sourceKey + " source.");
+          } catch (err) {
+            setStatusError(err && err.message ? err.message : "Unable to parse input.");
+          }
+        }
+
+        function handleSourceBlur(sourceKey) {
+          var srcEl = SOURCE_FIELDS[sourceKey];
+          try {
+            var text = textFromSource(sourceKey, srcEl.value);
+            normalizeSourceField(sourceKey, text);
+          } catch (err) {
+            return;
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        function bindSource(sourceKey) {
+          var el = SOURCE_FIELDS[sourceKey];
+          el.addEventListener("focus", function () {
+            activeSource = sourceKey;
+          });
+          el.addEventListener("input", function () {
+            handleSourceInput(sourceKey);
+          });
+          el.addEventListener("blur", function () {
+            handleSourceBlur(sourceKey);
+          });
+        }
+
+        bindSource("text");
+        bindSource("codepoints");
+        bindSource("utf8");
+        bindSource("utf16");
+        bindSource("escapes");
+
+        applyThemeMode(getStoredThemeMode(), false);
+        handleSourceInput(activeSource);
+      })();
+    </script>
+  </body>
+</html>

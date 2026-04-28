@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Datatype Byte Converter</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-bg: #fff1f1;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-bg: #402226;
+        --error-text: #ffb4b4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 0.9rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      label {
+        font-weight: 600;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .spin-wrap {
+        position: relative;
+      }
+
+      .spin-wrap input {
+        padding-right: 1.8rem;
+      }
+
+      .spin-btns {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border);
+      }
+
+      .spin-up,
+      .spin-dn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.5rem;
+        line-height: 1;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spin-dn {
+        border-top: 1px solid var(--border);
+      }
+
+      .spin-up:hover,
+      .spin-dn:hover {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .switch-row {
+        display: flex;
+        gap: 0;
+      }
+
+      .switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.55rem 0.7rem;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .switch-btn + .switch-btn {
+        border-left: none;
+      }
+
+      .switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .switch-btn:hover:not(.active) {
+        color: var(--text);
+      }
+
+      .status {
+        margin-top: 0.8rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 0.45rem 0.55rem;
+        vertical-align: top;
+        font-size: 0.9rem;
+      }
+
+      th {
+        text-align: left;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      td code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        word-break: break-all;
+      }
+
+      .row-invalid {
+        background: var(--error-bg);
+      }
+
+      .ok-pill,
+      .bad-pill {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid var(--border);
+        padding: 0.1rem 0.35rem;
+      }
+
+      .ok-pill {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .bad-pill {
+        color: var(--error-text);
+        border-color: var(--error-text);
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Datatype Byte Converter</h1>
+        <p class="subtitle">
+          Enter a value once and inspect how common integer and floating-point datatypes are encoded as raw bytes.
+        </p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">Hide attribution</button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">Did you know: this calculator can be saved and used locally!</p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <h2>Inputs</h2>
+        <div class="field-grid">
+          <div class="field">
+            <label for="source-value">Source value</label>
+            <div class="spin-wrap">
+              <input id="source-value" type="text" placeholder="Examples: 255, -1, 3.14159, 0xFF, 0b1010" />
+              <div class="spin-btns">
+                <button id="source-spin-up" type="button" class="spin-up" aria-label="Increment source value">▲</button>
+                <button id="source-spin-dn" type="button" class="spin-dn" aria-label="Decrement source value">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="source-mode">Interpretation mode</label>
+            <select id="source-mode">
+              <option value="auto">Auto</option>
+              <option value="integer">Integer only</option>
+              <option value="number">Number only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Byte order</label>
+            <div class="switch-row" role="group" aria-label="Byte order">
+              <button id="endian-le" type="button" class="switch-btn active" data-endian="le">Little-endian</button>
+              <button id="endian-be" type="button" class="switch-btn" data-endian="be">Big-endian</button>
+            </div>
+          </div>
+        </div>
+        <p id="status" class="status">Enter a value to inspect encodings.</p>
+      </section>
+
+      <section>
+        <h2>Encodings</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Hex bytes</th>
+                <th>Binary bytes</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Notes</h2>
+        <p class="formula-note">
+          <span>Signed integer rows use strict range validation (out-of-range values are not wrapped in this version).</span>
+          <span>float32/float64 rows include sign/exponent/mantissa bit slices in the Notes column.</span>
+          <span>Changing endian reverses byte order for multi-byte datatypes; bit fields are still shown in canonical big-endian bit order.</span>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+
+        var inputValue = document.getElementById("source-value");
+        var sourceSpinUp = document.getElementById("source-spin-up");
+        var sourceSpinDn = document.getElementById("source-spin-dn");
+        var inputMode = document.getElementById("source-mode");
+        var endianButtons = [
+          document.getElementById("endian-le"),
+          document.getElementById("endian-be")
+        ];
+        var endianMode = "le";
+        var statusEl = document.getElementById("status");
+        var rowsEl = document.getElementById("rows");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") return stored;
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute("aria-label", "Theme mode " + mode + ". Activate to switch mode.");
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          document.documentElement.setAttribute("data-theme", getResolvedTheme(themeMode));
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+          if (shouldPersist) localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        function bytesToHex(bytes) {
+          var out = [];
+          for (var i = 0; i < bytes.length; i++) {
+            out.push(bytes[i].toString(16).toUpperCase().padStart(2, "0"));
+          }
+          return out.join(" ");
+        }
+
+        function bytesToBinary(bytes) {
+          var out = [];
+          for (var i = 0; i < bytes.length; i++) {
+            out.push(bytes[i].toString(2).padStart(8, "0"));
+          }
+          return out.join(" ");
+        }
+
+        function parseSource(raw, mode) {
+          var text = String(raw || "").trim();
+          if (!text) return null;
+
+          var lower = text.toLowerCase();
+          if (mode !== "integer" && (lower === "nan" || lower === "infinity" || lower === "+infinity" || lower === "-infinity")) {
+            return {
+              text: text,
+              isInteger: false,
+              numberValue: Number(text),
+              bigIntValue: null
+            };
+          }
+
+          var bigIntValue = null;
+          var numberValue = null;
+          var isInteger = false;
+
+          if (/^[-+]?0x[0-9a-f]+$/i.test(text)) {
+            try {
+              bigIntValue = BigInt(text);
+              isInteger = true;
+              numberValue = Number(bigIntValue);
+            } catch (e) {
+              return { error: "Invalid hex integer literal." };
+            }
+          } else if (/^[-+]?0b[01]+$/i.test(text)) {
+            try {
+              var sign = text.charAt(0) === "-" ? -1n : 1n;
+              var body = text.replace(/^[-+]?0b/i, "");
+              bigIntValue = sign * BigInt("0b" + body);
+              isInteger = true;
+              numberValue = Number(bigIntValue);
+            } catch (e) {
+              return { error: "Invalid binary integer literal." };
+            }
+          } else if (/^[-+]?\d+$/.test(text)) {
+            try {
+              bigIntValue = BigInt(text);
+              isInteger = true;
+              numberValue = Number(text);
+            } catch (e) {
+              return { error: "Invalid integer literal." };
+            }
+          } else {
+            numberValue = Number(text);
+            if (!Number.isFinite(numberValue)) {
+              return { error: "Unable to parse the value." };
+            }
+            isInteger = Number.isInteger(numberValue);
+            if (isInteger) {
+              try {
+                bigIntValue = BigInt(String(numberValue));
+              } catch (e) {
+                bigIntValue = null;
+              }
+            }
+          }
+
+          if (mode === "integer" && !isInteger) {
+            return { error: "Integer mode requires an integer input." };
+          }
+
+          if (mode === "number" && !Number.isFinite(numberValue)) {
+            return { error: "Number mode requires a finite numeric value." };
+          }
+
+          return {
+            text: text,
+            isInteger: isInteger,
+            numberValue: numberValue,
+            bigIntValue: bigIntValue
+          };
+        }
+
+        function intRange(bits, signed) {
+          if (signed) {
+            var max = (1n << BigInt(bits - 1)) - 1n;
+            var min = -(1n << BigInt(bits - 1));
+            return { min: min, max: max };
+          }
+          return { min: 0n, max: (1n << BigInt(bits)) - 1n };
+        }
+
+        function encodeInt(bigIntValue, bits, signed, littleEndian) {
+          var size = bits / 8;
+          var buf = new ArrayBuffer(size);
+          var dv = new DataView(buf);
+          if (bits === 8) {
+            if (signed) dv.setInt8(0, Number(bigIntValue));
+            else dv.setUint8(0, Number(bigIntValue));
+          } else if (bits === 16) {
+            if (signed) dv.setInt16(0, Number(bigIntValue), littleEndian);
+            else dv.setUint16(0, Number(bigIntValue), littleEndian);
+          } else if (bits === 32) {
+            if (signed) dv.setInt32(0, Number(bigIntValue), littleEndian);
+            else dv.setUint32(0, Number(bigIntValue), littleEndian);
+          } else if (bits === 64) {
+            if (signed) dv.setBigInt64(0, bigIntValue, littleEndian);
+            else dv.setBigUint64(0, bigIntValue, littleEndian);
+          }
+          return new Uint8Array(buf);
+        }
+
+        function encodeFloat(numberValue, bits, littleEndian) {
+          var size = bits / 8;
+          var buf = new ArrayBuffer(size);
+          var dv = new DataView(buf);
+          if (bits === 32) dv.setFloat32(0, numberValue, littleEndian);
+          else dv.setFloat64(0, numberValue, littleEndian);
+          return new Uint8Array(buf);
+        }
+
+        function bitLayoutForFloat(numberValue, bits) {
+          var canonical = encodeFloat(numberValue, bits, false);
+          var bitString = bytesToBinary(canonical).replace(/\s/g, "");
+          if (bits === 32) {
+            return {
+              sign: bitString.slice(0, 1),
+              exp: bitString.slice(1, 9),
+              frac: bitString.slice(9)
+            };
+          }
+          return {
+            sign: bitString.slice(0, 1),
+            exp: bitString.slice(1, 12),
+            frac: bitString.slice(12)
+          };
+        }
+
+        var TYPES = [
+          { name: "int8", bits: 8, kind: "int", signed: true },
+          { name: "int16", bits: 16, kind: "int", signed: true },
+          { name: "int32", bits: 32, kind: "int", signed: true },
+          { name: "int64", bits: 64, kind: "int", signed: true },
+          { name: "uint8", bits: 8, kind: "int", signed: false },
+          { name: "uint16", bits: 16, kind: "int", signed: false },
+          { name: "uint32", bits: 32, kind: "int", signed: false },
+          { name: "uint64", bits: 64, kind: "int", signed: false },
+          { name: "float32", bits: 32, kind: "float", signed: true },
+          { name: "float64", bits: 64, kind: "float", signed: true }
+        ];
+
+        function renderRow(type, parsed, littleEndian) {
+          var tr = document.createElement("tr");
+          var tdType = document.createElement("td");
+          var tdStatus = document.createElement("td");
+          var tdHex = document.createElement("td");
+          var tdBin = document.createElement("td");
+          var tdNote = document.createElement("td");
+
+          tdType.innerHTML = "<strong>" + type.name + "</strong><br/><span style='color:var(--muted);font-size:0.82rem'>" + (type.bits / 8) + " bytes</span>";
+
+          function setInvalid(message) {
+            tr.className = "row-invalid";
+            tdStatus.innerHTML = "<span class='bad-pill'>Invalid</span>";
+            tdHex.innerHTML = "<code>—</code>";
+            tdBin.innerHTML = "<code>—</code>";
+            tdNote.textContent = message;
+          }
+
+          if (!parsed || parsed.error) {
+            setInvalid(parsed && parsed.error ? parsed.error : "No input");
+            tr.appendChild(tdType);
+            tr.appendChild(tdStatus);
+            tr.appendChild(tdHex);
+            tr.appendChild(tdBin);
+            tr.appendChild(tdNote);
+            return tr;
+          }
+
+          if (type.kind === "int") {
+            if (!parsed.isInteger || parsed.bigIntValue === null) {
+              setInvalid("Requires integer source value.");
+            } else {
+              var range = intRange(type.bits, type.signed);
+              if (parsed.bigIntValue < range.min || parsed.bigIntValue > range.max) {
+                setInvalid("Out of range: [" + range.min.toString() + ", " + range.max.toString() + "]");
+              } else {
+                var bytes = encodeInt(parsed.bigIntValue, type.bits, type.signed, littleEndian);
+                tdStatus.innerHTML = "<span class='ok-pill'>OK</span>";
+                tdHex.innerHTML = "<code>" + bytesToHex(bytes) + "</code>";
+                tdBin.innerHTML = "<code>" + bytesToBinary(bytes) + "</code>";
+                tdNote.textContent = type.signed ? "Signed two's complement" : "Unsigned integer";
+              }
+            }
+          } else {
+            if (parsed.numberValue === null || !Number.isFinite(parsed.numberValue)) {
+              setInvalid("Requires finite numeric value.");
+            } else {
+              var fbytes = encodeFloat(parsed.numberValue, type.bits, littleEndian);
+              var bits = bitLayoutForFloat(parsed.numberValue, type.bits);
+              tdStatus.innerHTML = "<span class='ok-pill'>OK</span>";
+              tdHex.innerHTML = "<code>" + bytesToHex(fbytes) + "</code>";
+              tdBin.innerHTML = "<code>" + bytesToBinary(fbytes) + "</code>";
+              tdNote.innerHTML = "sign=" + bits.sign + " · exp=" + bits.exp + " · mantissa=" + bits.frac;
+            }
+          }
+
+          tr.appendChild(tdType);
+          tr.appendChild(tdStatus);
+          tr.appendChild(tdHex);
+          tr.appendChild(tdBin);
+          tr.appendChild(tdNote);
+          return tr;
+        }
+
+        function nudgeSourceValue(delta) {
+          var parsed = parseSource(inputValue.value, "integer");
+          var next = 0n;
+          if (parsed && !parsed.error && parsed.bigIntValue !== null) {
+            next = parsed.bigIntValue;
+          }
+          next += BigInt(delta);
+          inputValue.value = next.toString();
+          update();
+        }
+
+        function update() {
+          var parsed = parseSource(inputValue.value, inputMode.value);
+          var littleEndian = endianMode === "le";
+
+          rowsEl.innerHTML = "";
+          for (var i = 0; i < TYPES.length; i++) {
+            rowsEl.appendChild(renderRow(TYPES[i], parsed, littleEndian));
+          }
+
+          if (!inputValue.value.trim()) {
+            statusEl.className = "status";
+            statusEl.textContent = "Enter a value to inspect encodings.";
+            return;
+          }
+
+          if (parsed && parsed.error) {
+            statusEl.className = "status error";
+            statusEl.textContent = parsed.error;
+            return;
+          }
+
+          statusEl.className = "status";
+          statusEl.textContent = "Rendered all datatype rows for " + (littleEndian ? "little-endian" : "big-endian") + ".";
+        }
+
+        inputValue.addEventListener("input", update);
+        sourceSpinUp.addEventListener("click", function () { nudgeSourceValue(1); });
+        sourceSpinDn.addEventListener("click", function () { nudgeSourceValue(-1); });
+        inputMode.addEventListener("change", update);
+        for (var i = 0; i < endianButtons.length; i++) {
+          endianButtons[i].addEventListener("click", (function (btn) {
+            return function () {
+              endianMode = btn.getAttribute("data-endian");
+              for (var j = 0; j < endianButtons.length; j++) {
+                endianButtons[j].classList.toggle("active", endianButtons[j] === btn);
+              }
+              update();
+            };
+          })(endianButtons[i]));
+        }
+
+        applyThemeMode(getStoredThemeMode(), false);
+        update();
+      })();
+    </script>
+  </body>
+</html>

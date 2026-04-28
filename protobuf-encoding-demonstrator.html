@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Protobuf Encoding Demonstrator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-bg: #fff1f1;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-bg: #402226;
+        --error-text: #ffb4b4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 0.9rem;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .compare-field-grid {
+        grid-template-columns: minmax(6.5rem, 8.5rem) max-content minmax(16rem, 1fr);
+      }
+
+      .compare-field-grid .field:last-child {
+        min-width: 0;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .value-input-wrap {
+        display: grid;
+      }
+
+      .compare-textarea {
+        resize: vertical;
+        min-height: 2.9rem;
+      }
+
+      label {
+        font-weight: 600;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .status {
+        margin-top: 0.8rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      .breakdown {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .breakdown-row {
+        display: grid;
+        gap: 0.25rem;
+        border-top: 1px solid var(--border);
+        padding-top: 0.7rem;
+      }
+
+      .breakdown-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .breakdown-label {
+        color: var(--muted);
+        font-size: 0.82rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        word-break: break-all;
+      }
+
+      .zigzag-box {
+        background: var(--accent-soft);
+        padding: 0.8rem;
+        border: 1px solid var(--border);
+      }
+
+      .zigzag-box[hidden] {
+        display: none;
+      }
+
+      .final-bytes {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .byte-line {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .byte-line label {
+        font-size: 0.82rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .byte-out {
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        padding: 0.6rem 0.75rem;
+      }
+
+      .copy-btn {
+        width: fit-content;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .view-switch {
+        display: flex;
+        gap: 0;
+      }
+
+      .view-switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .view-switch-btn + .view-switch-btn {
+        border-left: none;
+      }
+
+      .view-switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .comparison-table-wrap {
+        overflow-x: auto;
+      }
+
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        border: 1px solid var(--border);
+        padding: 0.45rem 0.55rem;
+        vertical-align: top;
+      }
+
+      .comparison-table th {
+        text-align: left;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      .comparison-row-error td {
+        background: var(--error-bg);
+        color: var(--error-text);
+      }
+
+      .family-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .family-chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.82rem;
+        padding: 0.35rem 0.6rem;
+        cursor: pointer;
+      }
+
+      .family-chip.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .family-chip:hover:not(.active) {
+        color: var(--text);
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .compare-field-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Protobuf Encoding Demonstrator</h1>
+        <p class="subtitle">Build a single protobuf field and inspect the exact wire bytes, including key varint, zigzag transform, and value payload.</p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">Hide attribution</button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">Did you know: this calculator can be saved and used locally!</p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <h2>Mode</h2>
+        <div class="view-switch" role="group" aria-label="Protobuf mode switch">
+          <button id="mode-single" type="button" class="view-switch-btn active" data-mode="single">Single Field Encoder</button>
+          <button id="mode-compare" type="button" class="view-switch-btn" data-mode="compare">Type Comparison</button>
+        </div>
+      </section>
+
+      <div id="view-single">
+
+      <section>
+        <h2>Field Input</h2>
+        <div class="field-grid">
+          <div class="field">
+            <label for="field-number">Field number</label>
+            <input id="field-number" type="number" min="1" step="1" value="1" />
+          </div>
+          <div class="field">
+            <label for="field-type">Field type</label>
+            <select id="field-type">
+              <option value="int32" selected>int32</option>
+              <option value="int64">int64</option>
+              <option value="sint32">sint32 (zigzag)</option>
+              <option value="sint64">sint64 (zigzag)</option>
+              <option value="uint32">uint32</option>
+              <option value="uint64">uint64</option>
+              <option value="bool">bool</option>
+              <option value="fixed32">fixed32</option>
+              <option value="fixed64">fixed64</option>
+              <option value="sfixed32">sfixed32</option>
+              <option value="sfixed64">sfixed64</option>
+              <option value="float">float</option>
+              <option value="double">double</option>
+              <option value="string">string</option>
+              <option value="bytes">bytes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="value-input">Field value</label>
+            <div class="value-input-wrap">
+              <input id="value-input-number" type="number" step="any" value="150" />
+              <input id="value-input-text" type="text" hidden />
+            </div>
+          </div>
+        </div>
+        <p id="status" class="status">Live update ready.</p>
+      </section>
+
+      <section>
+        <h2>Encoding Breakdown</h2>
+        <div class="breakdown">
+          <div class="breakdown-row">
+            <div class="breakdown-label">Wire type</div>
+            <div id="wire-type-text">0 (varint)</div>
+          </div>
+          <div class="breakdown-row">
+            <div class="breakdown-label">Key formula</div>
+            <code id="key-formula">key = (field_number << 3) | wire_type</code>
+          </div>
+          <div class="breakdown-row">
+            <div class="breakdown-label">Key varint bytes</div>
+            <code id="key-bytes">08</code>
+          </div>
+          <div class="breakdown-row">
+            <div class="breakdown-label">Value encoding steps</div>
+            <div id="value-steps">varint(150) -> 96 01</div>
+          </div>
+        </div>
+
+        <div id="zigzag-box" class="zigzag-box" hidden>
+          <div class="breakdown-label">Zigzag Example</div>
+          <div id="zigzag-text">signed=-1 -> zigzag=1 -> varint=01</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Final Wire Bytes</h2>
+        <div class="final-bytes">
+          <div class="byte-line">
+            <label>Hex</label>
+            <div class="byte-out"><code id="final-hex">08 96 01</code></div>
+          </div>
+          <div class="byte-line">
+            <label>Binary</label>
+            <div class="byte-out"><code id="final-bin">00001000 10010110 00000001</code></div>
+          </div>
+          <button id="copy-hex" class="action-btn copy-btn" type="button">Copy hex</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Wire Reference</h2>
+        <p class="formula-note">
+          <span>Wire type 0: varint (int/uint/sint/bool)</span>
+          <span>Wire type 1: 64-bit little-endian (fixed64/sfixed64/double)</span>
+          <span>Wire type 2: length-delimited (string/bytes)</span>
+          <span>Wire type 5: 32-bit little-endian (fixed32/sfixed32/float)</span>
+        </p>
+      </section>
+
+      </div>
+
+      <div id="view-compare" hidden>
+        <section>
+          <h2>Comparison Input</h2>
+          <div class="field-grid compare-field-grid">
+            <div class="field">
+              <label for="compare-field-number">Field number</label>
+              <input id="compare-field-number" type="number" min="1" step="1" value="1" />
+            </div>
+            <div class="field">
+              <label>Compatible type family</label>
+              <div class="family-chips" role="group" aria-label="Compatible type family">
+                <button type="button" class="family-chip active" data-family="signed-int">Signed integers</button>
+                <button type="button" class="family-chip" data-family="unsigned-int">Unsigned integers</button>
+                <button type="button" class="family-chip" data-family="float">Floating point</button>
+                <button type="button" class="family-chip" data-family="text">Text and bytes</button>
+                <button type="button" class="family-chip" data-family="bool">Boolean</button>
+              </div>
+            </div>
+            <div class="field">
+              <label for="compare-value">Shared value</label>
+              <div class="value-input-wrap">
+                <input id="compare-value-number" type="number" step="any" value="-1" />
+                <input id="compare-value-text" type="text" hidden />
+                <textarea id="compare-value-textarea" class="compare-textarea" rows="2" hidden></textarea>
+              </div>
+            </div>
+          </div>
+          <p id="compare-status" class="status">Comparison ready.</p>
+        </section>
+
+        <section>
+          <h2>Type Comparison</h2>
+          <div class="comparison-table-wrap">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Value bytes (hex)</th>
+                  <th>Full field bytes (hex)</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="compare-rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+
+        var fieldNumberEl = document.getElementById("field-number");
+        var fieldTypeEl = document.getElementById("field-type");
+        var valueInputNumberEl = document.getElementById("value-input-number");
+        var valueInputTextEl = document.getElementById("value-input-text");
+        var valueInputEl = valueInputNumberEl;
+
+        var statusEl = document.getElementById("status");
+        var wireTypeTextEl = document.getElementById("wire-type-text");
+        var keyFormulaEl = document.getElementById("key-formula");
+        var keyBytesEl = document.getElementById("key-bytes");
+        var valueStepsEl = document.getElementById("value-steps");
+        var zigzagBoxEl = document.getElementById("zigzag-box");
+        var zigzagTextEl = document.getElementById("zigzag-text");
+        var finalHexEl = document.getElementById("final-hex");
+        var finalBinEl = document.getElementById("final-bin");
+        var copyHexBtn = document.getElementById("copy-hex");
+        var viewSingleEl = document.getElementById("view-single");
+        var viewCompareEl = document.getElementById("view-compare");
+        var modeSingleBtn = document.getElementById("mode-single");
+        var modeCompareBtn = document.getElementById("mode-compare");
+        var compareFieldNumberEl = document.getElementById("compare-field-number");
+        var compareFamilyButtons = document.querySelectorAll(".family-chip");
+        var compareFamily = "signed-int";
+        var compareValueNumberEl = document.getElementById("compare-value-number");
+        var compareValueTextEl = document.getElementById("compare-value-text");
+        var compareValueTextareaEl = document.getElementById("compare-value-textarea");
+        var compareValueEl = compareValueNumberEl;
+        var compareStatusEl = document.getElementById("compare-status");
+        var compareRowsEl = document.getElementById("compare-rows");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+        var themeMode = "auto";
+        var currentMode = "single";
+
+        var TYPE_INFO = {
+          int32: { wireType: 0, family: "int32" },
+          int64: { wireType: 0, family: "int64" },
+          sint32: { wireType: 0, family: "sint32" },
+          sint64: { wireType: 0, family: "sint64" },
+          uint32: { wireType: 0, family: "uint32" },
+          uint64: { wireType: 0, family: "uint64" },
+          bool: { wireType: 0, family: "bool" },
+          fixed64: { wireType: 1, family: "fixed64" },
+          sfixed64: { wireType: 1, family: "sfixed64" },
+          double: { wireType: 1, family: "double" },
+          string: { wireType: 2, family: "string" },
+          bytes: { wireType: 2, family: "bytes" },
+          fixed32: { wireType: 5, family: "fixed32" },
+          sfixed32: { wireType: 5, family: "sfixed32" },
+          float: { wireType: 5, family: "float" }
+        };
+
+        var NUMERIC_TYPES = {
+          int32: true,
+          int64: true,
+          sint32: true,
+          sint64: true,
+          uint32: true,
+          uint64: true,
+          fixed32: true,
+          fixed64: true,
+          sfixed32: true,
+          sfixed64: true,
+          float: true,
+          double: true
+        };
+
+        var COMPARISON_FAMILIES = {
+          "signed-int": ["int32", "int64", "sint32", "sint64", "sfixed32", "sfixed64"],
+          "unsigned-int": ["uint32", "uint64", "fixed32", "fixed64"],
+          float: ["float", "double"],
+          text: ["string", "bytes"],
+          bool: ["bool"]
+        };
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") return stored;
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute("aria-label", "Theme mode " + mode + ". Activate to switch mode.");
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          document.documentElement.setAttribute("data-theme", getResolvedTheme(themeMode));
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+          if (shouldPersist) localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        function bytesToHex(bytes) {
+          var out = [];
+          for (var i = 0; i < bytes.length; i++) out.push(bytes[i].toString(16).toUpperCase().padStart(2, "0"));
+          return out.join(" ");
+        }
+
+        function bytesToBinary(bytes) {
+          var out = [];
+          for (var i = 0; i < bytes.length; i++) out.push(bytes[i].toString(2).padStart(8, "0"));
+          return out.join(" ");
+        }
+
+        function encodeVarintUnsigned(value) {
+          var v = BigInt(value);
+          if (v < 0n) throw new Error("Varint expects unsigned value.");
+          var out = [];
+          while (v >= 0x80n) {
+            out.push(Number((v & 0x7Fn) | 0x80n));
+            v >>= 7n;
+          }
+          out.push(Number(v));
+          return Uint8Array.from(out);
+        }
+
+        function zigzag32(n) {
+          var signed = BigInt.asIntN(32, n);
+          return BigInt.asUintN(32, (signed << 1n) ^ (signed >> 31n));
+        }
+
+        function zigzag64(n) {
+          var signed = BigInt.asIntN(64, n);
+          return BigInt.asUintN(64, (signed << 1n) ^ (signed >> 63n));
+        }
+
+        function parseIntegerText(text) {
+          var t = String(text || "").trim();
+          if (!t) throw new Error("Value is required.");
+          if (!/^[-+]?((0x[0-9a-f]+)|(0b[01]+)|\d+)$/i.test(t)) throw new Error("Invalid integer literal.");
+          return BigInt(t);
+        }
+
+        function parseBool(text) {
+          var t = String(text || "").trim().toLowerCase();
+          if (t === "true" || t === "1") return 1n;
+          if (t === "false" || t === "0") return 0n;
+          throw new Error("bool expects true/false or 1/0.");
+        }
+
+        function parseBytes(text) {
+          var t = String(text || "").trim();
+          if (!t) return new Uint8Array(0);
+          if (/^(?:0x)?[0-9a-f]{2}(?:\s+(?:0x)?[0-9a-f]{2})*$/i.test(t)) {
+            var parts = t.split(/\s+/);
+            var out = [];
+            for (var i = 0; i < parts.length; i++) {
+              out.push(parseInt(parts[i].replace(/^0x/i, ""), 16));
+            }
+            return Uint8Array.from(out);
+          }
+          return new TextEncoder().encode(t);
+        }
+
+        function toLittleEndianBytes32(numberValue, signed) {
+          var buf = new ArrayBuffer(4);
+          var dv = new DataView(buf);
+          if (signed) dv.setInt32(0, numberValue, true);
+          else dv.setUint32(0, numberValue, true);
+          return new Uint8Array(buf);
+        }
+
+        function toLittleEndianBytes64(bigValue, signed) {
+          var buf = new ArrayBuffer(8);
+          var dv = new DataView(buf);
+          if (signed) dv.setBigInt64(0, bigValue, true);
+          else dv.setBigUint64(0, bigValue, true);
+          return new Uint8Array(buf);
+        }
+
+        function encodeFloat32(value) {
+          var buf = new ArrayBuffer(4);
+          var dv = new DataView(buf);
+          dv.setFloat32(0, value, true);
+          return new Uint8Array(buf);
+        }
+
+        function encodeFloat64(value) {
+          var buf = new ArrayBuffer(8);
+          var dv = new DataView(buf);
+          dv.setFloat64(0, value, true);
+          return new Uint8Array(buf);
+        }
+
+        function assertRange(value, min, max, label) {
+          if (value < min || value > max) {
+            throw new Error(label + " out of range [" + min.toString() + ", " + max.toString() + "]");
+          }
+        }
+
+        function encodeValue(fieldType, rawValue) {
+          var steps = [];
+          var zigzagText = null;
+          var family = TYPE_INFO[fieldType].family;
+
+          if (family === "int32") {
+            var i32 = parseIntegerText(rawValue);
+            assertRange(i32, -(1n << 31n), (1n << 31n) - 1n, "int32");
+            var int32AsU64 = BigInt.asUintN(64, BigInt.asIntN(32, i32));
+            var varint32 = encodeVarintUnsigned(int32AsU64);
+            steps.push("int32 uses varint; negative values expand to 10 bytes");
+            return { bytes: varint32, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "int64") {
+            var i64 = parseIntegerText(rawValue);
+            assertRange(i64, -(1n << 63n), (1n << 63n) - 1n, "int64");
+            var varint64 = encodeVarintUnsigned(BigInt.asUintN(64, i64));
+            steps.push("int64 encoded as two's complement then base-128 varint");
+            return { bytes: varint64, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "sint32") {
+            var s32 = parseIntegerText(rawValue);
+            assertRange(s32, -(1n << 31n), (1n << 31n) - 1n, "sint32");
+            var zz32 = zigzag32(s32);
+            var sint32Bytes = encodeVarintUnsigned(zz32);
+            zigzagText = "signed=" + s32.toString() + " -> zigzag=" + zz32.toString() + " -> varint=" + bytesToHex(sint32Bytes);
+            steps.push("zigzag32 = (n << 1) ^ (n >> 31)");
+            return { bytes: sint32Bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "sint64") {
+            var s64 = parseIntegerText(rawValue);
+            assertRange(s64, -(1n << 63n), (1n << 63n) - 1n, "sint64");
+            var zz64 = zigzag64(s64);
+            var sint64Bytes = encodeVarintUnsigned(zz64);
+            zigzagText = "signed=" + s64.toString() + " -> zigzag=" + zz64.toString() + " -> varint=" + bytesToHex(sint64Bytes);
+            steps.push("zigzag64 = (n << 1) ^ (n >> 63)");
+            return { bytes: sint64Bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "uint32") {
+            var u32 = parseIntegerText(rawValue);
+            assertRange(u32, 0n, (1n << 32n) - 1n, "uint32");
+            var u32bytes = encodeVarintUnsigned(u32);
+            steps.push("uint32 encoded as unsigned varint");
+            return { bytes: u32bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "uint64") {
+            var u64 = parseIntegerText(rawValue);
+            assertRange(u64, 0n, (1n << 64n) - 1n, "uint64");
+            var u64bytes = encodeVarintUnsigned(u64);
+            steps.push("uint64 encoded as unsigned varint");
+            return { bytes: u64bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "bool") {
+            var b = parseBool(rawValue);
+            var bBytes = encodeVarintUnsigned(b);
+            steps.push("bool false=0, true=1 then varint");
+            return { bytes: bBytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "fixed32") {
+            var f32 = parseIntegerText(rawValue);
+            assertRange(f32, 0n, (1n << 32n) - 1n, "fixed32");
+            var fixed32bytes = toLittleEndianBytes32(Number(f32), false);
+            steps.push("fixed32 always 4 bytes, little-endian");
+            return { bytes: fixed32bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "sfixed32") {
+            var sf32 = parseIntegerText(rawValue);
+            assertRange(sf32, -(1n << 31n), (1n << 31n) - 1n, "sfixed32");
+            var sfixed32bytes = toLittleEndianBytes32(Number(sf32), true);
+            steps.push("sfixed32 always 4 bytes, little-endian two's complement");
+            return { bytes: sfixed32bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "fixed64") {
+            var f64 = parseIntegerText(rawValue);
+            assertRange(f64, 0n, (1n << 64n) - 1n, "fixed64");
+            var fixed64bytes = toLittleEndianBytes64(f64, false);
+            steps.push("fixed64 always 8 bytes, little-endian");
+            return { bytes: fixed64bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "sfixed64") {
+            var sf64 = parseIntegerText(rawValue);
+            assertRange(sf64, -(1n << 63n), (1n << 63n) - 1n, "sfixed64");
+            var sfixed64bytes = toLittleEndianBytes64(sf64, true);
+            steps.push("sfixed64 always 8 bytes, little-endian two's complement");
+            return { bytes: sfixed64bytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "float") {
+            var fl = Number(String(rawValue).trim());
+            if (!Number.isFinite(fl)) throw new Error("float expects a finite number.");
+            var floatBytes = encodeFloat32(fl);
+            steps.push("float encoded as IEEE754 binary32, little-endian");
+            return { bytes: floatBytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "double") {
+            var dbl = Number(String(rawValue).trim());
+            if (!Number.isFinite(dbl)) throw new Error("double expects a finite number.");
+            var doubleBytes = encodeFloat64(dbl);
+            steps.push("double encoded as IEEE754 binary64, little-endian");
+            return { bytes: doubleBytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "string") {
+            var utf8 = new TextEncoder().encode(String(rawValue));
+            var len = encodeVarintUnsigned(BigInt(utf8.length));
+            var strBytes = new Uint8Array(len.length + utf8.length);
+            strBytes.set(len, 0);
+            strBytes.set(utf8, len.length);
+            steps.push("string = varint(length) + UTF-8 bytes");
+            return { bytes: strBytes, steps: steps, zigzagText: zigzagText };
+          }
+
+          if (family === "bytes") {
+            var payload = parseBytes(rawValue);
+            var blen = encodeVarintUnsigned(BigInt(payload.length));
+            var bytesField = new Uint8Array(blen.length + payload.length);
+            bytesField.set(blen, 0);
+            bytesField.set(payload, blen.length);
+            steps.push("bytes = varint(length) + raw bytes");
+            return { bytes: bytesField, steps: steps, zigzagText: zigzagText };
+          }
+
+          throw new Error("Unsupported field type.");
+        }
+
+        function wireTypeName(wireType) {
+          if (wireType === 0) return "0 (varint)";
+          if (wireType === 1) return "1 (64-bit fixed)";
+          if (wireType === 2) return "2 (length-delimited)";
+          if (wireType === 5) return "5 (32-bit fixed)";
+          return String(wireType);
+        }
+
+        function update() {
+          try {
+            var fieldNoText = String(fieldNumberEl.value || "").trim();
+            if (!fieldNoText) throw new Error("Field number is required.");
+            var fieldNo = BigInt(fieldNoText);
+            if (fieldNo <= 0n) throw new Error("Field number must be > 0.");
+
+            var type = fieldTypeEl.value;
+            var info = TYPE_INFO[type];
+            var wireType = info.wireType;
+            var key = (fieldNo << 3n) | BigInt(wireType);
+            var keyBytes = encodeVarintUnsigned(key);
+
+            var encodedValue = encodeValue(type, valueInputEl.value);
+            var valueBytes = encodedValue.bytes;
+
+            var finalBytes = new Uint8Array(keyBytes.length + valueBytes.length);
+            finalBytes.set(keyBytes, 0);
+            finalBytes.set(valueBytes, keyBytes.length);
+
+            wireTypeTextEl.textContent = wireTypeName(wireType);
+            keyFormulaEl.textContent = "key = (" + fieldNo.toString() + " << 3) | " + wireType + " = " + key.toString();
+            keyBytesEl.textContent = bytesToHex(keyBytes);
+            valueStepsEl.textContent = encodedValue.steps.join(" -> ") + " -> " + bytesToHex(valueBytes);
+
+            if (encodedValue.zigzagText) {
+              zigzagBoxEl.hidden = false;
+              zigzagTextEl.textContent = encodedValue.zigzagText;
+            } else {
+              zigzagBoxEl.hidden = true;
+              zigzagTextEl.textContent = "";
+            }
+
+            finalHexEl.textContent = bytesToHex(finalBytes);
+            finalBinEl.textContent = bytesToBinary(finalBytes);
+
+            statusEl.className = "status";
+            statusEl.textContent = "Encoded field " + fieldNo.toString() + " as " + type + ".";
+          } catch (err) {
+            statusEl.className = "status error";
+            statusEl.textContent = err && err.message ? err.message : "Unable to encode field.";
+            wireTypeTextEl.textContent = "—";
+            keyFormulaEl.textContent = "—";
+            keyBytesEl.textContent = "—";
+            valueStepsEl.textContent = "—";
+            zigzagBoxEl.hidden = true;
+            finalHexEl.textContent = "—";
+            finalBinEl.textContent = "—";
+          }
+        }
+
+        function setMode(mode) {
+          currentMode = mode === "compare" ? "compare" : "single";
+          viewSingleEl.hidden = currentMode !== "single";
+          viewCompareEl.hidden = currentMode !== "compare";
+          modeSingleBtn.classList.toggle("active", currentMode === "single");
+          modeCompareBtn.classList.toggle("active", currentMode === "compare");
+          if (currentMode === "compare") {
+            updateComparison();
+          }
+        }
+
+        function updateComparison() {
+          compareRowsEl.innerHTML = "";
+          try {
+            var fieldNoText = String(compareFieldNumberEl.value || "").trim();
+            if (!fieldNoText) throw new Error("Field number is required.");
+            var fieldNo = BigInt(fieldNoText);
+            if (fieldNo <= 0n) throw new Error("Field number must be > 0.");
+
+            var family = compareFamily;
+            var types = COMPARISON_FAMILIES[family] || [];
+            if (!types.length) throw new Error("No compatible types for selected family.");
+
+            var raw = compareValueEl.value;
+            var errorCount = 0;
+
+            for (var i = 0; i < types.length; i++) {
+              var type = types[i];
+              var tr = document.createElement("tr");
+              var tdType = document.createElement("td");
+              var tdValue = document.createElement("td");
+              var tdFull = document.createElement("td");
+              var tdNote = document.createElement("td");
+
+              tdType.textContent = type;
+              try {
+                var info = TYPE_INFO[type];
+                var wireType = info.wireType;
+                var key = (fieldNo << 3n) | BigInt(wireType);
+                var keyBytes = encodeVarintUnsigned(key);
+                var encodedValue = encodeValue(type, raw);
+                var valueBytes = encodedValue.bytes;
+
+                var finalBytes = new Uint8Array(keyBytes.length + valueBytes.length);
+                finalBytes.set(keyBytes, 0);
+                finalBytes.set(valueBytes, keyBytes.length);
+
+                tdValue.innerHTML = "<code>" + bytesToHex(valueBytes) + "</code>";
+                tdFull.innerHTML = "<code>" + bytesToHex(finalBytes) + "</code>";
+                tdNote.textContent = encodedValue.zigzagText ? encodedValue.zigzagText : encodedValue.steps.join(" -> ");
+              } catch (rowErr) {
+                errorCount += 1;
+                tr.classList.add("comparison-row-error");
+                tdValue.textContent = "-";
+                tdFull.textContent = "-";
+                tdNote.textContent = rowErr && rowErr.message ? rowErr.message : "Value cannot be encoded for this type.";
+              }
+
+              tr.appendChild(tdType);
+              tr.appendChild(tdValue);
+              tr.appendChild(tdFull);
+              tr.appendChild(tdNote);
+              compareRowsEl.appendChild(tr);
+            }
+
+            compareStatusEl.className = "status";
+            if (errorCount > 0) {
+              compareStatusEl.textContent =
+                "Compared " + types.length + " compatible type encodings; " + errorCount + " row" + (errorCount === 1 ? " is" : "s are") + " out of range.";
+            } else {
+              compareStatusEl.textContent = "Compared " + types.length + " compatible type encodings.";
+            }
+          } catch (err) {
+            compareStatusEl.className = "status error";
+            compareStatusEl.textContent = err && err.message ? err.message : "Unable to build comparison.";
+          }
+        }
+
+        function setCompareValueControlByFamily(family) {
+          var sourceValue = compareValueEl ? compareValueEl.value : "";
+          if (family === "signed-int" || family === "unsigned-int" || family === "float") {
+            compareValueNumberEl.hidden = false;
+            compareValueTextEl.hidden = true;
+            compareValueTextareaEl.hidden = true;
+            if (compareValueNumberEl.value === "" && sourceValue !== "") compareValueNumberEl.value = sourceValue;
+            compareValueEl = compareValueNumberEl;
+          } else if (family === "text") {
+            compareValueNumberEl.hidden = true;
+            compareValueTextEl.hidden = true;
+            compareValueTextareaEl.hidden = false;
+            if (compareValueTextareaEl.value === "" && sourceValue !== "") compareValueTextareaEl.value = sourceValue;
+            compareValueEl = compareValueTextareaEl;
+          } else {
+            compareValueNumberEl.hidden = true;
+            compareValueTextEl.hidden = false;
+            compareValueTextareaEl.hidden = true;
+            if (compareValueTextEl.value === "" && sourceValue !== "") compareValueTextEl.value = sourceValue;
+            compareValueEl = compareValueTextEl;
+          }
+        }
+
+        function setValueControlByType(type) {
+          var isNumeric = !!NUMERIC_TYPES[type];
+          if (isNumeric) {
+            valueInputNumberEl.hidden = false;
+            valueInputTextEl.hidden = true;
+            if (valueInputNumberEl.value === "" && valueInputTextEl.value !== "") {
+              valueInputNumberEl.value = valueInputTextEl.value;
+            }
+            valueInputEl = valueInputNumberEl;
+          } else {
+            valueInputNumberEl.hidden = true;
+            valueInputTextEl.hidden = false;
+            if (valueInputTextEl.value === "" && valueInputNumberEl.value !== "") {
+              valueInputTextEl.value = valueInputNumberEl.value;
+            }
+            valueInputEl = valueInputTextEl;
+          }
+        }
+
+        fieldNumberEl.addEventListener("input", update);
+        modeSingleBtn.addEventListener("click", function () { setMode("single"); });
+        modeCompareBtn.addEventListener("click", function () { setMode("compare"); });
+        fieldTypeEl.addEventListener("change", function () {
+          var t = fieldTypeEl.value;
+          setValueControlByType(t);
+          if (t === "bool") valueInputEl.value = "true";
+          else if (t === "string") valueInputEl.value = "A";
+          else if (t === "bytes") valueInputEl.value = "DE AD BE EF";
+          else if (t === "float") valueInputEl.value = "1.0";
+          else if (t === "double") valueInputEl.value = "3.141592653589793";
+          else if (t === "sint32") valueInputEl.value = "-1";
+          else valueInputEl.value = "150";
+          update();
+        });
+        valueInputNumberEl.addEventListener("input", update);
+        valueInputTextEl.addEventListener("input", update);
+        compareFieldNumberEl.addEventListener("input", updateComparison);
+        for (var c = 0; c < compareFamilyButtons.length; c++) {
+          compareFamilyButtons[c].addEventListener("click", (function (btn) {
+            return function () {
+              var fam = btn.getAttribute("data-family");
+              compareFamily = fam;
+              for (var j = 0; j < compareFamilyButtons.length; j++) {
+                compareFamilyButtons[j].classList.toggle("active", compareFamilyButtons[j] === btn);
+              }
+              setCompareValueControlByFamily(fam);
+              if (fam === "signed-int") compareValueEl.value = "-1";
+              else if (fam === "unsigned-int") compareValueEl.value = "150";
+              else if (fam === "float") compareValueEl.value = "3.14159";
+              else if (fam === "text") compareValueEl.value = "A";
+              else compareValueEl.value = "true";
+              updateComparison();
+            };
+          })(compareFamilyButtons[c]));
+        }
+        compareValueNumberEl.addEventListener("input", updateComparison);
+        compareValueTextEl.addEventListener("input", updateComparison);
+        compareValueTextareaEl.addEventListener("input", updateComparison);
+
+        copyHexBtn.addEventListener("click", function () {
+          var text = finalHexEl.textContent;
+          if (!text || text === "—") return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text);
+          }
+        });
+
+        setValueControlByType(fieldTypeEl.value);
+        setCompareValueControlByFamily(compareFamily);
+        applyThemeMode(getStoredThemeMode(), false);
+        update();
+        updateComparison();
+      })();
+    </script>
+  </body>
+</html>
