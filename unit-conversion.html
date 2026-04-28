@@ -1,0 +1,2549 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Unit Converter and Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #2c5aa0;
+        --accent-soft: #eef3f9;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #6ba3d4;
+        --accent-soft: #1f2d3a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .converter-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 1rem;
+        margin-top: 1rem;
+        background: none;
+        border: none;
+        padding: 0;
+      }
+
+      /* Common block: shared layout, control, and card styles */
+      .calculator-picker {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+      }
+
+      .calculator-picker-btn {
+        width: 100%;
+        text-align: center;
+        padding: 0.5rem 0.65rem;
+      }
+
+      .calculator-picker-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .converter-card {
+        display: grid;
+        gap: 1rem;
+        width: min(100%, 54rem);
+        justify-self: center;
+      }
+
+      .converter-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        flex: 1;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 7.5rem;
+      }
+
+      .markdown-io {
+        font-family: "Consolas", "Liberation Mono", monospace;
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .generic-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .generic-actions .action-btn {
+        padding: 0.38rem 0.62rem;
+        font-size: 0.84rem;
+      }
+
+      .input-row {
+        display: flex;
+        align-items: stretch;
+        gap: 0.4rem;
+      }
+
+      input.input-used {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .clear-input-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.85rem;
+        min-width: 2rem;
+        padding: 0 0.5rem;
+        cursor: pointer;
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+      }
+
+      .clear-input-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .clear-input-btn.is-visible {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .status {
+        margin-top: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .output-value {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+        min-height: 2.65rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        word-break: break-all;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      /* Card header chip row */
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .converter-label {
+        flex: 1;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.78rem;
+        padding: 0.2rem 0.65rem;
+        cursor: pointer;
+        letter-spacing: 0.04em;
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 120ms ease;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+      }
+
+      .section-header h2 {
+        margin: 0;
+      }
+
+      /* In-box spin buttons for base converter */
+      .spin-wrap {
+        position: relative;
+      }
+
+      .spin-wrap input {
+        padding-right: 1.8rem;
+        width: 100%;
+      }
+
+      .spin-btns {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border);
+      }
+
+      .spin-up,
+      .spin-dn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.5rem;
+        line-height: 1;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spin-dn {
+        border-top: 1px solid var(--border);
+      }
+
+      .spin-up:hover,
+      .spin-dn:hover {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      /* Unit type toggle switch */
+      .unit-switch {
+        display: flex;
+        gap: 0;
+        margin-bottom: 0.9rem;
+      }
+
+      .unit-switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .unit-switch-btn + .unit-switch-btn {
+        border-left: none;
+      }
+
+      .unit-switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .unit-switch-btn:hover:not(.active) {
+        color: var(--text);
+        border-color: var(--border);
+        background: var(--field-bg);
+      }
+
+      .unit-section {
+        display: none;
+      }
+
+      .unit-section.active {
+        display: block;
+      }
+
+      /* Transfer time table */
+      .transfer-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+        margin-top: 0.1rem;
+      }
+
+      .transfer-table th,
+      .transfer-table td {
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+
+      .transfer-table th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: var(--field-bg);
+      }
+
+      .transfer-table td {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .transfer-table tr:nth-child(even) td {
+        background: var(--field-bg);
+      }
+
+      .formula-var-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+
+      .formula-var-label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        font-weight: 600;
+      }
+
+      .formula-var-hint {
+        font-family: "Consolas", "Liberation Mono", monospace;
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      .formula-var-mode {
+        display: inline-block;
+        margin-left: 0.45rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      .formula-var-units {
+        font-size: 0.875rem;
+        color: var(--muted);
+        white-space: nowrap;
+        min-width: 2rem;
+      }
+
+      .generic-unit-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+
+      .generic-unit-name {
+        font-weight: 600;
+      }
+
+      .generic-unit-units {
+        font-size: 0.875rem;
+        color: var(--muted);
+        white-space: nowrap;
+        min-width: 2rem;
+      }
+
+      .input-formula.is-computed {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      .input-formula.is-output-only {
+        background: var(--field-bg);
+        color: var(--muted);
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 560px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .converter-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .calculator-picker {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .generic-unit-row {
+          grid-template-columns: 1fr;
+          gap: 0.35rem;
+        }
+      }
+    </style>
+    <script src="custom-units-conversion.js"></script>
+    <script src="unit-conversion-formulas.js"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <!-- Common block: shared page header and theme controls -->
+        <h1>Unit Converter and Calculator</h1>
+        <p class="subtitle">
+          Generic unit conversion tables and formula-driven calculators loaded
+          from editable catalog files. Enter values directly or import markdown
+          tables to create custom tools.
+        </p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <section id="converters" class="converter-grid" aria-live="polite">
+        <div
+          id="calculator-picker"
+          class="calculator-picker"
+          role="tablist"
+          aria-label="Calculator picker"
+        >
+          <button
+            id="pick-generic-converter"
+            class="action-btn calculator-picker-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Unit Conversion
+          </button>
+          <button
+            id="pick-formulas-calculator"
+            class="action-btn calculator-picker-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Formula Calculator
+          </button>
+        </div>
+      </section>
+
+      <section class="formulas-section" aria-label="Conversion references">
+        <h2>Conversion References</h2>
+        <p id="conversion-reference-note" class="formula-note"></p>
+        <div id="generic-reference-io" class="formula-note" hidden>
+          <div class="generic-actions">
+            <button
+              id="reference-generic-import-btn"
+              type="button"
+              class="action-btn"
+            >
+              Import from table
+            </button>
+            <button
+              id="reference-generic-export-btn"
+              type="button"
+              class="action-btn"
+            >
+              Export current table
+            </button>
+          </div>
+          <label>
+            Conversion import/export table (Name + Factor to base unit + Units)
+            <textarea
+              id="reference-generic-markdown"
+              class="markdown-io"
+              spellcheck="false"
+              placeholder="## Length&#10;| Name | Factor to base unit | Units |&#10;| --- | ---: | --- |&#10;| Meter | 1 | m |"
+            ></textarea>
+          </label>
+        </div>
+        <div id="formulas-reference-io" class="formula-note" hidden>
+          <div class="generic-actions">
+            <button
+              id="reference-formulas-import-btn"
+              type="button"
+              class="action-btn"
+            >
+              Import from table
+            </button>
+            <button
+              id="reference-formulas-export-btn"
+              type="button"
+              class="action-btn"
+            >
+              Export current group
+            </button>
+          </div>
+          <label>
+            Formula import/export table (Name + Variable + Formula + Units +
+            Output only)
+            <textarea
+              id="reference-formulas-markdown"
+              class="markdown-io"
+              spellcheck="false"
+              placeholder='## My Formula&#10;| Name | Variable | Formula | Units | Output only |&#10;| --- | --- | --- | --- | --- |&#10;| OK label | OK_LABEL | "Nominal" | text | hidden |&#10;| Low label | LOW_LABEL | "Low" | text | hidden |&#10;| State | S | if V > 12 then OK_LABEL else LOW_LABEL | text | yes |'
+            ></textarea>
+          </label>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+        var convertersContainer = document.getElementById("converters");
+        var calculatorPicker = document.getElementById("calculator-picker");
+        // Common block: shared DOM bootstrap and theme wiring
+        var pickGenericConverterButton = document.getElementById(
+          "pick-generic-converter",
+        );
+        var pickFormulasCalculatorButton = document.getElementById(
+          "pick-formulas-calculator",
+        );
+        var conversionReferenceNote = document.getElementById(
+          "conversion-reference-note",
+        );
+        var genericReferenceIo = document.getElementById(
+          "generic-reference-io",
+        );
+        var referenceGenericImportButton = document.getElementById(
+          "reference-generic-import-btn",
+        );
+        var referenceGenericExportButton = document.getElementById(
+          "reference-generic-export-btn",
+        );
+        var referenceGenericMarkdown = document.getElementById(
+          "reference-generic-markdown",
+        );
+        var formulasReferenceIo = document.getElementById(
+          "formulas-reference-io",
+        );
+        var referenceFormulasImportButton = document.getElementById(
+          "reference-formulas-import-btn",
+        );
+        var referenceFormulasExportButton = document.getElementById(
+          "reference-formulas-export-btn",
+        );
+        var referenceFormulasMarkdown = document.getElementById(
+          "reference-formulas-markdown",
+        );
+        var activeConverterCard = null;
+        var activeGenericContext = null;
+        var activeFormulasContext = null;
+        var activeReferenceKey = "generic";
+
+        // Common block: shared theme mode lifecycle
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        applyThemeMode(getStoredThemeMode(), false);
+
+        function toNullableNonNegativeNumber(value) {
+          if (value == null) return null;
+          var trimmed = String(value).trim();
+          if (!trimmed) return null;
+          var parsed = parseFloat(trimmed);
+          if (!Number.isFinite(parsed)) return null;
+          return Math.max(0, parsed);
+        }
+
+        function formatNumber(value) {
+          if (!Number.isFinite(value)) return "";
+          var fixed = value.toFixed(6);
+          return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+        }
+
+        var CONVERSION_REFERENCES = {
+          generic:
+            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>custom-units-conversion.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. Use import/export below to work with the active table.</span>",
+          formulas:
+            '<span><strong>Formula Calculator:</strong> Formula groups are defined in <code>unit-conversion-formulas.js</code> where each <code>##</code> heading is a group. The 5-column table maps each variable to its name, formula, units, and Output only mode. Set Output only to <code>yes</code> to make a row computed-only, or <code>hidden</code> to compute it without showing an input row. The solver can back-solve equations when exactly one variable in a row is unknown, so dependent values can propagate from a single driving input. Output-only rows can use <code>if ... then ... else ...</code> formulas with numeric or string outputs. String branches can be direct literals (for example <code>"OK"</code>) or references to string variables defined in the same group. Formulas may reference any other variable by its Variable column value, and may use standard math functions (sqrt, pow, sin, cos, PI, E, etc.).</span>',
+        };
+
+        function updateConversionReferences(key) {
+          activeReferenceKey = key;
+          conversionReferenceNote.innerHTML = CONVERSION_REFERENCES[key] || "";
+          var showGenericIo = key === "generic";
+          genericReferenceIo.hidden = !showGenericIo;
+          if (showGenericIo && activeGenericContext) {
+            referenceGenericMarkdown.value =
+              activeGenericContext.exportToMarkdownText();
+          }
+          var showFormulasIo = key === "formulas";
+          formulasReferenceIo.hidden = !showFormulasIo;
+          if (showFormulasIo && activeFormulasContext) {
+            referenceFormulasMarkdown.value =
+              activeFormulasContext.exportToMarkdownText();
+          }
+        }
+
+        function setActivePickerButton(activeButton) {
+          var pickerButtons = calculatorPicker.querySelectorAll(
+            ".calculator-picker-btn",
+          );
+          for (var i = 0; i < pickerButtons.length; i++) {
+            var isActive = pickerButtons[i] === activeButton;
+            pickerButtons[i].classList.toggle("active", isActive);
+            pickerButtons[i].setAttribute(
+              "aria-pressed",
+              isActive ? "true" : "false",
+            );
+          }
+        }
+
+        function mountSingleConverterCard(card) {
+          if (
+            activeConverterCard &&
+            activeConverterCard.parentNode === convertersContainer
+          ) {
+            convertersContainer.removeChild(activeConverterCard);
+          }
+          activeConverterCard = card;
+          activeGenericContext = null;
+          activeFormulasContext = null;
+          convertersContainer.appendChild(card);
+        }
+
+        function setActiveGenericContext(context) {
+          activeGenericContext = context;
+          if (activeReferenceKey === "generic" && activeGenericContext) {
+            referenceGenericMarkdown.value =
+              activeGenericContext.exportToMarkdownText();
+          }
+        }
+
+        var GENERIC_UNITS_CATALOG_FILE = "custom-units-conversion.js";
+        var genericCatalog = { order: [], map: {} };
+        var genericCatalogLoadPromise = null;
+        var genericCatalogLoadError = null;
+
+        function slugifyHeading(value) {
+          return (
+            String(value || "")
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "") || "unit-type"
+          );
+        }
+
+        function escapeHTML(str) {
+          return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        function escapeForRegExp(s) {
+          return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        }
+
+        function cloneGenericPresetRows(key) {
+          if (!genericCatalog || !genericCatalog.map[key]) return [];
+          var rows = genericCatalog.map[key].rows || [];
+          var clone = [];
+          for (var i = 0; i < rows.length; i++) {
+            clone.push({
+              name: rows[i].name,
+              factor: rows[i].factor,
+              units: rows[i].units,
+            });
+          }
+          return clone;
+        }
+
+        function parseGenericCatalogMarkdown(markdownText) {
+          var lines = String(markdownText || "").split(/\r?\n/);
+          var order = [];
+          var map = {};
+          var currentTitle = null;
+          var currentLines = [];
+
+          function flushCurrentSection() {
+            if (!currentTitle) return;
+            var rows = markdownToGenericRows(currentLines.join("\n"));
+            if (!rows.length) return;
+
+            var baseKey = slugifyHeading(currentTitle);
+            var key = baseKey;
+            var suffix = 2;
+            while (map[key]) {
+              key = baseKey + "-" + suffix;
+              suffix += 1;
+            }
+
+            order.push(key);
+            map[key] = {
+              label: currentTitle,
+              rows: rows,
+            };
+          }
+
+          for (var i = 0; i < lines.length; i++) {
+            var headingMatch = lines[i].match(/^##\s+(.+)$/);
+            if (headingMatch) {
+              flushCurrentSection();
+              currentTitle = headingMatch[1].trim();
+              currentLines = [];
+              continue;
+            }
+            if (currentTitle) {
+              currentLines.push(lines[i]);
+            }
+          }
+
+          flushCurrentSection();
+          return { order: order, map: map };
+        }
+
+        function loadGenericCatalogFromMarkdownFile() {
+          if (genericCatalogLoadPromise) return genericCatalogLoadPromise;
+
+          // When opened as a file:// URL, fetch() is blocked by browsers.
+          // custom-units-conversion.js (loaded via <script src>) sets this global
+          // as a reliable fallback.
+          if (window.GENERIC_UNITS_CATALOG_MARKDOWN) {
+            genericCatalogLoadPromise = Promise.resolve(
+              window.GENERIC_UNITS_CATALOG_MARKDOWN,
+            );
+          } else {
+            var candidateUrls = [
+              GENERIC_UNITS_CATALOG_FILE,
+              "./" + GENERIC_UNITS_CATALOG_FILE,
+              new URL(
+                GENERIC_UNITS_CATALOG_FILE,
+                window.location.href,
+              ).toString(),
+              "/" + GENERIC_UNITS_CATALOG_FILE,
+            ];
+
+            function fetchFromCandidates(index) {
+              if (index >= candidateUrls.length) {
+                return Promise.reject(new Error("Catalog markdown not found"));
+              }
+
+              return fetch(candidateUrls[index], { cache: "no-cache" })
+                .then(function (response) {
+                  if (!response.ok) {
+                    return fetchFromCandidates(index + 1);
+                  }
+                  return response.text();
+                })
+                .catch(function () {
+                  return fetchFromCandidates(index + 1);
+                });
+            }
+
+            genericCatalogLoadPromise = fetchFromCandidates(0);
+          }
+
+          genericCatalogLoadPromise = genericCatalogLoadPromise
+            .then(function (markdownText) {
+              genericCatalogLoadError = null;
+              var parsed = parseGenericCatalogMarkdown(markdownText);
+              if (parsed.order.length) {
+                genericCatalog = parsed;
+                if (
+                  activeGenericContext &&
+                  activeGenericContext.refreshCatalog
+                ) {
+                  activeGenericContext.refreshCatalog();
+                }
+              } else {
+                genericCatalogLoadError =
+                  "No valid unit tables found in " +
+                  GENERIC_UNITS_CATALOG_FILE +
+                  ".";
+              }
+            })
+            .catch(function () {
+              genericCatalogLoadError =
+                "Could not load " + GENERIC_UNITS_CATALOG_FILE + ".";
+              // Allow retry attempts later.
+              genericCatalogLoadPromise = null;
+            });
+
+          return genericCatalogLoadPromise;
+        }
+
+        loadGenericCatalogFromMarkdownFile();
+
+        var formulasCatalog = { order: [], map: {} };
+
+        function parseFormulasCatalogMarkdown(text) {
+          var lines = String(text || "").split(/\r?\n/);
+          var order = [];
+          var map = {};
+          var currentTitle = null;
+          var currentRows = [];
+
+          function flushSection() {
+            if (!currentTitle || !currentRows.length) return;
+            var baseKey = slugifyHeading(currentTitle);
+            var key = baseKey;
+            var suffix = 2;
+            while (map[key]) {
+              key = baseKey + "-" + suffix;
+              suffix += 1;
+            }
+            order.push(key);
+            map[key] = { label: currentTitle, rows: currentRows };
+            currentRows = [];
+          }
+
+          function parseOutputOnlyCell(rawValue) {
+            var value = String(rawValue || "")
+              .trim()
+              .toLowerCase();
+            if (value === "hidden" || value === "hide" || value === "h") {
+              return { outputOnly: true, hidden: true };
+            }
+            var outputOnly =
+              value === "yes" ||
+              value === "y" ||
+              value === "true" ||
+              value === "1" ||
+              value === "output only" ||
+              value === "computed";
+            return { outputOnly: outputOnly, hidden: false };
+          }
+
+          for (var i = 0; i < lines.length; i++) {
+            var headingMatch = lines[i].match(/^##\s+(.+)$/);
+            if (headingMatch) {
+              flushSection();
+              currentTitle = headingMatch[1].trim();
+              currentRows = [];
+              continue;
+            }
+            if (!currentTitle) continue;
+            var line = lines[i].trim();
+            if (line.charAt(0) !== "|") continue;
+            var cells = line.split("|");
+            cells = cells.slice(1, cells.length - 1);
+            cells = cells.map(function (c) {
+              return c.trim();
+            });
+            if (cells.length < 4) continue;
+            if (cells[0].replace(/[-:\s]/g, "") === "") continue; // separator row
+            if (cells[0].toLowerCase() === "name") continue; // header row
+            var name = cells[0];
+            var variable = cells[1];
+            var formula = cells[2];
+            var units = cells[3];
+            var outputMode = parseOutputOnlyCell(cells[4]);
+            if (!variable || !formula) continue;
+            currentRows.push({
+              name: name,
+              variable: variable,
+              formula: formula,
+              units: units,
+              outputOnly: outputMode.outputOnly,
+              hidden: outputMode.hidden,
+            });
+          }
+
+          flushSection();
+          return { order: order, map: map };
+        }
+
+        function loadFormulasCatalog() {
+          if (!window.UNIT_CONVERSION_FORMULAS_MARKDOWN) return;
+          var parsed = parseFormulasCatalogMarkdown(
+            window.UNIT_CONVERSION_FORMULAS_MARKDOWN,
+          );
+          if (parsed.order.length) {
+            formulasCatalog = parsed;
+          }
+        }
+
+        loadFormulasCatalog();
+
+        function formatGenericFactor(value) {
+          if (!Number.isFinite(value)) return "";
+          return value
+            .toPrecision(15)
+            .replace(/(?:\.0+|(?:(\.\d+?)0+))$/, "$1");
+        }
+
+        function genericRowsToMarkdown(rows) {
+          var nameHeader = "Name";
+          var factorHeader = "Factor to base unit";
+          var unitsHeader = "Units";
+          var nameWidth = nameHeader.length;
+          var factorWidth = factorHeader.length;
+          var unitsWidth = unitsHeader.length;
+          var factorTexts = [];
+
+          for (var i = 0; i < rows.length; i++) {
+            var nameText = String(rows[i].name || "");
+            var factorText = formatGenericFactor(rows[i].factor);
+            var unitsText = String(rows[i].units || "");
+            factorTexts.push(factorText);
+            if (nameText.length > nameWidth) nameWidth = nameText.length;
+            if (factorText.length > factorWidth)
+              factorWidth = factorText.length;
+            if (unitsText.length > unitsWidth) unitsWidth = unitsText.length;
+          }
+
+          var lines = [
+            "| " +
+              nameHeader.padEnd(nameWidth, " ") +
+              " | " +
+              factorHeader.padEnd(factorWidth, " ") +
+              " | " +
+              unitsHeader.padEnd(unitsWidth, " ") +
+              " |",
+            "| " +
+              "-".repeat(nameWidth) +
+              " | " +
+              "-".repeat(Math.max(0, factorWidth - 1)) +
+              ": | " +
+              "-".repeat(unitsWidth) +
+              ": |",
+          ];
+
+          for (var j = 0; j < rows.length; j++) {
+            var rowName = String(rows[j].name || "");
+            var rowFactor = factorTexts[j] || "";
+            var rowUnits = String(rows[j].units || "");
+            lines.push(
+              "| " +
+                rowName.padEnd(nameWidth, " ") +
+                " | " +
+                rowFactor.padStart(factorWidth, " ") +
+                " | " +
+                rowUnits.padEnd(unitsWidth, " ") +
+                " |",
+            );
+          }
+
+          return lines.join("\n");
+        }
+
+        function parseLocalizedNumberForMarkdown(value) {
+          var raw = String(value).trim();
+          if (!raw) return null;
+
+          // Accept fraction syntax for factors:
+          // - Simple fraction: 1/2
+          // - Mixed number: 2 1/2
+          // - Locale decimals inside fraction parts: 1,5/3
+          function parseSimpleNumberToken(token) {
+            var t = String(token || "").trim();
+            if (!t) return null;
+
+            var hasDot = t.indexOf(".") !== -1;
+            var hasComma = t.indexOf(",") !== -1;
+
+            if (hasDot && hasComma) {
+              if (t.lastIndexOf(",") > t.lastIndexOf(".")) {
+                t = t.replace(/\./g, "").replace(/,/g, ".");
+              } else {
+                t = t.replace(/,/g, "");
+              }
+            } else if (hasComma && !hasDot) {
+              t = t.replace(/,/g, ".");
+            }
+
+            t = t.replace(/\s/g, "").replace(/'/g, "");
+            if (!t) return null;
+
+            var n = parseFloat(t);
+            return Number.isFinite(n) ? n : null;
+          }
+
+          var mixedFractionMatch = raw.match(
+            /^([+-]?\d+(?:[.,]\d+)?)\s+([+-]?\d+(?:[.,]\d+)?)\s*\/\s*([+-]?\d+(?:[.,]\d+)?)$/,
+          );
+          if (mixedFractionMatch) {
+            var wholeText = mixedFractionMatch[1];
+            var numeratorText = mixedFractionMatch[2];
+            var denominatorText = mixedFractionMatch[3];
+            var numerator = parseSimpleNumberToken(numeratorText);
+            var denominator = parseSimpleNumberToken(denominatorText);
+            if (numerator == null || denominator == null || denominator === 0) {
+              return null;
+            }
+
+            var absoluteFraction = Math.abs(numerator / denominator);
+            var whole = parseSimpleNumberToken(wholeText);
+            if (whole == null) return null;
+
+            // Sign is taken from the whole part for mixed numbers.
+            var signSource = whole;
+            var sign = signSource < 0 ? -1 : 1;
+            var combined = Math.abs(whole) + absoluteFraction;
+            if (!Number.isFinite(combined) || combined <= 0) return null;
+            return sign * combined > 0 ? sign * combined : null;
+          }
+
+          var simpleFractionMatch = raw.match(
+            /^([+-]?\d+(?:[.,]\d+)?)\s*\/\s*([+-]?\d+(?:[.,]\d+)?)$/,
+          );
+          if (simpleFractionMatch) {
+            var simpleNumerator = parseSimpleNumberToken(
+              simpleFractionMatch[1],
+            );
+            var simpleDenominator = parseSimpleNumberToken(
+              simpleFractionMatch[2],
+            );
+            if (
+              simpleNumerator == null ||
+              simpleDenominator == null ||
+              simpleDenominator === 0
+            ) {
+              return null;
+            }
+
+            var simpleValue = simpleNumerator / simpleDenominator;
+            if (!Number.isFinite(simpleValue) || simpleValue <= 0) return null;
+            return simpleValue;
+          }
+
+          var hasDot = raw.indexOf(".") !== -1;
+          var hasComma = raw.indexOf(",") !== -1;
+
+          if (hasDot && hasComma) {
+            // Assume the rightmost symbol is the decimal separator.
+            if (raw.lastIndexOf(",") > raw.lastIndexOf(".")) {
+              raw = raw.replace(/\./g, "").replace(/,/g, ".");
+            } else {
+              raw = raw.replace(/,/g, "");
+            }
+          } else if (hasComma && !hasDot) {
+            raw = raw.replace(/,/g, ".");
+          }
+
+          raw = raw.replace(/\s/g, "").replace(/'/g, "");
+
+          var parsed = parseFloat(raw);
+          if (!Number.isFinite(parsed) || parsed <= 0) return null;
+          return parsed;
+        }
+
+        function markdownToGenericRows(markdown) {
+          var text = String(markdown || "");
+          var lines = text.split(/\r?\n/);
+          var rows = [];
+
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line || line.indexOf("|") === -1) continue;
+            if (/^\|?\s*:?-+:?\s*\|/.test(line)) continue;
+
+            var cells = line.replace(/^\|/, "").replace(/\|$/, "").split("|");
+            if (cells.length < 2) continue;
+
+            var name = cells[0].trim();
+            var factor = parseLocalizedNumberForMarkdown(cells[1]);
+            var units = cells.length >= 3 ? cells[2].trim() : "";
+            if (!name || factor == null) continue;
+
+            // Skip likely header rows.
+            var lowerName = name.toLowerCase();
+            if (lowerName === "unit" || lowerName === "name") continue;
+
+            rows.push({ name: name, factor: factor, units: units });
+          }
+
+          return rows;
+        }
+
+        function parseLocalizedNullableNonNegativeNumber(
+          value,
+          decimalSeparator,
+        ) {
+          if (value == null) return null;
+          var normalized = String(value).trim();
+          if (!normalized) return null;
+
+          // Spaces and apostrophes are always treated as grouping separators.
+          normalized = normalized.replace(/[\s']/g, "");
+
+          if (decimalSeparator === ",") {
+            // In comma-decimal mode, dots are grouping separators.
+            normalized = normalized.replace(/\./g, "").replace(/,/g, ".");
+          } else {
+            // In dot-decimal mode, commas are grouping separators.
+            normalized = normalized.replace(/,/g, "");
+          }
+
+          if (!normalized) return null;
+          var parsed = parseFloat(normalized);
+          if (!Number.isFinite(parsed)) return null;
+          return Math.max(0, parsed);
+        }
+
+        function applyGroupingToInteger(integerText, separator) {
+          return integerText.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+        }
+
+        function formatNumberWithGrouping(
+          value,
+          groupingMode,
+          decimalSeparator,
+        ) {
+          var base = formatNumber(value);
+          if (!base) return base;
+
+          var sign = "";
+          if (base.charAt(0) === "-") {
+            sign = "-";
+            base = base.slice(1);
+          }
+
+          var parts = base.split(".");
+          var integerPart = parts[0];
+          var decimalPart = parts.length > 1 ? parts[1] : "";
+          var groupedInteger = integerPart;
+
+          if (groupingMode !== "off") {
+            var separator =
+              groupingMode === "spaces"
+                ? " "
+                : groupingMode === "apostrophes"
+                  ? "'"
+                  : decimalSeparator === ","
+                    ? "."
+                    : ",";
+            groupedInteger = applyGroupingToInteger(integerPart, separator);
+          }
+
+          return (
+            sign +
+            groupedInteger +
+            (decimalPart ? decimalSeparator + decimalPart : "")
+          );
+        }
+
+        function buildGenericConverter() {
+          loadGenericCatalogFromMarkdownFile();
+
+          var card = document.createElement("article");
+          card.className = "converter-card";
+          card.innerHTML =
+            '<div class="card-header"><p class="converter-label">Unit Conversion</p></div>' +
+            "<section>" +
+            '<div class="section-header"><h2>Table and Values</h2><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
+            '<div class="field"><label>Preset family<select class="generic-preset"></select></label></div>' +
+            '<div class="generic-inputs"></div>' +
+            '<div class="status">Choose a preset or generate fields from markdown.</div>' +
+            "</section>";
+
+          var groupingChip = card.querySelector(".grouping-chip");
+          var decimalChip = card.querySelector(".decimal-chip");
+          var resetChip = card.querySelector(".reset-chip");
+          var presetSelect = card.querySelector(".generic-preset");
+          var inputsWrap = card.querySelector(".generic-inputs");
+          var status = card.querySelector(".status");
+          var GROUPING_MODES = ["off", "spaces", "commas", "apostrophes"];
+          var GROUPING_LABELS = {
+            off: "Off",
+            spaces: "Spaces",
+            apostrophes: "Apostrophes",
+          };
+          var DECIMAL_SEPARATORS = [".", ","];
+          var groupingMode = "off";
+          var decimalSeparator = ".";
+          var rows = [];
+
+          function updateGroupingChipLabel() {
+            var modeLabel =
+              groupingMode === "commas"
+                ? decimalSeparator === ","
+                  ? "Points"
+                  : "Commas"
+                : GROUPING_LABELS[groupingMode];
+            groupingChip.textContent = "Grouping: " + modeLabel;
+          }
+
+          function updateDecimalChipLabel() {
+            decimalChip.textContent = "Decimal: " + decimalSeparator;
+          }
+
+          function getNextGroupingMode(mode) {
+            var index = GROUPING_MODES.indexOf(mode);
+            var nextIndex = (index + 1) % GROUPING_MODES.length;
+            return GROUPING_MODES[nextIndex];
+          }
+
+          function getNextDecimalSeparator(separator) {
+            var index = DECIMAL_SEPARATORS.indexOf(separator);
+            var nextIndex = (index + 1) % DECIMAL_SEPARATORS.length;
+            return DECIMAL_SEPARATORS[nextIndex];
+          }
+
+          function renderPresetOptions(selectedKey) {
+            var options = [];
+            if (genericCatalog && genericCatalog.order.length) {
+              for (var i = 0; i < genericCatalog.order.length; i++) {
+                var key = genericCatalog.order[i];
+                var label = genericCatalog.map[key]
+                  ? genericCatalog.map[key].label
+                  : key;
+                options.push(
+                  '<option value="' + key + '">' + label + "</option>",
+                );
+              }
+            }
+            options.push('<option value="custom">Custom</option>');
+            presetSelect.innerHTML = options.join("");
+
+            var targetKey = selectedKey;
+            if (
+              !targetKey ||
+              (!genericCatalog.map[targetKey] && targetKey !== "custom")
+            ) {
+              targetKey = genericCatalog.order.length
+                ? genericCatalog.order[0]
+                : "custom";
+            }
+            presetSelect.value = targetKey;
+          }
+
+          function findCurrentBaseValue() {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              var parsed = parseLocalizedNullableNonNegativeNumber(
+                inputs[i].value,
+                decimalSeparator,
+              );
+              if (parsed == null) continue;
+              var factor = parseFloat(inputs[i].getAttribute("data-factor"));
+              return parsed * factor;
+            }
+            return null;
+          }
+
+          function clearInputs() {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              inputs[i].value = "";
+            }
+            status.textContent = "Enter a value in any field to convert.";
+          }
+
+          function syncInputs(baseValue, skipInput) {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              if (inputs[i] === skipInput) continue;
+              if (baseValue == null) {
+                inputs[i].value = "";
+                continue;
+              }
+              var factor = parseFloat(inputs[i].getAttribute("data-factor"));
+              inputs[i].value = formatNumberWithGrouping(
+                baseValue / factor,
+                groupingMode,
+                decimalSeparator,
+              );
+            }
+          }
+
+          function calculateFrom(sourceInput) {
+            var baseValue = null;
+            if (sourceInput) {
+              var parsed = parseLocalizedNullableNonNegativeNumber(
+                sourceInput.value,
+                decimalSeparator,
+              );
+              if (parsed != null) {
+                baseValue =
+                  parsed * parseFloat(sourceInput.getAttribute("data-factor"));
+              }
+            }
+
+            if (baseValue == null) {
+              clearInputs();
+              return;
+            }
+
+            syncInputs(baseValue, sourceInput);
+            status.textContent =
+              "Converted using imported markdown conversion factors.";
+          }
+
+          function bindInputListeners() {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              inputs[i].addEventListener(
+                "input",
+                (function (inp) {
+                  return function () {
+                    calculateFrom(inp);
+                  };
+                })(inputs[i]),
+              );
+
+              inputs[i].addEventListener(
+                "blur",
+                (function (inp) {
+                  return function () {
+                    var parsed = parseLocalizedNullableNonNegativeNumber(
+                      inp.value,
+                      decimalSeparator,
+                    );
+                    if (parsed != null) {
+                      inp.value = formatNumberWithGrouping(
+                        parsed,
+                        groupingMode,
+                        decimalSeparator,
+                      );
+                    }
+                  };
+                })(inputs[i]),
+              );
+            }
+          }
+
+          function renderInputsFromRows() {
+            inputsWrap.innerHTML = "";
+
+            if (!rows.length) {
+              status.textContent =
+                "No valid conversion rows. Use a preset or import a markdown table.";
+              return;
+            }
+
+            for (var i = 0; i < rows.length; i++) {
+              var field = document.createElement("div");
+              field.className = "generic-unit-row";
+              var displayUnits = rows[i].units ? rows[i].units : "";
+              field.innerHTML =
+                '<span class="generic-unit-name">' +
+                escapeHTML(rows[i].name) +
+                "</span>" +
+                '<span class="input-row"><input class="input-generic" data-factor="' +
+                rows[i].factor +
+                '" type="text" inputmode="decimal" placeholder="Enter value" /></span>' +
+                '<span class="generic-unit-units">' +
+                escapeHTML(displayUnits) +
+                "</span>";
+              inputsWrap.appendChild(field);
+            }
+
+            bindInputListeners();
+            clearInputs();
+          }
+
+          function loadPresetFromSelection() {
+            var selected = presetSelect.value;
+            if (!genericCatalog.map[selected]) {
+              if (genericCatalog.order.length === 0) {
+                status.textContent =
+                  genericCatalogLoadError ||
+                  "No unit groups loaded yet from " +
+                    GENERIC_UNITS_CATALOG_FILE +
+                    ".";
+              } else {
+                status.textContent =
+                  "Custom mode selected. Import markdown to generate fields.";
+              }
+              return;
+            }
+
+            rows = cloneGenericPresetRows(selected);
+            renderInputsFromRows();
+            var presetLabel = genericCatalog.map[selected]
+              ? genericCatalog.map[selected].label
+              : selected;
+            status.textContent =
+              "Loaded " +
+              presetLabel +
+              " preset and generated calculator fields.";
+            if (activeReferenceKey === "generic") {
+              referenceGenericMarkdown.value = genericRowsToMarkdown(rows);
+            }
+          }
+
+          function importFromMarkdownText(markdownText) {
+            var parsedRows = markdownToGenericRows(markdownText);
+            if (!parsedRows.length) {
+              status.textContent =
+                "No valid rows found. Use columns: Name, Factor to base unit, Units.";
+              return false;
+            }
+
+            rows = parsedRows;
+            presetSelect.value = "custom";
+            renderInputsFromRows();
+            status.textContent =
+              "Imported table values and switched preset to Custom.";
+            return true;
+          }
+
+          function exportToMarkdownText() {
+            if (!rows.length) {
+              return "";
+            }
+            return genericRowsToMarkdown(rows);
+          }
+
+          function refreshCatalogOptions() {
+            var currentSelection = presetSelect.value;
+            var hadNoRows = rows.length === 0;
+            renderPresetOptions(currentSelection);
+
+            if (
+              genericCatalog.order.length &&
+              presetSelect.value === "custom" &&
+              hadNoRows
+            ) {
+              presetSelect.value = genericCatalog.order[0];
+            }
+
+            if (presetSelect.value !== "custom") {
+              loadPresetFromSelection();
+            }
+          }
+
+          groupingChip.addEventListener("click", function () {
+            groupingMode = getNextGroupingMode(groupingMode);
+            updateGroupingChipLabel();
+            var baseValue = findCurrentBaseValue();
+            if (baseValue != null) {
+              syncInputs(baseValue);
+            }
+          });
+
+          decimalChip.addEventListener("click", function () {
+            var baseValue = findCurrentBaseValue();
+            decimalSeparator = getNextDecimalSeparator(decimalSeparator);
+            updateDecimalChipLabel();
+            updateGroupingChipLabel();
+            if (baseValue != null) {
+              syncInputs(baseValue);
+            }
+          });
+
+          resetChip.addEventListener("click", function () {
+            clearInputs();
+          });
+          presetSelect.addEventListener("change", loadPresetFromSelection);
+
+          updateGroupingChipLabel();
+          updateDecimalChipLabel();
+
+          renderPresetOptions(null);
+
+          // Start with a useful default that can immediately be exported.
+          loadPresetFromSelection();
+
+          mountSingleConverterCard(card);
+
+          setActiveGenericContext({
+            importFromMarkdownText: importFromMarkdownText,
+            exportToMarkdownText: exportToMarkdownText,
+            refreshCatalog: refreshCatalogOptions,
+          });
+        }
+
+        function buildFormulasCalculator() {
+          var card = document.createElement("article");
+          card.className = "converter-card";
+          card.innerHTML =
+            '<div class="card-header"><p class="converter-label">Formula Calculator</p></div>' +
+            "<section>" +
+            '<div class="section-header"><h2>Variables</h2>' +
+            '<button type="button" class="chip reset-chip">Reset</button></div>' +
+            '<div class="field"><label>Formula group<select class="formulas-preset"></select></label></div>' +
+            '<div class="formula-inputs"></div>' +
+            '<div class="status">Choose a formula group to begin.</div>' +
+            "</section>";
+
+          var presetSelect = card.querySelector(".formulas-preset");
+          var inputsWrap = card.querySelector(".formula-inputs");
+          var status = card.querySelector(".status");
+          var resetChip = card.querySelector(".reset-chip");
+          var currentRows = [];
+          var userValues = {};
+
+          var MATH_TOKEN_RE =
+            /^(sqrt|pow|abs|log|log2|log10|sin|cos|tan|asin|acos|atan|atan2|ceil|floor|round|min|max|PI|E)$/;
+
+          function isFiniteNumber(value) {
+            return typeof value === "number" && isFinite(value);
+          }
+
+          function parseQuotedStringLiteral(text) {
+            var raw = String(text || "").trim();
+            var m = raw.match(/^(["'])([\s\S]*)\1$/);
+            if (!m) return null;
+            return m[2].replace(/\\([nrt"'\\])/g, function (_, esc) {
+              if (esc === "n") return "\n";
+              if (esc === "r") return "\r";
+              if (esc === "t") return "\t";
+              return esc;
+            });
+          }
+
+          function extractFormulaIdentifiers(expr) {
+            var stripped = String(expr || "").replace(
+              /(["'])(?:\\.|(?!\1)[\s\S])*\1/g,
+              " ",
+            );
+            var tokens = stripped.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+            var ids = [];
+            for (var i = 0; i < tokens.length; i++) {
+              var token = tokens[i];
+              if (
+                MATH_TOKEN_RE.test(token) ||
+                /^(if|then|else)$/i.test(token) ||
+                /^(and|or|not)$/i.test(token)
+              ) {
+                continue;
+              }
+              if (ids.indexOf(token) === -1) ids.push(token);
+            }
+            return ids;
+          }
+
+          function canEvaluateFormulaCandidate(expr, scope) {
+            var ids = extractFormulaIdentifiers(expr);
+            for (var i = 0; i < ids.length; i++) {
+              var value = scope[ids[i]];
+              if (
+                value === undefined ||
+                value === null ||
+                !isFiniteNumber(value)
+              ) {
+                return false;
+              }
+            }
+            return true;
+          }
+
+          function solveUnknownWithSecant(residual, startA, startB) {
+            var x0 = startA;
+            var x1 = startB;
+            var r0 = residual(x0);
+            var r1 = residual(x1);
+            if (!isFinite(r0) || !isFinite(r1)) return null;
+            if (Math.abs(r0) < 1e-9) return x0;
+            if (Math.abs(r1) < 1e-9) return x1;
+
+            for (var i = 0; i < 48; i++) {
+              var denom = r1 - r0;
+              if (!isFinite(denom) || Math.abs(denom) < 1e-18) return null;
+              var x2 = x1 - (r1 * (x1 - x0)) / denom;
+              if (!isFinite(x2)) return null;
+              var r2 = residual(x2);
+              if (!isFinite(r2)) return null;
+              if (Math.abs(r2) < 1e-9) return x2;
+              x0 = x1;
+              r0 = r1;
+              x1 = x2;
+              r1 = r2;
+            }
+
+            return Math.abs(r1) < 1e-7 ? x1 : null;
+          }
+
+          function solveUnknownWithBisection(residual) {
+            var left = -1;
+            var right = 1;
+            var rLeft = residual(left);
+            var rRight = residual(right);
+            if (!isFinite(rLeft) || !isFinite(rRight)) return null;
+
+            for (var expand = 0; expand < 60; expand++) {
+              if (rLeft === 0) return left;
+              if (rRight === 0) return right;
+              if (rLeft * rRight < 0) break;
+              left *= 2;
+              right *= 2;
+              rLeft = residual(left);
+              rRight = residual(right);
+              if (!isFinite(rLeft) || !isFinite(rRight)) return null;
+            }
+
+            if (!(rLeft * rRight < 0)) return null;
+
+            for (var iter = 0; iter < 80; iter++) {
+              var mid = (left + right) / 2;
+              var rMid = residual(mid);
+              if (!isFinite(rMid)) return null;
+              if (Math.abs(rMid) < 1e-9) return mid;
+              if (rLeft * rMid < 0) {
+                right = mid;
+                rRight = rMid;
+              } else {
+                left = mid;
+                rLeft = rMid;
+              }
+            }
+
+            return (left + right) / 2;
+          }
+
+          function solveEquationForUnknown(row, unknownVar, scope, rowLookup) {
+            if (!isFiniteNumber(scope[row.variable])) return null;
+            var lhsTarget = scope[row.variable];
+
+            function residual(x) {
+              var localScope = {};
+              for (var key in scope) {
+                if (Object.prototype.hasOwnProperty.call(scope, key)) {
+                  localScope[key] = scope[key];
+                }
+              }
+              localScope[unknownVar] = x;
+              var rhs = evaluateFormula(
+                row.formula,
+                localScope,
+                !!row.outputOnly,
+                rowLookup,
+                {},
+              );
+              if (!isFiniteNumber(rhs)) return NaN;
+              return lhsTarget - rhs;
+            }
+
+            var lhsAbs = Math.abs(lhsTarget);
+            var seeds = [
+              0,
+              1,
+              -1,
+              lhsTarget,
+              lhsTarget === 0 ? 1 : lhsTarget * 1.05,
+              lhsTarget === 0 ? -1 : -lhsTarget,
+              Math.sqrt(lhsAbs || 1),
+              -Math.sqrt(lhsAbs || 1),
+            ];
+
+            for (var i = 0; i < seeds.length; i++) {
+              var a = seeds[i];
+              var b = a === 0 ? 1 : a + Math.sign(a) * 0.5;
+              var secantResult = solveUnknownWithSecant(residual, a, b);
+              if (secantResult != null && isFinite(secantResult)) {
+                return secantResult;
+              }
+            }
+
+            var bisectionResult = solveUnknownWithBisection(residual);
+            if (bisectionResult != null && isFinite(bisectionResult)) {
+              return bisectionResult;
+            }
+
+            return null;
+          }
+
+          function solveRowFromSingleUnknown(row, scope, rowLookup) {
+            var variables = [row.variable].concat(
+              extractFormulaIdentifiers(row.formula),
+            );
+            var unique = [];
+            for (var i = 0; i < variables.length; i++) {
+              if (unique.indexOf(variables[i]) === -1)
+                unique.push(variables[i]);
+            }
+
+            var unknowns = [];
+            for (var j = 0; j < unique.length; j++) {
+              var varName = unique[j];
+              var varValue = scope[varName];
+              if (varValue === undefined || varValue === null) {
+                unknowns.push(varName);
+              }
+            }
+
+            if (unknowns.length !== 1) return null;
+            var target = unknowns[0];
+
+            if (target === row.variable) {
+              var forwardValue = evaluateFormula(
+                row.formula,
+                scope,
+                !!row.outputOnly,
+                rowLookup,
+                {},
+              );
+              if (forwardValue == null) return null;
+              return { variable: target, value: forwardValue };
+            }
+
+            if (row.outputOnly) return null;
+            var solved = solveEquationForUnknown(row, target, scope, rowLookup);
+            if (solved == null || !isFiniteNumber(solved)) return null;
+            return { variable: target, value: solved };
+          }
+
+          function evaluateExpression(expr, scope, allowBooleanResult) {
+            var jsExpr = expr.replace(/\^/g, "**");
+            var varNames = Object.keys(scope).sort(function (a, b) {
+              return b.length - a.length;
+            });
+            for (var i = 0; i < varNames.length; i++) {
+              var name = varNames[i];
+              var val = scope[name];
+              if (val === undefined || val === null || !isFiniteNumber(val))
+                continue;
+              jsExpr = jsExpr.replace(
+                new RegExp("\\b" + escapeForRegExp(name) + "\\b", "g"),
+                "(" + val + ")",
+              );
+            }
+
+            // Convenience boolean words for conditional expressions.
+            jsExpr = jsExpr
+              .replace(/\band\b/gi, "&&")
+              .replace(/\bor\b/gi, "||")
+              .replace(/\bnot\b/gi, "!");
+
+            var remaining = jsExpr.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
+            for (var j = 0; j < remaining.length; j++) {
+              var token = remaining[j];
+              if (MATH_TOKEN_RE.test(token) || token === "NaN") continue;
+              return null;
+            }
+            try {
+              /* jshint -W054 */
+              var fn = new Function(
+                "sqrt",
+                "pow",
+                "abs",
+                "log",
+                "log2",
+                "log10",
+                "sin",
+                "cos",
+                "tan",
+                "asin",
+                "acos",
+                "atan",
+                "atan2",
+                "ceil",
+                "floor",
+                "round",
+                "min",
+                "max",
+                "PI",
+                "E",
+                '"use strict"; return (' + jsExpr + ");",
+              );
+              var result = fn(
+                Math.sqrt,
+                Math.pow,
+                Math.abs,
+                Math.log,
+                Math.log2 ||
+                  function (x) {
+                    return Math.log(x) / Math.LN2;
+                  },
+                Math.log10 ||
+                  function (x) {
+                    return Math.log(x) / Math.LN10;
+                  },
+                Math.sin,
+                Math.cos,
+                Math.tan,
+                Math.asin,
+                Math.acos,
+                Math.atan,
+                Math.atan2,
+                Math.ceil,
+                Math.floor,
+                Math.round,
+                Math.min,
+                Math.max,
+                Math.PI,
+                Math.E,
+              );
+              if (allowBooleanResult && typeof result === "boolean") {
+                return result;
+              }
+              return typeof result === "number" && isFiniteNumber(result)
+                ? result
+                : null;
+            } catch (e) {
+              return null;
+            }
+          }
+
+          function evaluateFormula(
+            formula,
+            scope,
+            isOutputOnly,
+            rowLookup,
+            resolving,
+          ) {
+            var text = String(formula || "").trim();
+            var ifMatch = text.match(
+              /^if\s+([\s\S]+?)\s+then\s+([\s\S]+?)(?:\s+else\s+([\s\S]+))?$/i,
+            );
+
+            function resolveOutputExpression(expressionText) {
+              var expr = String(expressionText || "").trim();
+              var directString = parseQuotedStringLiteral(expr);
+              if (directString != null) return directString;
+
+              var refMatch = expr.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/);
+              if (refMatch && rowLookup) {
+                var refVar = refMatch[0];
+                if (typeof scope[refVar] === "string") {
+                  return scope[refVar];
+                }
+                var refRow = rowLookup[refVar];
+                if (refRow) {
+                  var key = refVar;
+                  if (resolving[key]) return null;
+                  resolving[key] = true;
+                  var refValue = evaluateFormula(
+                    refRow.formula,
+                    scope,
+                    !!refRow.outputOnly,
+                    rowLookup,
+                    resolving,
+                  );
+                  delete resolving[key];
+                  if (typeof refValue === "string") {
+                    return refValue;
+                  }
+                }
+              }
+
+              if (!canEvaluateFormulaCandidate(expr, scope)) return null;
+              return evaluateExpression(expr, scope, false);
+            }
+
+            if (ifMatch) {
+              var conditionExpr = ifMatch[1].trim();
+              var thenExpr = ifMatch[2].trim();
+              var elseExpr = ifMatch[3] ? ifMatch[3].trim() : "0";
+
+              // Support formula-style equality in IF conditions.
+              conditionExpr = conditionExpr.replace(
+                /(^|[^<>=!])=([^=]|$)/g,
+                "$1==$2",
+              );
+
+              if (!canEvaluateFormulaCandidate(conditionExpr, scope)) {
+                return null;
+              }
+
+              var conditionValue = evaluateExpression(
+                conditionExpr,
+                scope,
+                true,
+              );
+              if (conditionValue === null) return null;
+              var chosenExpr = conditionValue ? thenExpr : elseExpr;
+              if (isOutputOnly) {
+                return resolveOutputExpression(chosenExpr);
+              }
+              return evaluateFormula(
+                chosenExpr,
+                scope,
+                isOutputOnly,
+                rowLookup,
+                resolving,
+              );
+            }
+
+            if (isOutputOnly) {
+              var outputValue = resolveOutputExpression(text);
+              if (typeof outputValue === "string") return outputValue;
+              return isFiniteNumber(outputValue) ? outputValue : null;
+            }
+
+            if (!canEvaluateFormulaCandidate(text, scope)) return null;
+            return evaluateExpression(text, scope, false);
+          }
+
+          function computeAll() {
+            var scope = {};
+            for (var v in userValues) {
+              if (Object.prototype.hasOwnProperty.call(userValues, v)) {
+                scope[v] = userValues[v];
+              }
+            }
+
+            var rowLookup = {};
+            for (var r = 0; r < currentRows.length; r++) {
+              rowLookup[currentRows[r].variable] = currentRows[r];
+            }
+
+            for (var pass = 0; pass < currentRows.length; pass++) {
+              var changed = false;
+              for (var i = 0; i < currentRows.length; i++) {
+                var row = currentRows[i];
+                var solveResult = solveRowFromSingleUnknown(
+                  row,
+                  scope,
+                  rowLookup,
+                );
+                if (solveResult && scope[solveResult.variable] === undefined) {
+                  scope[solveResult.variable] = solveResult.value;
+                  changed = true;
+                }
+              }
+              if (!changed) break;
+            }
+            return scope;
+          }
+
+          function formatFormulaValue(value) {
+            if (!isFinite(value)) return "";
+            var s = value.toPrecision(10).replace(/\.?0+$/, "");
+            if (parseFloat(s) !== value) s = String(value);
+            return s;
+          }
+
+          function updateFields() {
+            var scope = computeAll();
+            var inputs = inputsWrap.querySelectorAll(".input-formula");
+            for (var i = 0; i < inputs.length; i++) {
+              var v = inputs[i].getAttribute("data-variable");
+              var clearBtn = inputs[i].nextElementSibling;
+              var isOutputOnly =
+                inputs[i].getAttribute("data-output-only") === "true";
+              if (isOutputOnly) {
+                if (clearBtn) clearBtn.classList.remove("is-visible");
+                var outputOnlyVal = scope[v];
+                if (outputOnlyVal !== undefined) {
+                  inputs[i].value =
+                    typeof outputOnlyVal === "string"
+                      ? outputOnlyVal
+                      : formatFormulaValue(outputOnlyVal);
+                  inputs[i].classList.add("is-computed");
+                } else {
+                  inputs[i].value = "";
+                  inputs[i].classList.remove("is-computed");
+                }
+                continue;
+              }
+              if (userValues[v] !== undefined) {
+                inputs[i].classList.remove("is-computed");
+                if (clearBtn) clearBtn.classList.add("is-visible");
+                continue;
+              }
+              if (clearBtn) clearBtn.classList.remove("is-visible");
+              var val = scope[v];
+              if (isFiniteNumber(val)) {
+                inputs[i].value = formatFormulaValue(val);
+                inputs[i].classList.add("is-computed");
+              } else {
+                inputs[i].value = "";
+                inputs[i].classList.remove("is-computed");
+              }
+            }
+            var unknownCount = 0;
+            for (var j = 0; j < currentRows.length; j++) {
+              if (currentRows[j].hidden) continue;
+              if (scope[currentRows[j].variable] === undefined) unknownCount++;
+            }
+            if (Object.keys(userValues).length === 0) {
+              status.textContent = "Enter values to calculate.";
+            } else if (unknownCount === 0) {
+              status.textContent = "All variables solved.";
+            } else {
+              status.textContent =
+                unknownCount +
+                " variable" +
+                (unknownCount === 1 ? "" : "s") +
+                " cannot be determined from the current inputs.";
+            }
+          }
+
+          function renderFields() {
+            if (!currentRows.length) {
+              inputsWrap.innerHTML = "";
+              status.textContent = "No valid rows found in this group.";
+              return;
+            }
+            var html = "";
+            for (var i = 0; i < currentRows.length; i++) {
+              var row = currentRows[i];
+              if (row.hidden) continue;
+              var inputClassName = row.outputOnly
+                ? "input-formula is-output-only"
+                : "input-formula";
+              var outputOnlyAttr = row.outputOnly
+                ? ' data-output-only="true"'
+                : "";
+              var readonlyAttrs = row.outputOnly
+                ? ' readonly aria-readonly="true"'
+                : "";
+              var clearButtonHtml = row.outputOnly
+                ? ""
+                : '<button type="button" class="clear-input-btn" aria-label="Clear ' +
+                  escapeHTML(row.name) +
+                  ' input">X</button>';
+              html +=
+                '<div class="formula-var-row">' +
+                '<div class="formula-var-label">' +
+                '<span class="formula-var-name">' +
+                escapeHTML(row.name) +
+                "</span>" +
+                '<span class="formula-var-hint">= ' +
+                escapeHTML(row.formula) +
+                (row.outputOnly
+                  ? '<span class="formula-var-mode">Output only</span>'
+                  : "") +
+                "</span>" +
+                "</div>" +
+                '<span class="input-row">' +
+                '<input type="text" class="' +
+                inputClassName +
+                '" data-variable="' +
+                escapeHTML(row.variable) +
+                '"' +
+                outputOnlyAttr +
+                ' placeholder="?" autocomplete="off" inputmode="decimal"' +
+                readonlyAttrs +
+                ">" +
+                clearButtonHtml +
+                "</span>" +
+                '<span class="formula-var-units">' +
+                escapeHTML(row.units) +
+                "</span>" +
+                "</div>";
+            }
+            inputsWrap.innerHTML = html;
+            status.textContent = "Enter values to calculate.";
+
+            var inputs = inputsWrap.querySelectorAll(".input-formula");
+            for (var j = 0; j < inputs.length; j++) {
+              (function (inp) {
+                if (inp.getAttribute("data-output-only") === "true") {
+                  return;
+                }
+                var clearBtn = inp.nextElementSibling;
+                inp.addEventListener("input", function () {
+                  var v = inp.getAttribute("data-variable");
+                  var raw = inp.value.trim();
+                  if (raw === "") {
+                    delete userValues[v];
+                    if (clearBtn) clearBtn.classList.remove("is-visible");
+                  } else {
+                    var num = parseFloat(raw);
+                    if (isFinite(num)) {
+                      userValues[v] = num;
+                      if (clearBtn) clearBtn.classList.add("is-visible");
+                    } else {
+                      delete userValues[v];
+                      if (clearBtn) clearBtn.classList.remove("is-visible");
+                    }
+                  }
+                  updateFields();
+                });
+                if (clearBtn) {
+                  clearBtn.addEventListener("click", function () {
+                    var v = inp.getAttribute("data-variable");
+                    inp.value = "";
+                    delete userValues[v];
+                    clearBtn.classList.remove("is-visible");
+                    updateFields();
+                  });
+                }
+              })(inputs[j]);
+            }
+          }
+
+          function loadPreset(key) {
+            userValues = {};
+            if (!key || key === "custom" || !formulasCatalog.map[key]) {
+              currentRows = [];
+              inputsWrap.innerHTML = "";
+              status.textContent = "No group selected.";
+              return;
+            }
+            currentRows = formulasCatalog.map[key].rows.slice();
+            renderFields();
+          }
+
+          function renderPresetOptions() {
+            var currentKey = presetSelect.value || "";
+            var options = [];
+            if (formulasCatalog && formulasCatalog.order.length) {
+              for (var i = 0; i < formulasCatalog.order.length; i++) {
+                var key = formulasCatalog.order[i];
+                var label = formulasCatalog.map[key]
+                  ? formulasCatalog.map[key].label
+                  : key;
+                options.push(
+                  '<option value="' +
+                    escapeHTML(key) +
+                    '">' +
+                    escapeHTML(label) +
+                    "</option>",
+                );
+              }
+            }
+            options.push('<option value="custom">Custom</option>');
+            presetSelect.innerHTML = options.join("");
+            var targetKey =
+              currentKey && formulasCatalog.map[currentKey]
+                ? currentKey
+                : formulasCatalog.order.length
+                  ? formulasCatalog.order[0]
+                  : "custom";
+            presetSelect.value = targetKey;
+            loadPreset(targetKey);
+          }
+
+          presetSelect.addEventListener("change", function () {
+            loadPreset(presetSelect.value);
+          });
+
+          resetChip.addEventListener("click", function () {
+            userValues = {};
+            var inputs = inputsWrap.querySelectorAll(".input-formula");
+            for (var i = 0; i < inputs.length; i++) {
+              inputs[i].value = "";
+              inputs[i].classList.remove("is-computed");
+              var clearBtn = inputs[i].nextElementSibling;
+              if (clearBtn) clearBtn.classList.remove("is-visible");
+            }
+            status.textContent = "Enter values to calculate.";
+          });
+
+          function formulaRowsToMarkdown(rows) {
+            var headers = [
+              "Name",
+              "Variable",
+              "Formula",
+              "Units",
+              "Output only",
+            ];
+            var widths = headers.map(function (h) {
+              return h.length;
+            });
+            for (var i = 0; i < rows.length; i++) {
+              var r = rows[i];
+              var cols = [
+                String(r.name || ""),
+                String(r.variable || ""),
+                String(r.formula || ""),
+                String(r.units || ""),
+                r.hidden ? "hidden" : r.outputOnly ? "yes" : "no",
+              ];
+              for (var c = 0; c < headers.length; c++) {
+                if (cols[c].length > widths[c]) widths[c] = cols[c].length;
+              }
+            }
+            function pad(s, w) {
+              return s + " ".repeat(Math.max(0, w - s.length));
+            }
+            var lines = [];
+            lines.push(
+              "| " +
+                headers
+                  .map(function (h, i) {
+                    return pad(h, widths[i]);
+                  })
+                  .join(" | ") +
+                " |",
+            );
+            lines.push(
+              "| " +
+                widths
+                  .map(function (w) {
+                    return "-".repeat(w);
+                  })
+                  .join(" | ") +
+                " |",
+            );
+            for (var j = 0; j < rows.length; j++) {
+              var r2 = rows[j];
+              var cols2 = [
+                String(r2.name || ""),
+                String(r2.variable || ""),
+                String(r2.formula || ""),
+                String(r2.units || ""),
+                r2.hidden ? "hidden" : r2.outputOnly ? "yes" : "no",
+              ];
+              lines.push(
+                "| " +
+                  cols2
+                    .map(function (v, i) {
+                      return pad(v, widths[i]);
+                    })
+                    .join(" | ") +
+                  " |",
+              );
+            }
+            return lines.join("\n");
+          }
+
+          function exportToMarkdownText() {
+            if (!currentRows.length) return "";
+            var label =
+              presetSelect.value && formulasCatalog.map[presetSelect.value]
+                ? formulasCatalog.map[presetSelect.value].label
+                : "Custom";
+            return "## " + label + "\n\n" + formulaRowsToMarkdown(currentRows);
+          }
+
+          function importFromMarkdownText(text) {
+            var parsed = parseFormulasCatalogMarkdown(text);
+            if (!parsed.order.length) return;
+            var key = parsed.order[0];
+            userValues = {};
+            currentRows = parsed.map[key].rows;
+            presetSelect.value = "custom";
+            renderFields();
+          }
+
+          renderPresetOptions();
+          mountSingleConverterCard(card);
+
+          activeFormulasContext = {
+            exportToMarkdownText: exportToMarkdownText,
+            importFromMarkdownText: importFromMarkdownText,
+          };
+          if (activeReferenceKey === "formulas") {
+            referenceFormulasMarkdown.value = exportToMarkdownText();
+          }
+        }
+
+        referenceFormulasImportButton.addEventListener("click", function () {
+          if (!activeFormulasContext) return;
+          activeFormulasContext.importFromMarkdownText(
+            referenceFormulasMarkdown.value,
+          );
+        });
+
+        referenceFormulasExportButton.addEventListener("click", function () {
+          if (!activeFormulasContext) return;
+          referenceFormulasMarkdown.value =
+            activeFormulasContext.exportToMarkdownText();
+        });
+
+        referenceGenericImportButton.addEventListener("click", function () {
+          if (!activeGenericContext) return;
+          activeGenericContext.importFromMarkdownText(
+            referenceGenericMarkdown.value,
+          );
+        });
+
+        referenceGenericExportButton.addEventListener("click", function () {
+          if (!activeGenericContext) return;
+          referenceGenericMarkdown.value =
+            activeGenericContext.exportToMarkdownText();
+        });
+
+        pickGenericConverterButton.addEventListener("click", function () {
+          setActivePickerButton(pickGenericConverterButton);
+          buildGenericConverter();
+          updateConversionReferences("generic");
+        });
+
+        pickFormulasCalculatorButton.addEventListener("click", function () {
+          setActivePickerButton(pickFormulasCalculatorButton);
+          buildFormulasCalculator();
+          updateConversionReferences("formulas");
+        });
+
+        setActivePickerButton(pickGenericConverterButton);
+        buildGenericConverter();
+        updateConversionReferences("generic");
+      })();
+    </script>
+  </body>
+</html>
