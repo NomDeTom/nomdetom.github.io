@@ -341,12 +341,65 @@
         color: var(--text);
       }
 
+      .repeated-field-list {
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .repeated-field-card {
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        padding: 0.8rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .repeated-field-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+      }
+
+      .repeated-field-title {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .repeated-field-grid {
+        display: grid;
+        gap: 0.9rem;
+        grid-template-columns: minmax(6.5rem, 8.5rem) minmax(11rem, 15rem) minmax(14rem, 1fr);
+      }
+
+      .repeated-values {
+        min-height: 2.9rem;
+      }
+
+      .repeated-field-actions {
+        margin-top: 0.8rem;
+        display: flex;
+        gap: 0.6rem;
+      }
+
+      .mini-btn {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.82rem;
+      }
+
       @media (max-width: 640px) {
         main {
           padding: 1.25rem 0.9rem 2rem;
         }
 
         .compare-field-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .repeated-field-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -379,6 +432,7 @@
         <div class="view-switch" role="group" aria-label="Protobuf mode switch">
           <button id="mode-single" type="button" class="view-switch-btn active" data-mode="single">Single Field Encoder</button>
           <button id="mode-compare" type="button" class="view-switch-btn" data-mode="compare">Type Comparison</button>
+          <button id="mode-repeated" type="button" class="view-switch-btn" data-mode="repeated">Repeated Field Encoder</button>
         </div>
       </section>
 
@@ -523,6 +577,51 @@
           </div>
         </section>
       </div>
+
+      <div id="view-repeated" hidden>
+
+      <section>
+        <h2>Repeated Field Input</h2>
+        <div id="repeated-field-list" class="repeated-field-list"></div>
+        <div class="repeated-field-actions">
+          <button id="repeated-add-field" class="action-btn" type="button">Add field</button>
+        </div>
+        <p id="repeated-status" class="status">Ready to encode repeated fields.</p>
+      </section>
+
+      <section>
+        <h2>Encoded Fields</h2>
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Encoding</th>
+                <th>Field bytes (hex)</th>
+                <th>Byte count</th>
+              </tr>
+            </thead>
+            <tbody id="repeated-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Complete Protobuf Bytes</h2>
+        <div class="final-bytes">
+          <div class="byte-line">
+            <label>Concatenated hex</label>
+            <div class="byte-out"><code id="repeated-final-hex">0A 03 01 02 03</code></div>
+          </div>
+          <div class="byte-line">
+            <label>Total bytes</label>
+            <div class="byte-out"><span id="repeated-total-bytes">5</span> bytes</div>
+          </div>
+          <button id="repeated-copy-hex" class="action-btn copy-btn" type="button">Copy hex</button>
+        </div>
+      </section>
+
+      </div>
     </main>
 
     <script>
@@ -551,6 +650,8 @@
         var viewCompareEl = document.getElementById("view-compare");
         var modeSingleBtn = document.getElementById("mode-single");
         var modeCompareBtn = document.getElementById("mode-compare");
+        var modeRepeatedBtn = document.getElementById("mode-repeated");
+        var viewRepeatedEl = document.getElementById("view-repeated");
         var compareFieldNumberEl = document.getElementById("compare-field-number");
         var compareFamilyButtons = document.querySelectorAll(".family-chip");
         var compareFamily = "signed-int";
@@ -560,6 +661,14 @@
         var compareValueEl = compareValueNumberEl;
         var compareStatusEl = document.getElementById("compare-status");
         var compareRowsEl = document.getElementById("compare-rows");
+
+        var repeatedFieldListEl = document.getElementById("repeated-field-list");
+        var repeatedAddFieldBtn = document.getElementById("repeated-add-field");
+        var repeatedStatusEl = document.getElementById("repeated-status");
+        var repeatedRowsEl = document.getElementById("repeated-rows");
+        var repeatedFinalHexEl = document.getElementById("repeated-final-hex");
+        var repeatedTotalBytesEl = document.getElementById("repeated-total-bytes");
+        var repeatedCopyHexBtn = document.getElementById("repeated-copy-hex");
 
         var THEME_STORAGE_KEY = "nomdetom-theme-mode";
         var autoThemeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
@@ -606,6 +715,180 @@
           text: ["string", "bytes"],
           bool: ["bool"]
         };
+
+        var PACKABLE_TYPES = {
+          int32: true,
+          int64: true,
+          uint32: true,
+          uint64: true,
+          sint32: true,
+          sint64: true,
+          fixed32: true,
+          fixed64: true,
+          sfixed32: true,
+          sfixed64: true,
+          float: true,
+          double: true,
+          bool: true
+        };
+
+        var REPEATED_TYPE_OPTIONS = [
+          { value: "int32", label: "int32" },
+          { value: "int64", label: "int64" },
+          { value: "sint32", label: "sint32 (zigzag)" },
+          { value: "sint64", label: "sint64 (zigzag)" },
+          { value: "uint32", label: "uint32" },
+          { value: "uint64", label: "uint64" },
+          { value: "bool", label: "bool" },
+          { value: "fixed32", label: "fixed32" },
+          { value: "fixed64", label: "fixed64" },
+          { value: "sfixed32", label: "sfixed32" },
+          { value: "sfixed64", label: "sfixed64" },
+          { value: "float", label: "float" },
+          { value: "double", label: "double" },
+          { value: "string", label: "string" },
+          { value: "bytes", label: "bytes" }
+        ];
+
+        function repeatedTypeOptionsHtml(selectedType) {
+          var html = "";
+          for (var i = 0; i < REPEATED_TYPE_OPTIONS.length; i++) {
+            var item = REPEATED_TYPE_OPTIONS[i];
+            var isSelected = item.value === selectedType ? " selected" : "";
+            html += "<option value=\"" + item.value + "\"" + isSelected + ">" + item.label + "</option>";
+          }
+          return html;
+        }
+
+        function getRepeatedDefaultValuesForType(type) {
+          if (type === "bool") return "true, false, true";
+          if (type === "string") return "alpha, beta, gamma";
+          if (type === "bytes") return "DE AD, BE EF";
+          if (type === "float") return "1.5, 2.5, 3.5";
+          if (type === "double") return "1.25, 2.5, 5.0";
+          if (type === "sint32" || type === "sint64") return "-1, 1, -2";
+          return "1, 2, 3";
+        }
+
+        function parseRepeatedValues(text) {
+          return String(text || "")
+            .split(",")
+            .map(function (value) { return value.trim(); })
+            .filter(function (value) { return value.length > 0; });
+        }
+
+        function getNextRepeatedFieldNumber() {
+          var fieldInputs = repeatedFieldListEl.querySelectorAll(".repeated-field-number");
+          var maxNo = 0;
+          for (var i = 0; i < fieldInputs.length; i++) {
+            var n = parseInt(fieldInputs[i].value, 10);
+            if (Number.isFinite(n) && n > maxNo) maxNo = n;
+          }
+          return String(Math.max(1, maxNo + 1));
+        }
+
+        function updateRepeatedFieldTitles() {
+          var cards = repeatedFieldListEl.querySelectorAll(".repeated-field-card");
+          for (var i = 0; i < cards.length; i++) {
+            var titleEl = cards[i].querySelector(".repeated-field-title");
+            if (titleEl) titleEl.textContent = "Repeated Field " + String(i + 1);
+            var removeBtn = cards[i].querySelector(".repeated-remove-field");
+            if (removeBtn) removeBtn.disabled = cards.length === 1;
+          }
+        }
+
+        function addRepeatedField(config) {
+          var fieldType = config && config.type ? config.type : "int32";
+          var fieldNumber = config && config.number ? String(config.number) : getNextRepeatedFieldNumber();
+          var fieldValues = config && typeof config.values === "string" ? config.values : getRepeatedDefaultValuesForType(fieldType);
+
+          var card = document.createElement("div");
+          card.className = "repeated-field-card";
+          card.innerHTML =
+            "<div class=\"repeated-field-card-top\">" +
+            "<h3 class=\"repeated-field-title\">Repeated Field</h3>" +
+            "<button type=\"button\" class=\"action-btn mini-btn repeated-remove-field\">Remove</button>" +
+            "</div>" +
+            "<div class=\"repeated-field-grid\">" +
+            "<div class=\"field\">" +
+            "<label>Field number</label>" +
+            "<input class=\"repeated-field-number\" type=\"number\" min=\"1\" step=\"1\" value=\"" + fieldNumber + "\" />" +
+            "</div>" +
+            "<div class=\"field\">" +
+            "<label>Field type</label>" +
+            "<select class=\"repeated-field-type\">" + repeatedTypeOptionsHtml(fieldType) + "</select>" +
+            "</div>" +
+            "<div class=\"field\">" +
+            "<label>Values (comma-separated)</label>" +
+            "<input class=\"repeated-values\" type=\"text\" value=\"" + fieldValues + "\" />" +
+            "</div>" +
+            "</div>";
+
+          repeatedFieldListEl.appendChild(card);
+          updateRepeatedFieldTitles();
+        }
+
+        function encodeRepeatedFieldBlock(fieldNo, type, values) {
+          var info = TYPE_INFO[type];
+          var canPack = !!PACKABLE_TYPES[type];
+          var encodedValueList = [];
+          var i;
+          for (i = 0; i < values.length; i++) {
+            encodedValueList.push(encodeValue(type, values[i]).bytes);
+          }
+
+          if (canPack) {
+            var packedContent = new Uint8Array(
+              encodedValueList.reduce(function (sum, bytes) { return sum + bytes.length; }, 0)
+            );
+            var pOffset = 0;
+            for (i = 0; i < encodedValueList.length; i++) {
+              packedContent.set(encodedValueList[i], pOffset);
+              pOffset += encodedValueList[i].length;
+            }
+
+            var packedKeyBytes = encodeVarintUnsigned((fieldNo << 3n) | 2n);
+            var packedLenBytes = encodeVarintUnsigned(BigInt(packedContent.length));
+            var packedFieldBytes = new Uint8Array(packedKeyBytes.length + packedLenBytes.length + packedContent.length);
+            var pos = 0;
+            packedFieldBytes.set(packedKeyBytes, pos);
+            pos += packedKeyBytes.length;
+            packedFieldBytes.set(packedLenBytes, pos);
+            pos += packedLenBytes.length;
+            packedFieldBytes.set(packedContent, pos);
+
+            return {
+              bytes: packedFieldBytes,
+              encoding: "Packed (proto3 default)",
+              valueCount: values.length
+            };
+          }
+
+          var keyBytes = encodeVarintUnsigned((fieldNo << 3n) | BigInt(info.wireType));
+          var unpackedChunks = [];
+          for (i = 0; i < encodedValueList.length; i++) {
+            var valueBytes = encodedValueList[i];
+            var fullField = new Uint8Array(keyBytes.length + valueBytes.length);
+            fullField.set(keyBytes, 0);
+            fullField.set(valueBytes, keyBytes.length);
+            unpackedChunks.push(fullField);
+          }
+
+          var unpackedBytes = new Uint8Array(
+            unpackedChunks.reduce(function (sum, bytes) { return sum + bytes.length; }, 0)
+          );
+          var offset = 0;
+          for (i = 0; i < unpackedChunks.length; i++) {
+            unpackedBytes.set(unpackedChunks[i], offset);
+            offset += unpackedChunks[i].length;
+          }
+
+          return {
+            bytes: unpackedBytes,
+            encoding: "Unpacked (non-packable type)",
+            valueCount: values.length
+          };
+        }
 
         function capitalizeWord(value) {
           return value.charAt(0).toUpperCase() + value.slice(1);
@@ -723,6 +1006,53 @@
         function parseBytes(text) {
           var t = String(text || "").trim();
           if (!t) return new Uint8Array(0);
+
+          // Comma-separated list is treated as explicit byte values.
+          // Example: "61, 62" => 0x3D 0x3E.
+          if (t.indexOf(",") !== -1) {
+            var commaParts = t.split(",").map(function (part) {
+              return part.trim();
+            }).filter(function (part) {
+              return part.length > 0;
+            });
+            if (!commaParts.length) return new Uint8Array(0);
+
+            var decimalList = true;
+            for (var i = 0; i < commaParts.length; i++) {
+              if (!/^\d+$/.test(commaParts[i])) {
+                decimalList = false;
+                break;
+              }
+            }
+            if (decimalList) {
+              var decimalOut = [];
+              for (var d = 0; d < commaParts.length; d++) {
+                var dec = Number(commaParts[d]);
+                if (!Number.isInteger(dec) || dec < 0 || dec > 255) {
+                  throw new Error("bytes decimal list expects 0..255 per value.");
+                }
+                decimalOut.push(dec);
+              }
+              return Uint8Array.from(decimalOut);
+            }
+
+            // Support comma-separated explicit hex values like "0x61, 0x62".
+            var hexList = true;
+            for (var h = 0; h < commaParts.length; h++) {
+              if (!/^(?:0x)?[0-9a-f]{1,2}$/i.test(commaParts[h])) {
+                hexList = false;
+                break;
+              }
+            }
+            if (hexList) {
+              var hexOut = [];
+              for (var x = 0; x < commaParts.length; x++) {
+                hexOut.push(parseInt(commaParts[x].replace(/^0x/i, ""), 16));
+              }
+              return Uint8Array.from(hexOut);
+            }
+          }
+
           if (/^(?:0x)?[0-9a-f]{2}(?:\s+(?:0x)?[0-9a-f]{2})*$/i.test(t)) {
             var parts = t.split(/\s+/);
             var out = [];
@@ -966,13 +1296,103 @@
         }
 
         function setMode(mode) {
-          currentMode = mode === "compare" ? "compare" : "single";
+          currentMode = mode === "compare" ? "compare" : mode === "repeated" ? "repeated" : "single";
           viewSingleEl.hidden = currentMode !== "single";
           viewCompareEl.hidden = currentMode !== "compare";
+          viewRepeatedEl.hidden = currentMode !== "repeated";
           modeSingleBtn.classList.toggle("active", currentMode === "single");
           modeCompareBtn.classList.toggle("active", currentMode === "compare");
+          modeRepeatedBtn.classList.toggle("active", currentMode === "repeated");
           if (currentMode === "compare") {
             updateComparison();
+          } else if (currentMode === "repeated") {
+            updateRepeated();
+          }
+        }
+
+        function updateRepeated() {
+          repeatedRowsEl.innerHTML = "";
+          try {
+            var cards = repeatedFieldListEl.querySelectorAll(".repeated-field-card");
+            if (!cards.length) throw new Error("Add at least one repeated field.");
+
+            var encodedBlocks = [];
+            var errorCount = 0;
+            var totalValues = 0;
+
+            for (var i = 0; i < cards.length; i++) {
+              var card = cards[i];
+              var fieldNoText = String(card.querySelector(".repeated-field-number").value || "").trim();
+              var type = card.querySelector(".repeated-field-type").value;
+              var rawValues = card.querySelector(".repeated-values").value;
+              var tr = document.createElement("tr");
+              var tdField = document.createElement("td");
+              var tdEncoding = document.createElement("td");
+              var tdHex = document.createElement("td");
+              var tdCount = document.createElement("td");
+
+              tdField.textContent = "#" + String(i + 1);
+
+              try {
+                if (!fieldNoText) throw new Error("Field number is required.");
+                var fieldNo = BigInt(fieldNoText);
+                if (fieldNo <= 0n) throw new Error("Field number must be > 0.");
+
+                var values = parseRepeatedValues(rawValues);
+                if (!values.length) throw new Error("At least one value is required.");
+
+                var block = encodeRepeatedFieldBlock(fieldNo, type, values);
+                tdField.textContent = "#" + String(i + 1) + " (field " + fieldNo.toString() + ", " + type + ")";
+                tdEncoding.textContent = block.encoding + " • " + block.valueCount + " value" + (block.valueCount === 1 ? "" : "s");
+                tdHex.innerHTML = "<code>" + bytesToHex(block.bytes) + "</code>";
+                tdCount.textContent = String(block.bytes.length) + " bytes";
+
+                encodedBlocks.push(block.bytes);
+                totalValues += block.valueCount;
+              } catch (rowErr) {
+                errorCount += 1;
+                tr.classList.add("comparison-row-error");
+                tdEncoding.textContent = "Error";
+                tdHex.textContent = rowErr && rowErr.message ? rowErr.message : "Unable to encode field.";
+                tdCount.textContent = "-";
+              }
+
+              tr.appendChild(tdField);
+              tr.appendChild(tdEncoding);
+              tr.appendChild(tdHex);
+              tr.appendChild(tdCount);
+              repeatedRowsEl.appendChild(tr);
+            }
+
+            if (errorCount === 0) {
+              var finalBytes = new Uint8Array(
+                encodedBlocks.reduce(function (sum, block) { return sum + block.length; }, 0)
+              );
+              var finalOffset = 0;
+              for (var j = 0; j < encodedBlocks.length; j++) {
+                finalBytes.set(encodedBlocks[j], finalOffset);
+                finalOffset += encodedBlocks[j].length;
+              }
+
+              repeatedFinalHexEl.textContent = bytesToHex(finalBytes);
+              repeatedTotalBytesEl.textContent = String(finalBytes.length);
+              repeatedStatusEl.className = "status";
+              repeatedStatusEl.textContent =
+                "Encoded " + cards.length + " field" + (cards.length === 1 ? "" : "s") +
+                " and " + totalValues + " total repeated value" + (totalValues === 1 ? "" : "s") + ".";
+            } else {
+              repeatedFinalHexEl.textContent = "—";
+              repeatedTotalBytesEl.textContent = "—";
+              repeatedStatusEl.className = "status error";
+              repeatedStatusEl.textContent =
+                errorCount + " field" + (errorCount === 1 ? " has" : "s have") +
+                " encoding errors. Fix highlighted rows.";
+            }
+          } catch (err) {
+            repeatedStatusEl.className = "status error";
+            repeatedStatusEl.textContent = err && err.message ? err.message : "Unable to encode repeated fields.";
+            repeatedFinalHexEl.textContent = "—";
+            repeatedTotalBytesEl.textContent = "—";
           }
         }
 
@@ -1088,6 +1508,7 @@
         fieldNumberEl.addEventListener("input", update);
         modeSingleBtn.addEventListener("click", function () { setMode("single"); });
         modeCompareBtn.addEventListener("click", function () { setMode("compare"); });
+        modeRepeatedBtn.addEventListener("click", function () { setMode("repeated"); });
         fieldTypeEl.addEventListener("change", function () {
           var t = fieldTypeEl.value;
           setValueControlByType(t);
@@ -1102,6 +1523,35 @@
         });
         valueInputNumberEl.addEventListener("input", update);
         valueInputTextEl.addEventListener("input", update);
+        repeatedAddFieldBtn.addEventListener("click", function () {
+          addRepeatedField({ number: getNextRepeatedFieldNumber(), type: "int32", values: "1, 2, 3" });
+          updateRepeated();
+        });
+        repeatedFieldListEl.addEventListener("input", function (event) {
+          if (event.target.classList.contains("repeated-field-number") || event.target.classList.contains("repeated-values")) {
+            updateRepeatedFieldTitles();
+            updateRepeated();
+          }
+        });
+        repeatedFieldListEl.addEventListener("change", function (event) {
+          if (event.target.classList.contains("repeated-field-type")) {
+            var card = event.target.closest(".repeated-field-card");
+            var valuesInput = card ? card.querySelector(".repeated-values") : null;
+            if (valuesInput && parseRepeatedValues(valuesInput.value).length === 0) {
+              valuesInput.value = getRepeatedDefaultValuesForType(event.target.value);
+            }
+            updateRepeated();
+          }
+        });
+        repeatedFieldListEl.addEventListener("click", function (event) {
+          if (!event.target.classList.contains("repeated-remove-field")) return;
+          var cards = repeatedFieldListEl.querySelectorAll(".repeated-field-card");
+          if (cards.length <= 1) return;
+          var card = event.target.closest(".repeated-field-card");
+          if (card) card.remove();
+          updateRepeatedFieldTitles();
+          updateRepeated();
+        });
         compareFieldNumberEl.addEventListener("input", updateComparison);
         for (var c = 0; c < compareFamilyButtons.length; c++) {
           compareFamilyButtons[c].addEventListener("click", (function (btn) {
@@ -1133,11 +1583,21 @@
           }
         });
 
+        repeatedCopyHexBtn.addEventListener("click", function () {
+          var text = repeatedFinalHexEl.textContent;
+          if (!text || text === "—") return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text);
+          }
+        });
+
         setValueControlByType(fieldTypeEl.value);
         setCompareValueControlByFamily(compareFamily);
+        addRepeatedField({ number: "1", type: "int32", values: "1, 2, 3" });
         applyThemeMode(getStoredThemeMode(), false);
         update();
         updateComparison();
+        updateRepeated();
       })();
     </script>
   </body>
