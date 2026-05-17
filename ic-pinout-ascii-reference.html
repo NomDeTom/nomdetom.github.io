@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>ASCII IC Pinout Tool Reference</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 64rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 4vw, 2.25rem);
+        line-height: 1.15;
+        font-weight: 700;
+      }
+
+      h2 {
+        margin: 0 0 0.75rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      a:not(.action-btn) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      section {
+        padding: 2rem 0 0;
+        border-top: 1px solid var(--border);
+        margin-top: 2rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+        gap: 1rem;
+      }
+
+      .callout {
+        background: var(--accent-soft);
+        color: var(--muted);
+        padding: 0.85rem 0.95rem;
+        border-left: 3px solid var(--accent);
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      .mono,
+      pre,
+      code {
+        font-family: "Courier New", monospace;
+      }
+
+      pre {
+        margin: 0;
+        padding: 0.9rem;
+        overflow-x: auto;
+        background: var(--field-bg);
+        border: 1px solid var(--border);
+        white-space: pre;
+      }
+
+      .block {
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 1.2rem;
+      }
+
+      li + li {
+        margin-top: 0.45rem;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 768px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>ASCII IC Pinout Tool Reference</h1>
+        <p class="subtitle">
+          Usage notes for <span class="mono">ic_pinout_ascii.py</span>, plus verified example commands and outputs for ATtiny412 and ATtiny816 packages.
+        </p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-license-btn" class="action-btn" type="button" aria-expanded="false">Show license</button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block" hidden>
+          <p class="hosted-note">
+            Reference package pinouts were checked against Microchip product documentation for ATtiny412 and ATtiny816.
+          </p>
+          <p class="hosted-note">
+            Source pages:
+            <a href="https://onlinedocs.microchip.com/oxy/GUID-C699F447-1F83-4028-9A2C-379D019155E3-en-US-5/GUID-3B4CD538-EDA0-4831-BCB6-1CED0C439DB2.html">ATtiny412 8-pin package</a>
+            and
+            <a href="https://onlinedocs.microchip.com/oxy/GUID-EE7956F6-534E-4B4F-AD10-214BF9914B5A-en-US-5/GUID-B1B200C2-C0D0-4D0D-89AF-E156FEC10A33.html">ATtiny816 20-pin VQFN</a>.
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <h2>Overview</h2>
+        <div class="cards">
+          <div class="block">
+            <p>The tool generates ASCII package drawings for:</p>
+            <ul>
+              <li>2-sided packages with <span class="mono">two</span></li>
+              <li>4-sided packages with <span class="mono">four</span></li>
+              <li>Compact 4-sided layouts with <span class="mono">--vertical-spread</span></li>
+            </ul>
+          </div>
+          <div class="callout">
+            For 2-sided packages, pass left pins top-to-bottom and right pins top-to-bottom. For 4-sided packages, pass top left-to-right, right top-to-bottom, bottom left-to-right, and left top-to-bottom.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Basic Usage</h2>
+        <div class="block">
+          <pre>python ic_pinout_ascii.py two --name "IC_NAME" --left "PIN1,PIN2" --right "PINN,PINN-1"</pre>
+          <pre>python ic_pinout_ascii.py four --name "IC_NAME" --top "A,B,C" --right "D,E,F" --bottom "G,H,I" --left "J,K,L"</pre>
+          <pre>python ic_pinout_ascii.py four --vertical-spread --name "IC_NAME" --top "A,B,C" --right "D,E,F" --bottom "G,H,I" --left "J,K,L"</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>Reference Commands</h2>
+        <p class="small">
+          Pinouts verified against Microchip online documentation:
+          <a href="https://onlinedocs.microchip.com/oxy/GUID-C699F447-1F83-4028-9A2C-379D019155E3-en-US-5/GUID-3B4CD538-EDA0-4831-BCB6-1CED0C439DB2.html">ATtiny412 8-pin package</a>
+          and
+          <a href="https://onlinedocs.microchip.com/oxy/GUID-EE7956F6-534E-4B4F-AD10-214BF9914B5A-en-US-5/GUID-B1B200C2-C0D0-4D0D-89AF-E156FEC10A33.html">ATtiny816 20-pin VQFN</a>.
+        </p>
+        <div class="block">
+          <pre>python ic_pinout_ascii.py two --name "ATtiny412" --left "VDD,PA6,PA7,PA1" --right "GND,PA3/EXTCLK,PA0/RESET/UPDI,PA2"</pre>
+          <pre>python ic_pinout_ascii.py four --name "ATtiny816" --top "PA1,PA0/RESET/UPDI,PC3,PC2,PC1" --right "PC0,PB0,PB1,PB2/TOSC2,PB3/TOSC1" --bottom "PA5,PA6,PA7,PB5,PB4" --left "PA2,PA3/EXTCLK,GND,VDD,PA4"</pre>
+          <pre>python ic_pinout_ascii.py four --vertical-spread --name "ATtiny816" --top "PA1,PA0/RESET/UPDI,PC3,PC2,PC1" --right "PC0,PB0,PB1,PB2/TOSC2,PB3/TOSC1" --bottom "PA5,PA6,PA7,PB5,PB4" --left "PA2,PA3/EXTCLK,GND,VDD,PA4"</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2>ATtiny412 Output</h2>
+        <pre>         +-----------+
+ 1 VDD --|           |-- GND            8 
+ 2 PA6 --|           |-- PA3/EXTCLK     7 
+ 3 PA7 --| ATtiny412 |-- PA0/RESET/UPDI 6 
+ 4 PA1 --|           |-- PA2            5 
+         +-----------+</pre>
+      </section>
+
+      <section>
+        <h2>ATtiny816 Output</h2>
+        <pre>                      PA1       PA0/RESET/UPDI      PC3            PC2            PC1      
+                       20             19             18             17             16      
+                        |              |              |              |              |      
+                       -|-            -|-            -|-            -|-            -|-     
+                +-------+--------------+--------------+--------------+--------------+------+
+ 1 PA2        --|                                                                          |-- PC0       15
+ 2 PA3/EXTCLK --|                                                                          |-- PB0       14
+ 3 GND        --|                                ATtiny816                                 |-- PB1       13
+ 4 VDD        --|                                                                          |-- PB2/TOSC2 12
+ 5 PA4        --|                                                                          |-- PB3/TOSC1 11
+                +-------+--------------+--------------+--------------+--------------+------+
+                       -|-            -|-            -|-            -|-            -|-     
+                        |              |              |              |              |      
+                       6              7              8              9              10      
+                      PA5            PA6            PA7            PB5            PB4      </pre>
+      </section>
+
+      <section>
+        <h2>ATtiny816 Vertical Spread Output</h2>
+        <pre>                  +--------------------T20 PA1
+                  | +-------T19 PA0/RESET/UPDI
+                  | | +----------------T18 PC3
+                  | | | +--------------T17 PC2
+                  | | | | +------------T16 PC1
+                  | | | | |                   
+                +-+-+-+-+-+-------------------+
+ 1 PA2        --|                             |-- PC0       15
+ 2 PA3/EXTCLK --|                             |-- PB0       14
+ 3 GND        --|          ATtiny816          |-- PB1       13
+ 4 VDD        --|                             |-- PB2/TOSC2 12
+ 5 PA4        --|                             |-- PB3/TOSC1 11
+                +-+----+----+---+----+--------+
+                  |    |    |   |    |        
+                  |    |    |   |    +-B10 PB4
+                  |    |    |   +------B 9 PB5
+                  |    |    +----------B 8 PA7
+                  |    +---------------B 7 PA6
+                  +--------------------B 6 PA5</pre>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var toggleLicenseButton = document.getElementById("toggle-license-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          document.documentElement.setAttribute("data-theme", getResolvedTheme(themeMode));
+          toggleThemeButton.setAttribute("aria-pressed", "false");
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        function updateLicenseButton() {
+          var expanded = !attributionBlock.hidden;
+          toggleLicenseButton.textContent = expanded ? "Hide license" : "Show license";
+          toggleLicenseButton.setAttribute("aria-expanded", expanded ? "true" : "false");
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        toggleLicenseButton.addEventListener("click", function () {
+          attributionBlock.hidden = !attributionBlock.hidden;
+          updateLicenseButton();
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        applyThemeMode(getStoredThemeMode(), false);
+        updateLicenseButton();
+      })();
+    </script>
+  </body>
+</html>

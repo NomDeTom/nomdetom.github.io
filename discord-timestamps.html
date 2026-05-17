@@ -1,0 +1,931 @@
+<!doctype html>
+<!-- Discord Timestamp Generator -->
+<!-- Original source: https://github.com/3ventic/discord-timestamps (MIT License) -->
+<!-- Adapted to match NomDeTom microsite theme -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Discord Timestamp Generator</title>
+    <style>
+      /* ============================================================
+       CSS VARIABLES - customize colors here for your calculator
+       ============================================================ */
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #474d47;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+      }
+
+      /* ============================================================
+       SHARED BASE STYLES - do not modify
+       ============================================================ */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      section {
+        margin-top: 2rem;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1.2rem;
+        color: var(--text);
+      }
+
+      /* ============================================================
+       CALCULATOR SPECIFIC STYLES
+       ============================================================ */
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        align-items: end;
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      label {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-bottom: 0.3rem;
+        font-weight: 500;
+      }
+
+      input[type="date"],
+      input[type="time"],
+      select,
+      input[type="text"] {
+        background: var(--field-bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 0.5rem;
+        font: inherit;
+        font-size: 0.95rem;
+      }
+
+      input[type="date"]:focus,
+      input[type="time"]:focus,
+      select:focus,
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-soft);
+      }
+
+      input[type="text"][readonly] {
+        background: var(--accent-soft);
+        color: var(--text);
+        font-family: "Courier New", monospace;
+        font-size: 0.9rem;
+      }
+
+      .preview-section {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .preview-label {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-bottom: 0.3rem;
+        font-weight: 500;
+      }
+
+      #preview {
+        font-size: 1.1rem;
+        color: var(--text);
+        font-weight: 500;
+        padding: 0.75rem 0;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+
+      .chip-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+
+      /* Regular chip - default state */
+      .chip {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 2px solid var(--border);
+        padding: 0.5rem 1rem;
+        font: inherit;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-radius: 20px;
+        transition: all 0.2s;
+      }
+
+      .chip:hover:not(.disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* Primary chips - highlight important components (Date, Time, Relative) */
+      .chip.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      .chip.primary:hover:not(.disabled):not(.selected) {
+        background: var(--accent-soft);
+      }
+
+      /* Selected state - strong visual emphasis */
+      .chip.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .chip.primary.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      /* DISABLED STATE - Better contrast and clarity */
+      .chip.disabled {
+        color: var(--disabled);
+        border-color: var(--disabled);
+        background: var(--field-bg);
+        cursor: not-allowed;
+      }
+
+      .chip.disabled:hover {
+        border-color: var(--disabled);
+        background: var(--panel-bg);
+        color: var(--disabled);
+      }
+
+      .chip.disabled.primary {
+        color: var(--disabled);
+        border-color: var(--disabled);
+      }
+
+      .license-content {
+        display: none;
+        margin-top: 1rem;
+      }
+
+      .license-content.show {
+        display: block;
+      }
+
+      .license-text {
+        font-family: "Courier New", monospace;
+        font-size: 0.8rem;
+        background: var(--field-bg);
+        padding: 0.75rem;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        color: var(--text);
+      }
+
+      .info-box {
+        background: var(--accent-soft);
+        border: 1px solid var(--accent);
+        color: var(--text);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      .info-box p {
+        margin: 0;
+      }
+
+      .info-box a {
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      @media (max-width: 36rem) {
+        .calculator-grid {
+          grid-template-columns: 1fr;
+        }
+
+        section {
+          padding: 1rem;
+        }
+
+        .button-group {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Discord Timestamp Generator</h1>
+        <p class="subtitle">
+          Generate formatted timestamps for your Discord messages
+        </p>
+      </header>
+
+      <div class="top-actions">
+        <a class="action-btn" href="index.html">Back to index</a>
+        <button
+          id="toggle-theme-btn"
+          class="action-btn"
+          type="button"
+          aria-pressed="false"
+        >
+          Theme: Auto
+        </button>
+        <button
+          id="toggle-license-btn"
+          class="action-btn"
+          type="button"
+          aria-expanded="false"
+        >
+          Show license
+        </button>
+      </div>
+
+      <section>
+        <div class="info-box">
+          <p>
+            Use Discord's timestamp feature to display dates and times that
+            automatically adjust to each user's local timezone. Select a date
+            and time, choose your preferred format, and copy the code to paste
+            in Discord messages.
+          </p>
+        </div>
+
+        <h2>Timestamp Settings</h2>
+
+        <div class="calculator-grid">
+          <div class="field-group">
+            <label for="d">Date</label>
+            <input type="date" id="d" />
+          </div>
+
+          <div class="field-group">
+            <label for="hm">Time</label>
+            <input type="time" id="hm" />
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <label style="display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500;">
+            Format Components
+          </label>
+          <div class="chip-group" id="format-chips">
+            <button class="chip primary" data-format="date" data-type="component">Date</button>
+            <button class="chip primary" data-format="time" data-type="component">Time</button>
+            <button class="chip" data-format="day" data-type="modifier">Day of Week</button>
+            <button class="chip" data-format="short" data-type="style">Short</button>
+            <button class="chip" data-format="long" data-type="style">Long</button>
+            <button class="chip primary" data-format="R" data-type="special">Relative</button>
+          </div>
+        </div>
+
+        <div class="preview-section">
+          <p class="preview-label">Preview</p>
+          <div id="preview"></div>
+        </div>
+
+        <div>
+          <label for="code">Discord Code</label>
+          <input type="text" readonly id="code" title="Click to select all" />
+        </div>
+
+        <div class="button-group">
+          <button id="copy" class="action-btn" type="button">Copy to Clipboard</button>
+          <button id="current" class="action-btn" type="button">Reset to Current Time</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Format Guide</h2>
+        <p>
+          Select the components and style you want:
+        </p>
+        <ul>
+          <li><strong>Date:</strong> Include a date in the timestamp</li>
+          <li><strong>Time:</strong> Include a time in the timestamp</li>
+          <li><strong>Day of Week:</strong> Add the day name (only shown with Date + Time)</li>
+          <li><strong>Short:</strong> Use compact formatting (12/20/2025, 2:30 PM)</li>
+          <li><strong>Long:</strong> Use full formatting (December 20, 2025, 2:30:45 PM)</li>
+          <li><strong>Relative:</strong> Show relative time like "2 hours ago" (incompatible with other options)</li>
+        </ul>
+        <p style="margin-top: 1rem; color: var(--muted); font-size: 0.95rem;">
+          <strong>Note:</strong> When both Date and Time are selected, Discord only offers the Long Date format combined with Short Time format (the Short/Long toggle is not available in this case).
+        </p>
+      </section>
+
+      <section>
+        <h2>License</h2>
+        <p>
+          Original timestamp generator by
+          <a href="https://github.com/3ventic/discord-timestamps">3ventic</a>,
+          licensed under the MIT License.
+        </p>
+        <div class="license-content" id="license-content">
+          <div class="license-text">Copyright (c) 2021 Werner
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        // ============================================================
+        // THEME MANAGEMENT
+        // ============================================================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") {
+            return "dark";
+          }
+          if (mode === "dark") {
+            return "auto";
+          }
+          return "light";
+        }
+
+        function applyTheme(mode) {
+          themeMode = mode;
+          var resolved = getResolvedTheme(mode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            resolved === "dark" ? "true" : "false"
+          );
+          localStorage.setItem(THEME_STORAGE_KEY, mode);
+        }
+
+        function initTheme() {
+          var mode = getStoredThemeMode();
+          applyTheme(mode);
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyTheme(getNextThemeMode(themeMode));
+        });
+
+        if (autoThemeMediaQuery) {
+          autoThemeMediaQuery.addEventListener("change", function () {
+            if (themeMode === "auto") {
+              applyTheme("auto");
+            }
+          });
+        }
+
+        initTheme();
+
+        // ============================================================
+        // TIMESTAMP GENERATOR
+        // ============================================================
+        const dateInput = document.getElementById("d");
+        const timeInput = document.getElementById("hm");
+        const typeInput = document.getElementById("t");
+        const output = document.getElementById("code");
+        const copyButton = document.getElementById("copy");
+        const currentButton = document.getElementById("current");
+        const preview = document.getElementById("preview");
+
+        dateInput.onchange = updateOutput;
+        timeInput.onchange = updateOutput;
+        
+        // Remove typeInput.onchange since we're using chips now
+        output.onclick = function () {
+          this.select();
+        };
+
+        copyButton.onclick = async () => {
+          updateOutput();
+          try {
+            await navigator.clipboard.writeText(output.value);
+            const originalText = copyButton.textContent;
+            copyButton.textContent = "Copied!";
+            setTimeout(() => {
+              copyButton.textContent = originalText;
+            }, 2000);
+          } catch (e) {
+            alert("Failed to copy: " + e);
+          }
+        };
+
+        const typeFormats = {
+          t: { timeStyle: "short" },
+          T: { timeStyle: "medium" },
+          d: { dateStyle: "short" },
+          D: { dateStyle: "long" },
+          f: { dateStyle: "long", timeStyle: "short" },
+          F: { dateStyle: "full", timeStyle: "short" },
+          R: { style: "long", numeric: "auto" },
+        };
+
+        function automaticRelativeDifference(d) {
+          const diff =
+            -((new Date().getTime() - d.getTime()) / 1000) |
+            0;
+          const absDiff = Math.abs(diff);
+
+          if (absDiff > 86400 * 30 * 10) {
+            return { duration: Math.round(diff / (86400 * 365)), unit: "years" };
+          }
+          if (absDiff > 86400 * 25) {
+            return { duration: Math.round(diff / (86400 * 30)), unit: "months" };
+          }
+          if (absDiff > 3600 * 21) {
+            return { duration: Math.round(diff / 86400), unit: "days" };
+          }
+          if (absDiff > 60 * 44) {
+            return { duration: Math.round(diff / 3600), unit: "hours" };
+          }
+          if (absDiff > 30) {
+            return { duration: Math.round(diff / 60), unit: "minutes" };
+          }
+          return { duration: diff, unit: "seconds" };
+        }
+
+        function updateOutput() {
+          const selectedDate = new Date(
+            dateInput.valueAsNumber +
+              timeInput.valueAsNumber +
+              new Date(dateInput.valueAsNumber + timeInput.valueAsNumber)
+                .getTimezoneOffset() *
+                60000
+          );
+
+          const selectedChips = Array.from(document.querySelectorAll(".chip.selected")).map(c => c.dataset.format);
+          const formatValue = selectedChips.length > 0 ? getFormatCode(selectedChips) : "R";
+
+          const ts = selectedDate.getTime().toString();
+          output.value = `<t:${ts.substr(0, ts.length - 3)}:${formatValue}>`;
+
+          if (["R"].includes(formatValue)) {
+            const formatter = new Intl.RelativeTimeFormat(
+              navigator.language || "en",
+              typeFormats[formatValue] || {}
+            );
+            const format = automaticRelativeDifference(selectedDate);
+            preview.textContent = formatter.format(format.duration, format.unit);
+          } else {
+            const formatter = new Intl.DateTimeFormat(
+              navigator.language || "en",
+              typeFormats[formatValue] || {}
+            );
+            preview.textContent = formatter.format(selectedDate);
+          }
+        }
+
+        const onload = () => {
+          const now = new Date();
+          dateInput.value = `${now.getFullYear()}-${(now.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}-${now
+            .getDate()
+            .toString()
+            .padStart(2, "0")}`;
+          timeInput.value = `${now
+            .getHours()
+            .toString()
+            .padStart(2, "0")}:${now
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")}`;
+          updateOutput();
+        };
+
+        // Chip selection logic
+        const formatChips = document.querySelectorAll(".chip");
+        
+        // ============================================================
+        // VALID STATE MACHINE - Format component combinations
+        // ============================================================
+        // Defines all valid states, which chips are selectable/disabled,
+        // and valid transitions (escapes) from each state.
+        //
+        // States are identified by their selected chips and format code.
+        // Each state specifies which chips are disabled and why.
+        // ============================================================
+        const VALID_STATES = {
+          // STATE 1: EMPTY - Nothing selected
+          // Disabled: day (needs date+time), short (needs component), long (needs component)
+          empty: {
+            selected: [],
+            disabled: ["day", "short", "long"],
+            formatCode: "R",
+            description: "No components selected - defaults to Relative format"
+          },
+          
+          // STATE 2: DATE ONLY - Single component selected, Short auto-selected
+          // Time IS enabled (can click to transition to date-time)
+          // Long IS enabled (can click to replace short)
+          "date-short": {
+            selected: ["date", "short"],
+            disabled: ["day"],  // Day only works with Date+Time together
+            formatCode: "d",
+            description: "Date only with Short style"
+          },
+          
+          "date-long": {
+            selected: ["date", "long"],
+            disabled: ["day"],  // Day only works with Date+Time together
+            formatCode: "D",
+            description: "Date only with Long style"
+          },
+          
+          // STATE 3: TIME ONLY - Single component selected, Short auto-selected
+          // Date IS enabled (can click to transition to date-time)
+          // Long IS enabled (can click to replace short)
+          "time-short": {
+            selected: ["time", "short"],
+            disabled: ["day"],  // Day only works with Date+Time together
+            formatCode: "t",
+            description: "Time only with Short style"
+          },
+          
+          "time-long": {
+            selected: ["time", "long"],
+            disabled: ["day"],  // Day only works with Date+Time together
+            formatCode: "T",
+            description: "Time only with Long style"
+          },
+          
+          // STATE 4: DATE + TIME - Both components
+          // Discord forces "long date + short time" format
+          // Short/Long ARE DISABLED (not selectable, forced format)
+          "date-time": {
+            selected: ["date", "time"],
+            disabled: ["short", "long"],  // Discord doesn't offer style options for this combo
+            formatCode: "f",
+            description: "Date + Time (Discord forces long date + short time format)"
+          },
+          
+          // STATE 5: DATE + TIME + DAY - All components with modifier
+          // Day only shows with Date + Time
+          "date-time-day": {
+            selected: ["date", "time", "day"],
+            disabled: ["short", "long"],  // Discord doesn't offer style options for this combo
+            formatCode: "F",
+            description: "Date + Time + Day of Week"
+          },
+          
+          // STATE 6: RELATIVE - Special mode
+          // Incompatible with all other selections
+          "relative": {
+            selected: ["R"],
+            // Keep Date and Time enabled as explicit escape paths out of Relative.
+            disabled: ["day", "short", "long"],
+            formatCode: "R",
+            description: "Relative time format (incompatible with other options)"
+          }
+        };
+
+        // Define which components can be combined
+        const componentGroups = {
+          components: ["date", "time", "day"],
+          style: ["short", "long"],
+          relative: ["R"]
+        };
+
+        function getComponentGroup(format) {
+          if (componentGroups.components.includes(format)) return "components";
+          if (componentGroups.style.includes(format)) return "style";
+          return "relative";
+        }
+
+        // STAGE 1: Determine current state from selections
+        function getCurrentState() {
+          const selectedChips = Array.from(formatChips).filter(c => c.classList.contains("selected"));
+          const selected = selectedChips.map(c => c.dataset.format).sort();
+          
+          // Check each state to find which matches current selections
+          for (const [stateName, state] of Object.entries(VALID_STATES)) {
+            const stateSelected = state.selected.sort();
+            if (JSON.stringify(selected) === JSON.stringify(stateSelected)) {
+              return stateName;
+            }
+          }
+          
+          // If no exact match (shouldn't happen), return empty
+          return "empty";
+        }
+
+        // Apply disabling rules based on current state
+        function updateChipStates() {
+          const currentState = getCurrentState();
+          const state = VALID_STATES[currentState];
+          
+          if (!state) return; // Safety check
+          
+          formatChips.forEach(chip => {
+            const format = chip.dataset.format;
+            const isDisabled = state.disabled.includes(format);
+            
+            if (isDisabled) {
+              chip.classList.add("disabled");
+            } else {
+              chip.classList.remove("disabled");
+            }
+          });
+        }
+
+        // Get format code from state machine
+        function getFormatCode(selectedFormats) {
+          const currentState = getCurrentState();
+          const state = VALID_STATES[currentState];
+          return state ? state.formatCode : "R";
+        }
+
+        // Transition to new state by selecting/deselecting specific chips
+        function transitionToState(targetFormats) {
+          // Deselect all first
+          formatChips.forEach(chip => {
+            chip.classList.remove("selected");
+          });
+          
+          // Select target chips
+          targetFormats.forEach(format => {
+            const chip = Array.from(formatChips).find(c => c.dataset.format === format);
+            if (chip) {
+              chip.classList.add("selected");
+            }
+          });
+        }
+
+        formatChips.forEach(chip => {
+          chip.addEventListener("click", (e) => {
+            e.preventDefault();
+            const format = chip.dataset.format;
+            
+            // Don't allow clicking disabled chips
+            if (chip.classList.contains("disabled")) return;
+            
+            const currentState = getCurrentState();
+            const state = VALID_STATES[currentState];
+            const isAlreadySelected = chip.classList.contains("selected");
+            
+            if (isAlreadySelected) {
+              // TOGGLE OFF: Deselect this chip
+              chip.classList.remove("selected");
+
+              // Key-chip deselect behavior:
+              // If Date/Time/Relative is selected alone, allow clean exit to empty state.
+              if (format === "R") {
+                transitionToState([]);
+              } else if (format === "date" && !state.selected.includes("time")) {
+                transitionToState([]);
+              } else if (format === "time" && !state.selected.includes("date")) {
+                transitionToState([]);
+              }
+              
+              // Handle deselection transitions
+              if (format === "date" && state.selected.includes("time")) {
+                // Keep Time selected, transition to time-short
+                transitionToState(["time", "short"]);
+              } else if (format === "time" && state.selected.includes("date")) {
+                // Keep Date selected, transition to date-short
+                transitionToState(["date", "short"]);
+              } else if (format === "short" || format === "long") {
+                // Deselect style: flip to other style if date/time selected
+                const hasSomeComponent = state.selected.some(s => ["date", "time"].includes(s));
+                if (hasSomeComponent) {
+                  const otherStyle = format === "short" ? "long" : "short";
+                  const newSelection = state.selected.filter(s => !["short", "long"].includes(s));
+                  newSelection.push(otherStyle);
+                  transitionToState(newSelection);
+                } else {
+                  updateChipStates();
+                }
+              } else if (format === "day") {
+                // Just deselect day, keep date+time
+                transitionToState(["date", "time"]);
+              } else {
+                // Empty state
+                updateChipStates();
+              }
+            } else {
+              // TOGGLE ON: Select this chip
+              // Use state machine's escapes/transitions to determine new state
+              if (format === "R") {
+                // Selecting Relative: go to relative state
+                transitionToState(["R"]);
+              } else if (format === "date") {
+                const hasTime = state.selected.includes("time");
+                if (hasTime) {
+                  // Date + Time: transition to date-time (clears short/long)
+                  transitionToState(["date", "time"]);
+                } else {
+                  // Date only: transition to date-short (auto-select Short)
+                  transitionToState(["date", "short"]);
+                }
+              } else if (format === "time") {
+                const hasDate = state.selected.includes("date");
+                if (hasDate) {
+                  // Date + Time: transition to date-time (clears short/long)
+                  transitionToState(["date", "time"]);
+                } else {
+                  // Time only: transition to time-short (auto-select Short)
+                  transitionToState(["time", "short"]);
+                }
+              } else if (format === "day") {
+                // Add day to date+time
+                transitionToState(["date", "time", "day"]);
+              } else if (format === "short") {
+                // Select Short: deselect Long if selected
+                const newSelection = state.selected.filter(s => s !== "long");
+                newSelection.push("short");
+                transitionToState(newSelection);
+              } else if (format === "long") {
+                // Select Long: deselect Short if selected
+                const newSelection = state.selected.filter(s => s !== "short");
+                newSelection.push("long");
+                transitionToState(newSelection);
+              }
+            }
+            
+            updateChipStates();
+            updateOutput();
+          });
+        });
+
+        // License toggle
+        const licenseToggle = document.getElementById("toggle-license-btn");
+        const licenseContent = document.getElementById("license-content");
+        
+        licenseToggle.addEventListener("click", (e) => {
+          e.preventDefault();
+          const isHidden = !licenseContent.classList.contains("show");
+          if (isHidden) {
+            licenseContent.classList.add("show");
+            licenseToggle.textContent = "Hide license";
+            licenseToggle.setAttribute("aria-expanded", "true");
+          } else {
+            licenseContent.classList.remove("show");
+            licenseToggle.textContent = "Show license";
+            licenseToggle.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        window.onload = onload;
+        currentButton.onclick = onload;
+      })();
+    </script>
+  </body>
+</html>
