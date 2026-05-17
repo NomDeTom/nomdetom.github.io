@@ -121,12 +121,6 @@
         font-size: 0.88rem;
       }
 
-      .cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-        gap: 1rem;
-      }
-
       .callout {
         background: var(--accent-soft);
         color: var(--muted);
@@ -134,6 +128,27 @@
         border-left: 3px solid var(--accent);
         font-size: 0.95rem;
         line-height: 1.6;
+        margin: 1rem 0;
+      }
+
+      p {
+        margin: 0.5rem 0;
+      }
+
+      h3 {
+        margin: 1.5rem 0 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .schema {
+        margin: 1rem 0;
+      }
+
+      .schema strong {
+        display: block;
+        margin-bottom: 0.25rem;
       }
 
       .mono,
@@ -169,12 +184,6 @@
         color: var(--muted);
         font-size: 0.92rem;
       }
-
-      @media (max-width: 768px) {
-        .cards {
-          grid-template-columns: 1fr;
-        }
-      }
     </style>
   </head>
   <body>
@@ -182,118 +191,397 @@
       <header>
         <h1>ASCII IC Pinout Tool Reference</h1>
         <p class="subtitle">
-          Usage notes for <span class="mono">ic_pinout_ascii.py</span>, plus verified example commands and outputs for ATtiny412 and ATtiny816 packages.
+          Usage notes for <span class="mono">ic_pinout_ascii.py</span>, plus
+          verified example commands and outputs for ATtiny412 and ATtiny816
+          packages.
         </p>
         <div class="top-actions">
           <a class="action-btn" href="index.html">Back to index</a>
-          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
-          <button id="toggle-license-btn" class="action-btn" type="button" aria-expanded="false">Show license</button>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-license-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Show license
+          </button>
         </div>
 
         <div id="attribution-block" class="attribution-block" hidden>
           <p class="hosted-note">
-            Reference package pinouts were checked against Microchip product documentation for ATtiny412 and ATtiny816.
-          </p>
-          <p class="hosted-note">
-            Source pages:
-            <a href="https://onlinedocs.microchip.com/oxy/GUID-C699F447-1F83-4028-9A2C-379D019155E3-en-US-5/GUID-3B4CD538-EDA0-4831-BCB6-1CED0C439DB2.html">ATtiny412 8-pin package</a>
-            and
-            <a href="https://onlinedocs.microchip.com/oxy/GUID-EE7956F6-534E-4B4F-AD10-214BF9914B5A-en-US-5/GUID-B1B200C2-C0D0-4D0D-89AF-E156FEC10A33.html">ATtiny816 20-pin VQFN</a>.
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
           </p>
         </div>
       </header>
 
       <section>
         <h2>Overview</h2>
-        <div class="cards">
-          <div class="block">
-            <p>The tool generates ASCII package drawings for:</p>
-            <ul>
-              <li>2-sided packages with <span class="mono">two</span></li>
-              <li>4-sided packages with <span class="mono">four</span></li>
-              <li>Compact 4-sided layouts with <span class="mono">--vertical-spread</span></li>
-            </ul>
-          </div>
-          <div class="callout">
-            For 2-sided packages, pass left pins top-to-bottom and right pins top-to-bottom. For 4-sided packages, pass top left-to-right, right top-to-bottom, bottom left-to-right, and left top-to-bottom.
-          </div>
+        <p>
+          The tool generates ASCII package drawings from an ordered list of pin
+          labels. Specify:
+        </p>
+        <ul>
+          <li>
+            <strong>2-sided packages</strong> (DIP/SOIC style) using the
+            <span class="mono">two</span> subcommand
+          </li>
+          <li>
+            <strong>4-sided packages</strong> (QFP/QFN style) using the
+            <span class="mono">four</span> subcommand
+          </li>
+          <li>
+            <strong>Compact layouts</strong> with
+            <span class="mono">--vertical-spread</span> for reduced width
+          </li>
+        </ul>
+        <div class="callout">
+          Always pass one ordered list via <span class="mono">--pins</span>,
+          then describe package geometry with
+          <span class="mono">--counts</span>. Control traversal direction with
+          <span class="mono">--sequence</span> and
+          <span class="mono">--start</span>.
         </div>
       </section>
 
       <section>
         <h2>Basic Usage</h2>
         <div class="block">
-          <pre>python ic_pinout_ascii.py two --name "IC_NAME" --left "PIN1,PIN2" --right "PINN,PINN-1"</pre>
-          <pre>python ic_pinout_ascii.py four --name "IC_NAME" --top "A,B,C" --right "D,E,F" --bottom "G,H,I" --left "J,K,L"</pre>
-          <pre>python ic_pinout_ascii.py four --vertical-spread --name "IC_NAME" --top "A,B,C" --right "D,E,F" --bottom "G,H,I" --left "J,K,L"</pre>
+          <pre>
+python ic_pinout_ascii.py two --name "IC_NAME" --pins "A,B,C,D,E,F" --counts "3,3" --sequence ccw --start left-top</pre
+          >
+          <pre>
+python ic_pinout_ascii.py four --name "IC_NAME" --pins "A,B,C,D,E,F,G,H,I,J,K,L" --counts "3,3,3,3" --sequence ccw --start left-top</pre
+          >
+          <pre>
+python ic_pinout_ascii.py four --vertical-spread --name "IC_NAME" --pins "A,B,C,D,E,F,G,H,I,J,K,L" --counts "3,3,3,3" --sequence cw --start top-left</pre
+          >
         </div>
       </section>
 
       <section>
-        <h2>Reference Commands</h2>
-        <p class="small">
-          Pinouts verified against Microchip online documentation:
-          <a href="https://onlinedocs.microchip.com/oxy/GUID-C699F447-1F83-4028-9A2C-379D019155E3-en-US-5/GUID-3B4CD538-EDA0-4831-BCB6-1CED0C439DB2.html">ATtiny412 8-pin package</a>
-          and
-          <a href="https://onlinedocs.microchip.com/oxy/GUID-EE7956F6-534E-4B4F-AD10-214BF9914B5A-en-US-5/GUID-B1B200C2-C0D0-4D0D-89AF-E156FEC10A33.html">ATtiny816 20-pin VQFN</a>.
+        <h2>Numbering Schemas</h2>
+        <p>
+          Pass <span class="mono">--numbering &lt;schema&gt;</span> to either
+          subcommand. Default is <span class="mono">ccw</span>. This controls
+          how pin numbers are displayed (not how pins are placed from
+          <span class="mono">--pins</span>).
         </p>
-        <div class="block">
-          <pre>python ic_pinout_ascii.py two --name "ATtiny412" --left "VDD,PA6,PA7,PA1" --right "GND,PA3/EXTCLK,PA0/RESET/UPDI,PA2"</pre>
-          <pre>python ic_pinout_ascii.py four --name "ATtiny816" --top "PA1,PA0/RESET/UPDI,PC3,PC2,PC1" --right "PC0,PB0,PB1,PB2/TOSC2,PB3/TOSC1" --bottom "PA5,PA6,PA7,PB5,PB4" --left "PA2,PA3/EXTCLK,GND,VDD,PA4"</pre>
-          <pre>python ic_pinout_ascii.py four --vertical-spread --name "ATtiny816" --top "PA1,PA0/RESET/UPDI,PC3,PC2,PC1" --right "PC0,PB0,PB1,PB2/TOSC2,PB3/TOSC1" --bottom "PA5,PA6,PA7,PB5,PB4" --left "PA2,PA3/EXTCLK,GND,VDD,PA4"</pre>
+
+        <div class="schema">
+          <strong><span class="mono">ccw</span> (default)</strong>
+          <p>
+            Counterclockwise from pin 1 at top-left. Standard for DIP, SOIC,
+            QFP, QFN packages.
+          </p>
+          <ul>
+            <li>
+              <strong>2-sided:</strong> Left column 1–n top→bottom, right column
+              (2n)–(n+1) top→bottom.
+            </li>
+            <li>
+              <strong>4-sided:</strong> Left 1–nl, bottom nl+1–…, right
+              decreasing, top decreasing.
+            </li>
+          </ul>
+        </div>
+
+        <div class="schema">
+          <strong><span class="mono">cw</span></strong>
+          <p>
+            Clockwise from pin 1 at top-left of the top side. Meaningful for
+            4-sided only (identical to ccw for 2-sided).
+          </p>
+          <ul>
+            <li>
+              <strong>4-sided:</strong> Top 1–nt left→right, right nt+1–…,
+              bottom decreasing, left decreasing.
+            </li>
+          </ul>
+        </div>
+
+        <div class="schema">
+          <strong><span class="mono">seq</span></strong>
+          <p>
+            Each side numbered independently from 1. Useful for connectors,
+            headers, and IDC footprints.
+          </p>
+        </div>
+
+        <div class="schema">
+          <strong><span class="mono">none</span></strong>
+          <p>
+            Pin numbers suppressed. Labels only. Reduces diagram width when
+            numbering adds no value.
+          </p>
         </div>
       </section>
 
       <section>
-        <h2>ATtiny412 Output</h2>
-        <pre>         +-----------+
- 1 VDD --|           |-- GND            8 
- 2 PA6 --|           |-- PA3/EXTCLK     7 
- 3 PA7 --| ATtiny412 |-- PA0/RESET/UPDI 6 
- 4 PA1 --|           |-- PA2            5 
-         +-----------+</pre>
+        <h2>Demonstrations</h2>
+
+        <h3>ccw vs cw Numbering (same pins, different directions)</h3>
+
+        <p><strong>ccw</strong> (counterclockwise, left-top start):</p>
+        <pre>
+         L   K   J
+         12  11  10
+         |   |   |
+        -|- -|- -|-
+       +-+---+---+-+
+ 1 A --|           |-- I 9
+ 2 B --|    MCU    |-- H 8
+ 3 C --|           |-- G 7
+       +-+---+---+-+
+        -|- -|- -|-
+         |   |   |
+         4   5   6
+         D   E   F </pre
+        >
+
+        <p><strong>cw</strong> (clockwise, top-left start):</p>
+        <pre>
+         A   B   C
+         1   2   3
+         |   |   |
+        -|- -|- -|-
+       +-+---+---+-+
+12 L --|           |-- D 4
+11 K --|    MCU    |-- E 5
+10 J --|           |-- F 6
+       +-+---+---+-+
+        -|- -|- -|-
+         |   |   |
+         9   8   7
+         I   H   G </pre
+        >
+
+        <h3>seq and none Schemes</h3>
+
+        <p><strong>seq</strong> (each side: 1–n):</p>
+        <div class="schema">
+          <strong>4-sided:</strong>
+        </div>
+        <pre>
+         L   K   J
+         1   2   3
+         |   |   |
+        -|- -|- -|-
+       +-+---+---+-+
+ 1 A --|           |-- I 1
+ 2 B --|    MCU    |-- H 2
+ 3 C --|           |-- G 3
+       +-+---+---+-+
+        -|- -|- -|-
+         |   |   |
+         1   2   3
+         D   E   F </pre
+        >
+        <div class="schema">
+          <strong>2-sided:</strong>
+        </div>
+        <pre>
+       +----+
+ 1 A --|    |-- F 1
+ 2 B --| J1 |-- E 2
+ 3 C --|    |-- D 3
+       +----+</pre
+        >
+
+        <p><strong>none</strong> (labels only):</p>
+        <div class="schema">
+          <strong>4-sided:</strong>
+        </div>
+        <pre>
+      L   K   J
+      |   |   |
+     -|- -|- -|-
+    +-+---+---+-+
+A --|           |-- I
+B --|    MCU    |-- H
+C --|           |-- G
+    +-+---+---+-+
+     -|- -|- -|-
+      |   |   |
+      D   E   F </pre
+        >
+        <div class="schema">
+          <strong>2-sided:</strong>
+        </div>
+        <pre>
+    +----+
+A --|    |-- F
+B --| J1 |-- E
+C --|    |-- D
+    +----+</pre
+        >
       </section>
 
       <section>
-        <h2>ATtiny816 Output</h2>
-        <pre>                      PA1       PA0/RESET/UPDI      PC3            PC2            PC1      
-                       20             19             18             17             16      
-                        |              |              |              |              |      
-                       -|-            -|-            -|-            -|-            -|-     
-                +-------+--------------+--------------+--------------+--------------+------+
- 1 PA2        --|                                                                          |-- PC0       15
- 2 PA3/EXTCLK --|                                                                          |-- PB0       14
- 3 GND        --|                                ATtiny816                                 |-- PB1       13
- 4 VDD        --|                                                                          |-- PB2/TOSC2 12
- 5 PA4        --|                                                                          |-- PB3/TOSC1 11
-                +-------+--------------+--------------+--------------+--------------+------+
-                       -|-            -|-            -|-            -|-            -|-     
-                        |              |              |              |              |      
-                       6              7              8              9              10      
-                      PA5            PA6            PA7            PB5            PB4      </pre>
+        <h2>Reference: ATtiny Packages</h2>
+
+        <h3>Command: ATtiny412</h3>
+        <pre>
+python ic_pinout_ascii.py two --name "ATtiny412" --pins "VDD,PA6,PA7,PA1,PA2,PA0/RESET/UPDI,PA3/EXTCLK,GND" --counts "4,4" --sequence ccw --start left-top</pre
+        >
+
+        <h3>Command: ATtiny816 Standard</h3>
+        <pre>
+python ic_pinout_ascii.py four --name "ATtiny816" --pins "PA2,PA3/EXTCLK,GND,VDD,PA4,PA5,PA6,PA7,PB5,PB4,PB3/TOSC1,PB2/TOSC2,PB1,PB0,PC0,PC1,PC2,PC3,PA0/RESET/UPDI,PA1" --counts "5,5,5,5" --sequence ccw --start left-top</pre
+        >
+
+        <h3>Command: ATtiny816 Vertical Spread</h3>
+        <pre>
+python ic_pinout_ascii.py four --vertical-spread --name "ATtiny816" --pins "PA2,PA3/EXTCLK,GND,VDD,PA4,PA5,PA6,PA7,PB5,PB4,PB3/TOSC1,PB2/TOSC2,PB1,PB0,PC0,PC1,PC2,PC3,PA0/RESET/UPDI,PA1" --counts "5,5,5,5" --sequence ccw --start left-top</pre
+        >
       </section>
 
       <section>
-        <h2>ATtiny816 Vertical Spread Output</h2>
-        <pre>                  +--------------------T20 PA1
-                  | +-------T19 PA0/RESET/UPDI
-                  | | +----------------T18 PC3
-                  | | | +--------------T17 PC2
-                  | | | | +------------T16 PC1
-                  | | | | |                   
-                +-+-+-+-+-+-------------------+
- 1 PA2        --|                             |-- PC0       15
- 2 PA3/EXTCLK --|                             |-- PB0       14
- 3 GND        --|          ATtiny816          |-- PB1       13
- 4 VDD        --|                             |-- PB2/TOSC2 12
- 5 PA4        --|                             |-- PB3/TOSC1 11
-                +-+----+----+---+----+--------+
-                  |    |    |   |    |        
-                  |    |    |   |    +-B10 PB4
-                  |    |    |   +------B 9 PB5
-                  |    |    +----------B 8 PA7
-                  |    +---------------B 7 PA6
-                  +--------------------B 6 PA5</pre>
+        <h2>Output Examples</h2>
+        <p class="small">
+          Top/bottom labels split on <span class="mono">/</span>, and the center
+          IC name also wraps across body rows when needed.
+        </p>
+
+        <h3>ATtiny412 (2-sided, 8-pin DIP)</h3>
+        <p class="small">
+          Source:
+          <a
+            href="https://onlinedocs.microchip.com/oxy/GUID-C699F447-1F83-4028-9A2C-379D019155E3-en-US-5/GUID-3B4CD538-EDA0-4831-BCB6-1CED0C439DB2.html"
+            >ATtiny412 8-pin datasheet</a
+          >
+        </p>
+        <!-- prettier-ignore -->
+        <pre>
+         +-----------+
+ 1 VDD --|           |-- GND            8
+ 2 PA6 --| ATtiny412 |-- PA3/EXTCLK     7
+ 3 PA7 --|           |-- PA0/RESET/UPDI 6
+ 4 PA1 --|           |-- PA2            5
+         +-----------+</pre
+        >
+
+        <h3>ATtiny816 Standard (4-sided, 20-pin VQFN)</h3>
+        <p class="small">
+          Source:
+          <a
+            href="https://onlinedocs.microchip.com/oxy/GUID-EE7956F6-534E-4B4F-AD10-214BF9914B5A-en-US-5/GUID-B1B200C2-C0D0-4D0D-89AF-E156FEC10A33.html"
+            >ATtiny816 20-pin VQFN datasheet</a
+          >
+        </p>
+        <pre>
+                  PA1    PA0/   PC3    PC2    PC1
+                        RESET/
+                         UPDI
+                   20     19     18     17     16
+                    |      |      |      |      |
+                   -|-    -|-    -|-    -|-    -|-
+                +---+------+------+------+------+--+
+ 1 PA2        --|                                  |-- PC0       15
+ 2 PA3/EXTCLK --|                                  |-- PB0       14
+ 3 GND        --|            ATtiny816             |-- PB1       13
+ 4 VDD        --|                                  |-- PB2/TOSC2 12
+ 5 PA4        --|                                  |-- PB3/TOSC1 11
+                +---+------+------+------+------+--+
+                   -|-    -|-    -|-    -|-    -|-
+                    |      |      |      |      |
+                   6      7      8      9      10
+                  PA5    PA6    PA7    PB5    PB4</pre
+        >
+
+        <h3>ATtiny816 Vertical Spread (compact top/bottom)</h3>
+        <p class="small">
+          Source:
+          <a
+            href="https://onlinedocs.microchip.com/oxy/GUID-EE7956F6-534E-4B4F-AD10-214BF9914B5A-en-US-5/GUID-B1B200C2-C0D0-4D0D-89AF-E156FEC10A33.html"
+            >ATtiny816 20-pin VQFN datasheet</a
+          >
+        </p>
+        <pre>
+                  +----------------T20 PA1
+                  |+----T19 PA0/RESET/UPDI
+                  ||+--------------T18 PC3
+                  |||+-------------T17 PC2
+                  ||||+------------T16 PC1
+                  |||||
+                +-+++++-------------------+
+ 1 PA2        --|                         |-- PC0       15
+ 2 PA3/EXTCLK --|                         |-- PB0       14
+ 3 GND        --|        ATtiny816        |-- PB1       13
+ 4 VDD        --|                         |-- PB2/TOSC2 12
+ 5 PA4        --|                         |-- PB3/TOSC1 11
+                +-+---+---+--+---+--------+
+                  |   |   |  |   |
+                  |   |   |  |   +-B10 PB4
+                  |   |   |  +-----B 9 PB5
+                  |   |   +--------B 8 PA7
+                  |   +------------B 7 PA6
+                  +----------------B 6 PA5</pre
+        >
+      </section>
+
+      <section>
+        <h2>Understanding --sequence and --start</h2>
+        <p>
+          The <span class="mono">--sequence</span> option controls how
+          <span class="mono">--pins</span> are distributed around the package,
+          and <span class="mono">--start</span> specifies the starting endpoint.
+        </p>
+
+        <h3>ccw (Counterclockwise)</h3>
+        <p>Consume one complete side at a time, traversing counterclockwise.</p>
+        <p><strong>Valid --start values:</strong></p>
+        <ul>
+          <li>
+            <strong>2-sided:</strong> <span class="mono">left-top</span>,
+            <span class="mono">right-bottom</span>
+          </li>
+          <li>
+            <strong>4-sided:</strong> <span class="mono">left-top</span>,
+            <span class="mono">bottom-left</span>,
+            <span class="mono">right-bottom</span>,
+            <span class="mono">top-right</span>
+          </li>
+        </ul>
+
+        <h3>cw (Clockwise)</h3>
+        <p>Consume one complete side at a time, traversing clockwise.</p>
+        <p><strong>Valid --start values:</strong></p>
+        <ul>
+          <li>
+            <strong>2-sided:</strong> <span class="mono">right-top</span>,
+            <span class="mono">left-bottom</span>
+          </li>
+          <li>
+            <strong>4-sided:</strong> <span class="mono">top-left</span>,
+            <span class="mono">right-top</span>,
+            <span class="mono">bottom-right</span>,
+            <span class="mono">left-bottom</span>
+          </li>
+        </ul>
+
+        <h3>alternating</h3>
+        <p>
+          Round-robin across sides in traversal order. The
+          <span class="mono">--start</span> value is used to infer the traversal
+          direction (ccw or cw), then round-robin is applied.
+        </p>
       </section>
     </main>
 
@@ -323,7 +611,9 @@
 
         function getResolvedTheme(mode) {
           if (mode === "auto") {
-            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
           }
           return mode === "dark" ? "dark" : "light";
         }
@@ -343,8 +633,14 @@
         }
 
         function applyThemeMode(mode, shouldPersist) {
-          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
-          document.documentElement.setAttribute("data-theme", getResolvedTheme(themeMode));
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          document.documentElement.setAttribute(
+            "data-theme",
+            getResolvedTheme(themeMode),
+          );
           toggleThemeButton.setAttribute("aria-pressed", "false");
           updateThemeButton(themeMode);
 
@@ -355,8 +651,13 @@
 
         function updateLicenseButton() {
           var expanded = !attributionBlock.hidden;
-          toggleLicenseButton.textContent = expanded ? "Hide license" : "Show license";
-          toggleLicenseButton.setAttribute("aria-expanded", expanded ? "true" : "false");
+          toggleLicenseButton.textContent = expanded
+            ? "Hide license"
+            : "Show license";
+          toggleLicenseButton.setAttribute(
+            "aria-expanded",
+            expanded ? "true" : "false",
+          );
         }
 
         toggleThemeButton.addEventListener("click", function () {
