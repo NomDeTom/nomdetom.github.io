@@ -153,6 +153,12 @@ main {
 - Applies to: example commands, documentation, comments, reference pages, and any content that will be committed or served
 - If a local path appears in tool output (e.g. a test run), strip it before pasting into a published file
 
+### Gitignore Compiled and Generated Artifacts
+- Every repository that contains scripts or tooling must have a `.gitignore` at the root
+- Never commit compiled or generated artifacts: `__pycache__/`, `*.pyc`, `*.pyo`, `node_modules/`, `dist/`, `build/`, `.venv/`
+- If a `.gitignore` is missing and compiled artifacts are already tracked, untrack them with `git rm -r --cached <path>` and add the rule before committing
+- Check `git status` / `git ls-files` after adding new script files to confirm no build artifacts are staged
+
 ### Keep Calculators to Single HTML Files When Possible
 - Each calculator should be one `.html` file (no external HTML partials)
 - JavaScript logic may be in `<script>` tags or referenced `.js` files (unit-conversion.js pattern acceptable)
