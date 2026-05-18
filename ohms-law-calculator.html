@@ -162,6 +162,19 @@
         padding: 0;
       }
 
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+      }
+
+      .remove-card-btn {
+        padding: 0.28rem 0.55rem;
+        font-size: 0.78rem;
+        line-height: 1.2;
+      }
+
       .calculator-label {
         margin: 0;
         color: var(--muted);
@@ -652,6 +665,19 @@
           return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
         }
 
+        function createDebounced(callback, delayMs) {
+          var timerId = null;
+          return function () {
+            if (timerId != null) {
+              window.clearTimeout(timerId);
+            }
+            timerId = window.setTimeout(function () {
+              timerId = null;
+              callback();
+            }, delayMs);
+          };
+        }
+
         function approximatelyEqual(a, b) {
           var diff = Math.abs(a - b);
           var scale = Math.max(1, Math.abs(a), Math.abs(b));
@@ -878,14 +904,29 @@
           status.textContent = result.source + ".";
         }
 
+        function wireRemoveCardButton(card) {
+          var removeButton = card.querySelector(".remove-card-btn");
+          if (!removeButton) return;
+
+          removeButton.addEventListener("click", function () {
+            if (card.parentNode === cardsContainer) {
+              cardsContainer.removeChild(card);
+              cardsContainer.appendChild(addCardActions);
+            }
+          });
+        }
+
         function buildOhmCard() {
           cardCount += 1;
           var card = document.createElement("section");
           card.className = "card";
+          var scheduleCalculate = createDebounced(function () {
+            calculateCard(card);
+          }, 220);
           card.innerHTML =
-            '<p class="calculator-label">Ohm\'s Law Calculator ' +
+            '<div class="card-header"><p class="calculator-label">Ohm\'s Law Calculator ' +
             cardCount +
-            '</p>' +
+            '</p><button type="button" class="action-btn remove-card-btn" aria-label="Remove this calculator">Remove calculator</button></div>' +
             '<section class="card-section">' +
             "<h2>Inputs</h2>" +
             '<div class="grid">' +
@@ -915,7 +956,7 @@
                   toNullableNonNegativeNumber(input.value) == null,
                 );
               }
-              calculateCard(card);
+              scheduleCalculate();
             });
             input.addEventListener("focus", function () {
               var key = input.getAttribute("data-key");
@@ -1000,6 +1041,7 @@
             });
           });
 
+          wireRemoveCardButton(card);
           cardsContainer.insertBefore(card, addCardActions);
           cardsContainer.appendChild(addCardActions);
           calculateCard(card);
@@ -1091,11 +1133,11 @@
           var card = document.createElement("section");
           card.className = "card";
           card.innerHTML =
-            '<p class="calculator-label">' +
+            '<div class="card-header"><p class="calculator-label">' +
             (isSeries ? "Series" : "Parallel") +
             " Resistor Calculator " +
             cardCount +
-            '</p>' +
+            '</p><button type="button" class="action-btn remove-card-btn" aria-label="Remove this calculator">Remove calculator</button></div>' +
             '<section class="card-section">' +
             "<h2>Inputs</h2>" +
             '<div class="grid">' +
@@ -1123,6 +1165,7 @@
               calculateParallelCard(card);
             }
           };
+          var scheduleRecalculate = createDebounced(recalculate, 220);
 
           var resistorRowsContainer = card.querySelector(".resistor-rows");
           var addResistorRowButton = card.querySelector(".add-resistor-row-btn");
@@ -1229,12 +1272,12 @@
           card.addEventListener("input", function (event) {
             var target = event.target;
             if (target && target.matches(".resistor-row .input-r")) {
-              recalculate();
+              scheduleRecalculate();
               return;
             }
 
             if (target && target.matches(".unit-r-out")) {
-              recalculate();
+              scheduleRecalculate();
             }
           });
 
@@ -1263,6 +1306,7 @@
           addResistorRow();
           updateResistorRowLabels();
 
+          wireRemoveCardButton(card);
           cardsContainer.insertBefore(card, addCardActions);
           cardsContainer.appendChild(addCardActions);
           recalculate();

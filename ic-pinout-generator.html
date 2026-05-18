@@ -1,0 +1,2119 @@
+<!doctype html>
+<!-- Agentic tools: Playwright validation, theme system, attribution system -->
+<!-- LLMs: GPT-5.3-Codex -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>IC Pinout ASCII Generator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --page-glow-a: #dce9db;
+        --page-glow-b: #e8efe3;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --page-glow-a: transparent;
+        --page-glow-b: transparent;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        background: radial-gradient(circle at 15% 12%, var(--page-glow-a) 0%, transparent 45%),
+          radial-gradient(circle at 85% 88%, var(--page-glow-b) 0%, transparent 42%),
+          var(--page-bg);
+        font: 400 16px/1.45 "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .attribution-block {
+        margin-top: 0.7rem;
+        padding: 0.8rem;
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(21rem, 29rem) minmax(24rem, 1fr);
+        gap: 1rem;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        padding: 1rem;
+      }
+
+      .preview-panel {
+        width: 100%;
+        max-width: 46rem;
+        justify-self: center;
+        overflow-x: auto;
+      }
+
+      .panel h2 {
+        margin: 0 0 0.9rem;
+        font-size: 1.05rem;
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      .row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem;
+      }
+
+      .row-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.65rem;
+      }
+
+      label {
+        display: block;
+        margin: 0 0 0.35rem;
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      textarea {
+        font-family: "Courier New", monospace;
+        min-height: 7.5rem;
+        resize: vertical;
+      }
+
+      #preview {
+        min-height: 28rem;
+        white-space: pre;
+        width: auto;
+        min-width: 100%;
+        max-width: none;
+        resize: both;
+      }
+
+      .toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .toggle-wrap input {
+        width: auto;
+      }
+
+      .status {
+        min-height: 1.5rem;
+        font-size: 0.9rem;
+      }
+
+      .status.error {
+        color: #b93030;
+      }
+
+      .status.ok {
+        color: var(--accent);
+      }
+
+      .help-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .help-tip {
+        position: relative;
+        width: 1.05rem;
+        height: 1.05rem;
+        display: inline-grid;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 0.72rem;
+        color: var(--muted);
+        cursor: help;
+        user-select: none;
+        background: var(--panel-bg);
+      }
+
+      .help-tip::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 0.5rem);
+        transform: translateX(-50%);
+        width: min(22rem, 78vw);
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.5rem 0.6rem;
+        font-size: 0.82rem;
+        line-height: 1.35;
+        box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.12);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 12;
+      }
+
+      .help-tip:hover::after,
+      .help-tip:focus-visible::after {
+        opacity: 1;
+      }
+
+      .parser-box {
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        padding: 0.75rem;
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .parser-box[hidden] {
+        display: none !important;
+      }
+
+      .parser-box textarea {
+        min-height: 5.5rem;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .chip.selected:hover {
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .chip:disabled {
+        color: var(--disabled);
+        border-color: var(--border);
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      button:not(.action-btn):not(.chip) {
+        border: none;
+        background: var(--accent);
+        color: #fff;
+        padding: 0.65rem 0.9rem;
+        cursor: pointer;
+      }
+
+      button:not(.action-btn):not(.chip):hover {
+        filter: brightness(1.08);
+      }
+
+      button:not(.action-btn):not(.chip):active {
+        filter: brightness(0.94);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .preview-controls {
+        margin-top: 0.95rem;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.85rem;
+      }
+
+      .preview-group {
+        display: grid;
+        gap: 0.45rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        padding: 0.6rem 0.65rem;
+      }
+
+      .preview-controls .chip-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+        gap: 0.5rem;
+      }
+
+      .preview-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+
+      .preview-controls .chip,
+      .preview-actions > button {
+        width: 100%;
+        text-align: center;
+      }
+
+      a:not(.action-btn) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 768px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .preview-panel {
+          max-width: none;
+        }
+
+        .preview-controls {
+          grid-template-columns: 1fr;
+        }
+
+        .preview-actions {
+          grid-column: auto;
+          grid-template-columns: 1fr;
+        }
+
+        .row-2,
+        .row-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>IC Pinout ASCII Generator</h1>
+        <p class="subtitle">Edit fields and the preview updates live. Supports two-sided and four-sided packages with traversal, numbering, and vertical spread.</p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-license-btn" class="action-btn" type="button" aria-expanded="false">Show license</button>
+        </div>
+        <div id="license-block" class="attribution-block" hidden>
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+          <p class="hosted-note">
+            Browser-side port of logic from this repository's pinout renderer and interactive testing performed with Playwright.
+          </p>
+        </div>
+      </header>
+
+      <section class="layout">
+        <article class="panel">
+          <h2>Inputs</h2>
+          <div class="form-grid">
+            <div>
+              <label for="example-select" class="help-label">Example
+                <span class="help-tip" tabindex="0" data-tip="Loads a full preset including package type, counts, pins, numbering, and spread mode.">?</span>
+              </label>
+              <select id="example-select">
+                <option value="custom" selected>Custom (current values)</option>
+                <option value="attiny816-vertical">ATtiny816 (4-sided, vertical spread)</option>
+                <option value="stm32-lqfp16">STM32 LQFP-16 (4-sided, standard)</option>
+                <option value="ne555">NE555 (2-sided DIP)</option>
+              </select>
+            </div>
+
+            <div class="row-2">
+              <div>
+                <label class="help-label">Package type
+                  <span class="help-tip" tabindex="0" data-tip="Choose 2-sided, 4-sided standard, or 4-sided with vertical spread trails.">?</span>
+                </label>
+                <div class="chip-group">
+                  <button id="package-four-chip" type="button" class="chip" aria-pressed="false">4-sided (standard)</button>
+                  <button id="package-four-spread-chip" type="button" class="chip selected" aria-pressed="true">4-sided (vertical spread)</button>
+                  <button id="package-two-chip" type="button" class="chip" aria-pressed="false">2-sided (DIP/SOIC)</button>
+                </div>
+              </div>
+              <div>
+                <label for="numbering" class="help-label">Numbering
+                  <span class="help-tip" tabindex="0" data-tip="ccw/cw follow package conventions, seq numbers each side independently, none hides pin numbers.">?</span>
+                </label>
+                <select id="numbering">
+                  <option value="ccw">ccw</option>
+                  <option value="cw">cw</option>
+                  <option value="seq">seq</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label for="ic-name" class="help-label">Name
+                <span class="help-tip" tabindex="0" data-tip="Center label shown inside the IC body.">?</span>
+              </label>
+              <input id="ic-name" type="text" value="ATtiny816" />
+            </div>
+
+            <div>
+              <label for="pin-labels" class="help-label">Pin labels (comma-separated)
+                <span class="help-tip" tabindex="0" data-tip="Ordered labels consumed by sequence/start rules. Example: PA0,PA1,PA2,PA3">?</span>
+              </label>
+              <textarea id="pin-labels">UPDI/VREFA,PA4,PA5,PA6,PA7,PB5,PB4,PB3,PB2,PB1,PB0,PA3,PA2,PA1,PA0,VDD</textarea>
+            </div>
+
+            <div class="controls">
+              <button id="toggle-parser-btn" class="action-btn" type="button" aria-expanded="false">Show datasheet parser</button>
+            </div>
+
+            <div id="parser-box" class="parser-box" hidden>
+              <label for="regex-raw" class="help-label">Datasheet paste (regex parser)
+                <span class="help-tip" tabindex="0" data-tip="Paste pin tables from PDFs/text and extract labels using a regex with named groups: pin and label.">?</span>
+              </label>
+              <textarea id="regex-raw" placeholder="Example lines:&#10;1 PA0&#10;2 PA1&#10;3 VDD"></textarea>
+              <div class="row-3">
+                <div>
+                  <label for="regex-pattern" class="help-label">Regex pattern
+                    <span class="help-tip" tabindex="0" data-tip="Use named groups: (?<pin>...) and (?<label>...). Group 1/2 fallback is also supported.">?</span>
+                  </label>
+                  <input id="regex-pattern" type="text" value="(?&lt;label&gt;[A-Za-z][A-Za-z0-9_+\-\/()\u2012\u2013\u2014\u2212]*)\s+(?&lt;pin&gt;\d+)\b" />
+                </div>
+                <div>
+                  <label for="regex-flags" class="help-label">Regex flags
+                    <span class="help-tip" tabindex="0" data-tip="Typical flags: gm or gim. Global flag g is added automatically if missing.">?</span>
+                  </label>
+                  <input id="regex-flags" type="text" value="gm" />
+                </div>
+                <div>
+                  <label for="parse-regex-btn">Apply parser</label>
+                  <button id="parse-regex-btn" type="button">Parse Datasheet Text</button>
+                </div>
+              </div>
+              <div id="regex-status" class="status"></div>
+            </div>
+
+            <div class="row-3">
+              <div>
+                <label for="pin-counts" class="help-label">Counts
+                  <span class="help-tip" tabindex="0" data-tip="two-sided uses left,right. four-sided uses top,right,bottom,left.">?</span>
+                </label>
+                <input id="pin-counts" type="text" value="4,4,4,4" />
+                <div class="controls" style="margin-top: 0.45rem">
+                  <button id="refresh-counts-btn" class="action-btn" type="button">Refresh counts</button>
+                </div>
+              </div>
+              <div>
+                <label for="sequence" class="help-label">Sequence
+                  <span class="help-tip" tabindex="0" data-tip="ccw/cw walks one side at a time. alternating round-robins across sides.">?</span>
+                </label>
+                <select id="sequence">
+                  <option value="ccw">ccw</option>
+                  <option value="cw">cw</option>
+                  <option value="alternating">alternating</option>
+                </select>
+              </div>
+              <div>
+                <label for="start" class="help-label">Start
+                  <span class="help-tip" tabindex="0" data-tip="Valid start points depend on package type and sequence direction.">?</span>
+                </label>
+                <select id="start"></select>
+              </div>
+            </div>
+
+            <div id="status" class="status"></div>
+          </div>
+        </article>
+
+        <article class="panel preview-panel">
+          <h2>Preview</h2>
+          <textarea id="preview" readonly></textarea>
+          <div class="preview-controls">
+            <div class="preview-group">
+              <label class="help-label">Output mode
+                <span class="help-tip" tabindex="0" data-tip="Choose whether to show only ASCII or ASCII plus a tabular listing under it.">?</span>
+              </label>
+              <div class="chip-group">
+                <button id="output-ascii-chip" type="button" class="chip selected" aria-pressed="true">Diagram only</button>
+                <button id="output-ascii-table-chip" type="button" class="chip" aria-pressed="false">Diagram + table</button>
+              </div>
+            </div>
+
+            <div class="preview-group">
+              <label class="help-label">Comment option
+                <span class="help-tip" tabindex="0" data-tip="Choose output comment style for easy paste into code comments.">?</span>
+              </label>
+              <div class="chip-group">
+                <button id="comment-none-chip" type="button" class="chip selected" aria-pressed="true">No comments</button>
+                <button id="comment-slash-chip" type="button" class="chip" aria-pressed="false">// line</button>
+                <button id="comment-hash-chip" type="button" class="chip" aria-pressed="false"># line</button>
+                <button id="comment-cblock-chip" type="button" class="chip" aria-pressed="false">/* block */</button>
+              </div>
+            </div>
+
+            <div class="controls preview-actions">
+              <button id="generate-btn">Generate</button>
+              <button id="reset-btn" class="action-btn" type="button">Reset</button>
+              <button id="clear-btn" class="action-btn" type="button">Clear</button>
+              <button id="copy-btn" class="action-btn" type="button">Copy</button>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const TWO_CCW_STARTS = new Set(["left-top", "right-bottom"]);
+      const TWO_CW_STARTS = new Set(["right-top", "left-bottom"]);
+      const FOUR_CCW_STARTS = new Set(["left-top", "bottom-left", "right-bottom", "top-right"]);
+      const FOUR_CW_STARTS = new Set(["top-left", "right-top", "bottom-right", "left-bottom"]);
+
+      const el = {
+        exampleSelect: document.getElementById("example-select"),
+        packageFourChip: document.getElementById("package-four-chip"),
+        packageFourSpreadChip: document.getElementById("package-four-spread-chip"),
+        packageTwoChip: document.getElementById("package-two-chip"),
+        numbering: document.getElementById("numbering"),
+        icName: document.getElementById("ic-name"),
+        pinLabels: document.getElementById("pin-labels"),
+        outputAsciiChip: document.getElementById("output-ascii-chip"),
+        outputAsciiTableChip: document.getElementById("output-ascii-table-chip"),
+        commentNoneChip: document.getElementById("comment-none-chip"),
+        commentSlashChip: document.getElementById("comment-slash-chip"),
+        commentHashChip: document.getElementById("comment-hash-chip"),
+        commentCblockChip: document.getElementById("comment-cblock-chip"),
+        pinCounts: document.getElementById("pin-counts"),
+        refreshCountsBtn: document.getElementById("refresh-counts-btn"),
+        sequence: document.getElementById("sequence"),
+        start: document.getElementById("start"),
+        regexRaw: document.getElementById("regex-raw"),
+        regexPattern: document.getElementById("regex-pattern"),
+        regexFlags: document.getElementById("regex-flags"),
+        parseRegexBtn: document.getElementById("parse-regex-btn"),
+        regexStatus: document.getElementById("regex-status"),
+        parserBox: document.getElementById("parser-box"),
+        toggleParserBtn: document.getElementById("toggle-parser-btn"),
+        generate: document.getElementById("generate-btn"),
+        reset: document.getElementById("reset-btn"),
+        clear: document.getElementById("clear-btn"),
+        copy: document.getElementById("copy-btn"),
+        preview: document.getElementById("preview"),
+        status: document.getElementById("status"),
+        theme: document.getElementById("toggle-theme-btn"),
+        toggleLicense: document.getElementById("toggle-license-btn"),
+        licenseBlock: document.getElementById("license-block"),
+      };
+
+      const EXAMPLES = {
+        "attiny816-vertical": {
+          packageType: "four",
+          name: "ATtiny816",
+          pins: "UPDI/VREFA,PA4,PA5,PA6,PA7,PB5,PB4,PB3,PB2,PB1,PB0,PA3,PA2,PA1,PA0,VDD",
+          counts: "4,4,4,4",
+          sequence: "ccw",
+          start: "left-top",
+          numbering: "ccw",
+          verticalSpread: true,
+        },
+        "stm32-lqfp16": {
+          packageType: "four",
+          name: "STM32 (LQFP-16)",
+          pins: "PD0,PD1,PD2,VSS,PC0,PC1,PC2,BOOT0,VSS,PB2,PB1,PB0,VDD,PA1,PA0,NRST",
+          counts: "4,4,4,4",
+          sequence: "ccw",
+          start: "left-top",
+          numbering: "ccw",
+          verticalSpread: false,
+        },
+        ne555: {
+          packageType: "two",
+          name: "NE555",
+          pins: "GND,TRIG,OUT,RESET,CTRL,THR,DISCH,VCC",
+          counts: "4,4",
+          sequence: "ccw",
+          start: "left-top",
+          numbering: "ccw",
+          verticalSpread: false,
+        },
+      };
+
+      function parsePinList(raw) {
+        if (!raw.trim()) return [];
+        return raw
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0);
+      }
+
+      function parseSideCounts(raw, expected, argName) {
+        const items = raw
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0);
+        if (items.length !== expected) {
+          throw new Error(argName + " must contain exactly " + expected + " comma-separated integers.");
+        }
+        return items.map((item) => {
+          const value = Number.parseInt(item, 10);
+          if (!Number.isInteger(value)) {
+            throw new Error(argName + " must contain integers only.");
+          }
+          if (value < 0) {
+            throw new Error(argName + " values must be >= 0.");
+          }
+          return value;
+        });
+      }
+
+      function rotateCycle(cycle, startSide) {
+        const idx = cycle.indexOf(startSide);
+        return cycle.slice(idx).concat(cycle.slice(0, idx));
+      }
+
+      function sideOrientationStart(side, orient) {
+        if (side === "top") return orient === "fwd" ? "left" : "right";
+        if (side === "right") return orient === "fwd" ? "top" : "bottom";
+        if (side === "bottom") return orient === "fwd" ? "left" : "right";
+        if (side === "left") return orient === "fwd" ? "top" : "bottom";
+        throw new Error("Unknown side: " + side);
+      }
+
+      function inferDirectionFromStart(start, ccwStarts, cwStarts, dimension) {
+        if (ccwStarts.has(start)) return "ccw";
+        if (cwStarts.has(start)) return "cw";
+        throw new Error("Invalid --start for " + dimension + " package: " + start + ".");
+      }
+
+      function assignOrderedTwoSided(pins, leftCount, rightCount, sequence, start) {
+        const total = leftCount + rightCount;
+        if (pins.length !== total) {
+          throw new Error("Pin list length (" + pins.length + ") must match left+right counts (" + total + ").");
+        }
+
+        const direction = sequence === "alternating" ? inferDirectionFromStart(start, TWO_CCW_STARTS, TWO_CW_STARTS, "2-sided") : sequence;
+
+        let validStarts;
+        let cycle;
+        let orientation;
+
+        if (direction === "ccw") {
+          validStarts = TWO_CCW_STARTS;
+          cycle = ["left", "right"];
+          orientation = { left: "fwd", right: "rev" };
+        } else if (direction === "cw") {
+          validStarts = TWO_CW_STARTS;
+          cycle = ["right", "left"];
+          orientation = { right: "fwd", left: "rev" };
+        } else {
+          throw new Error("Unknown sequence: " + sequence);
+        }
+
+        if (!validStarts.has(start)) {
+          throw new Error("--start " + start + " is incompatible with --sequence " + sequence + " for 2-sided layout.");
+        }
+
+        const [startSide, startEndpoint] = start.split("-");
+        if (sideOrientationStart(startSide, orientation[startSide]) !== startEndpoint) {
+          throw new Error("--start " + start + " does not match traversal direction for --sequence " + sequence + ".");
+        }
+
+        const sideOrder = rotateCycle(cycle, startSide);
+        const counts = { left: leftCount, right: rightCount };
+        const assigned = { left: new Array(leftCount).fill(""), right: new Array(rightCount).fill("") };
+
+        if (sequence === "ccw" || sequence === "cw") {
+          let pinIdx = 0;
+          for (const side of sideOrder) {
+            const idxs = orientation[side] === "fwd" ? [...Array(counts[side]).keys()] : [...Array(counts[side]).keys()].reverse();
+            for (const idx of idxs) {
+              assigned[side][idx] = pins[pinIdx++];
+            }
+          }
+        } else {
+          const sideIndices = {};
+          for (const side of sideOrder) {
+            sideIndices[side] = orientation[side] === "fwd" ? [...Array(counts[side]).keys()] : [...Array(counts[side]).keys()].reverse();
+          }
+          const pos = Object.fromEntries(sideOrder.map((side) => [side, 0]));
+          let pinIdx = 0;
+          while (pinIdx < pins.length) {
+            let progressed = false;
+            for (const side of sideOrder) {
+              const p = pos[side];
+              const idxs = sideIndices[side];
+              if (p >= idxs.length) continue;
+              assigned[side][idxs[p]] = pins[pinIdx++];
+              pos[side] += 1;
+              progressed = true;
+              if (pinIdx >= pins.length) break;
+            }
+            if (!progressed) break;
+          }
+        }
+
+        return [assigned.left, assigned.right];
+      }
+
+      function assignOrderedFourSided(pins, topCount, rightCount, bottomCount, leftCount, sequence, start) {
+        const total = topCount + rightCount + bottomCount + leftCount;
+        if (pins.length !== total) {
+          throw new Error("Pin list length (" + pins.length + ") must match top+right+bottom+left counts (" + total + ").");
+        }
+
+        const direction = sequence === "alternating" ? inferDirectionFromStart(start, FOUR_CCW_STARTS, FOUR_CW_STARTS, "4-sided") : sequence;
+
+        let validStarts;
+        let cycle;
+        let orientation;
+
+        if (direction === "ccw") {
+          validStarts = FOUR_CCW_STARTS;
+          cycle = ["left", "bottom", "right", "top"];
+          orientation = { left: "fwd", bottom: "fwd", right: "rev", top: "rev" };
+        } else if (direction === "cw") {
+          validStarts = FOUR_CW_STARTS;
+          cycle = ["top", "right", "bottom", "left"];
+          orientation = { top: "fwd", right: "fwd", bottom: "rev", left: "rev" };
+        } else {
+          throw new Error("Unknown sequence: " + sequence);
+        }
+
+        if (!validStarts.has(start)) {
+          throw new Error("--start " + start + " is incompatible with --sequence " + sequence + " for 4-sided layout.");
+        }
+
+        const [startSide, startEndpoint] = start.split("-");
+        if (sideOrientationStart(startSide, orientation[startSide]) !== startEndpoint) {
+          throw new Error("--start " + start + " does not match traversal direction for --sequence " + sequence + ".");
+        }
+
+        const sideOrder = rotateCycle(cycle, startSide);
+        const counts = { top: topCount, right: rightCount, bottom: bottomCount, left: leftCount };
+        const assigned = {
+          top: new Array(topCount).fill(""),
+          right: new Array(rightCount).fill(""),
+          bottom: new Array(bottomCount).fill(""),
+          left: new Array(leftCount).fill(""),
+        };
+
+        if (sequence === "ccw" || sequence === "cw") {
+          let pinIdx = 0;
+          for (const side of sideOrder) {
+            const idxs = orientation[side] === "fwd" ? [...Array(counts[side]).keys()] : [...Array(counts[side]).keys()].reverse();
+            for (const idx of idxs) {
+              assigned[side][idx] = pins[pinIdx++];
+            }
+          }
+        } else {
+          const sideIndices = {};
+          for (const side of sideOrder) {
+            sideIndices[side] = orientation[side] === "fwd" ? [...Array(counts[side]).keys()] : [...Array(counts[side]).keys()].reverse();
+          }
+          const pos = Object.fromEntries(sideOrder.map((side) => [side, 0]));
+          let pinIdx = 0;
+          while (pinIdx < pins.length) {
+            let progressed = false;
+            for (const side of sideOrder) {
+              const p = pos[side];
+              const idxs = sideIndices[side];
+              if (p >= idxs.length) continue;
+              assigned[side][idxs[p]] = pins[pinIdx++];
+              pos[side] += 1;
+              progressed = true;
+              if (pinIdx >= pins.length) break;
+            }
+            if (!progressed) break;
+          }
+        }
+
+        return [assigned.top, assigned.right, assigned.bottom, assigned.left];
+      }
+
+      function centerText(text, width) {
+        let t = text;
+        if (t.length > width) {
+          t = t.slice(0, Math.max(0, width - 1)) + "…";
+        }
+        const totalPad = Math.max(0, width - t.length);
+        const leftPad = Math.floor(totalPad / 2);
+        const rightPad = totalPad - leftPad;
+        return " ".repeat(leftPad) + t + " ".repeat(rightPad);
+      }
+
+      function segmentWidth(count, cellWidth) {
+        if (count <= 0) return 0;
+        return count * cellWidth + (count - 1);
+      }
+
+      function pinCenters(count, innerWidth, cellWidth) {
+        if (count <= 0) return [];
+        const span = segmentWidth(count, cellWidth);
+        const offset = Math.max(0, Math.floor((innerWidth - span) / 2));
+        return [...Array(count).keys()].map((idx) => offset + idx * (cellWidth + 1) + Math.floor(cellWidth / 2));
+      }
+
+      function renderEdgeBorder(innerWidth, markerPositions, leftCorner, rightCorner, markerChar) {
+        const border = new Array(innerWidth).fill("─");
+        for (const pos of markerPositions) {
+          if (pos >= 0 && pos < innerWidth) border[pos] = markerChar;
+        }
+        return leftCorner + border.join("") + rightCorner;
+      }
+
+      function renderCells(items, innerWidth, cellWidth) {
+        const line = new Array(innerWidth).fill(" ");
+        if (!items.length) return line.join("");
+
+        const span = segmentWidth(items.length, cellWidth);
+        const offset = Math.max(0, Math.floor((innerWidth - span) / 2));
+
+        items.forEach((item, idx) => {
+          const start = offset + idx * (cellWidth + 1);
+          const cell = centerText(item, cellWidth);
+          for (let i = 0; i < cell.length; i += 1) {
+            const pos = start + i;
+            if (pos >= 0 && pos < innerWidth) line[pos] = cell[i];
+          }
+        });
+
+        return line.join("");
+      }
+
+      function splitLabelSegments(label) {
+        if (!label.includes("/")) return [label];
+        const parts = label.split("/");
+        return parts.slice(0, -1).map((part) => part + "/").concat(parts[parts.length - 1]);
+      }
+
+      function renderWrappedCells(items, innerWidth, cellWidth) {
+        if (!items.length) return [" ".repeat(innerWidth)];
+        const segmented = items.map(splitLabelSegments);
+        const maxRows = Math.max(...segmented.map((s) => s.length));
+        const rows = [];
+        for (let row = 0; row < maxRows; row += 1) {
+          rows.push(
+            renderCells(
+              segmented.map((segs) => (row < segs.length ? segs[row] : "")),
+              innerWidth,
+              cellWidth,
+            ),
+          );
+        }
+        return rows;
+      }
+
+      function renderWrappedCenterText(text, width) {
+        if (width <= 0) return [""];
+        if (!text) return [" ".repeat(width)];
+
+        const rows = [];
+        for (const segment of splitLabelSegments(text)) {
+          if (!segment) {
+            rows.push("");
+            continue;
+          }
+          for (let start = 0; start < segment.length; start += width) {
+            rows.push(segment.slice(start, start + width));
+          }
+        }
+        if (!rows.length) rows.push("");
+
+        return rows.map((row) => {
+          const totalPad = Math.max(0, width - row.length);
+          const leftPad = Math.floor(totalPad / 2);
+          const rightPad = totalPad - leftPad;
+          return " ".repeat(leftPad) + row + " ".repeat(rightPad);
+        });
+      }
+
+      function renderStems(count, innerWidth, cellWidth) {
+        const line = new Array(innerWidth).fill(" ");
+        if (count <= 0) return line.join("");
+        for (const center of pinCenters(count, innerWidth, cellWidth)) {
+          if (center >= 0 && center < innerWidth) line[center] = "│";
+        }
+        return line.join("");
+      }
+
+      function distributeColumns(start, end, count) {
+        if (count <= 0) return [];
+        if (end < start) throw new Error("distributeColumns: end < start");
+
+        const available = end - start + 1;
+        const adjustedCount = Math.min(count, available);
+
+        if (adjustedCount === 1) return [Math.floor((start + end) / 2)];
+
+        const span = end - start;
+        if (span % (adjustedCount - 1) === 0) {
+          const step = span / (adjustedCount - 1);
+          return [...Array(adjustedCount).keys()].map((idx) => start + idx * step);
+        }
+
+        const cols = [];
+        let prev = start - 1;
+        for (let idx = 0; idx < adjustedCount; idx += 1) {
+          let col = start + Math.round((idx * span) / (adjustedCount - 1));
+          col = Math.max(col, prev + 1);
+          col = Math.min(col, end - (adjustedCount - idx - 1));
+          col = Math.max(start, Math.min(end, col));
+          cols.push(col);
+          prev = col;
+        }
+        return cols;
+      }
+
+      function writeText(line, start, text) {
+        for (let i = 0; i < text.length; i += 1) {
+          const pos = start + i;
+          if (pos >= 0 && pos < line.length) line[pos] = text[i];
+        }
+      }
+
+      function drawHorizontalSegment(line, start, end) {
+        if (end < start) return;
+        for (let pos = start; pos <= end; pos += 1) {
+          if (pos < 0 || pos >= line.length) continue;
+          if (line[pos] === "│") line[pos] = "┼";
+          else if (line[pos] === " ") line[pos] = "─";
+        }
+      }
+
+      function renderTopVerticalTrails(labels, numbers, pinWidth, innerWidth, edgeCols, showNumbers = true) {
+        const lines = [];
+        const items = labels.map((label, idx) => [label, numbers[idx], edgeCols[idx]]);
+
+        if (items.length) {
+          const contents = showNumbers ? items.map(([label, num]) => String(num).padStart(pinWidth) + " " + label) : items.map(([label]) => label);
+          const requiredWidth = Math.max(
+            innerWidth,
+            ...items.map(([, , edgeCol], idx) => edgeCol + 3 + contents[idx].length),
+          );
+          innerWidth = Math.max(innerWidth, requiredWidth);
+        }
+
+        const orderedEdgeCols = items.map((it) => it[2]);
+
+        for (let rowIndex = 0; rowIndex < items.length; rowIndex += 1) {
+          const [label, num, edgeCol] = items[rowIndex];
+          const content = showNumbers ? String(num).padStart(pinWidth) + " " + label : label;
+          const line = new Array(innerWidth).fill(" ");
+
+          for (const prevCol of orderedEdgeCols.slice(0, rowIndex)) {
+            if (prevCol >= 0 && prevCol < innerWidth) line[prevCol] = "│";
+          }
+
+          if (edgeCol < 0 || edgeCol >= innerWidth) {
+            lines.push(line.join(""));
+            continue;
+          }
+
+          const contentStart = Math.max(edgeCol + 3, innerWidth - content.length);
+          drawHorizontalSegment(line, edgeCol + 1, contentStart - 2);
+          writeText(line, contentStart, content);
+          line[edgeCol] = "┌";
+          lines.push(line.join(""));
+        }
+
+        if (items.length) {
+          const connector = new Array(innerWidth).fill(" ");
+          for (const edgeCol of orderedEdgeCols) {
+            if (edgeCol >= 0 && edgeCol < innerWidth) connector[edgeCol] = "│";
+          }
+          lines.push(connector.join(""));
+        }
+
+        return lines;
+      }
+
+      function renderBottomVerticalTrails(labels, numbers, pinWidth, innerWidth, edgeCols, showNumbers = true) {
+        const items = labels.map((label, idx) => [label, numbers[idx], edgeCols[idx]]);
+
+        if (items.length) {
+          const contents = showNumbers ? items.map(([label, num]) => String(num).padStart(pinWidth) + " " + label) : items.map(([label]) => label);
+          const requiredWidth = Math.max(
+            innerWidth,
+            ...items.map(([, , edgeCol], idx) => edgeCol + 3 + contents[idx].length),
+          );
+          innerWidth = Math.max(innerWidth, requiredWidth);
+        }
+
+        const lines = [];
+        const renderedCols = [];
+
+        for (const [label, num, edgeCol] of items) {
+          const content = showNumbers ? String(num).padStart(pinWidth) + " " + label : label;
+          const line = new Array(innerWidth).fill(" ");
+
+          for (const col of renderedCols) {
+            if (col >= 0 && col < innerWidth) line[col] = "│";
+          }
+
+          if (edgeCol < 0 || edgeCol >= innerWidth) {
+            lines.push(line.join(""));
+            renderedCols.push(edgeCol);
+            continue;
+          }
+
+          const contentStart = Math.max(edgeCol + 3, innerWidth - content.length);
+          drawHorizontalSegment(line, edgeCol + 1, contentStart - 2);
+          writeText(line, contentStart, content);
+          line[edgeCol] = "└";
+          lines.push(line.join(""));
+          renderedCols.push(edgeCol);
+        }
+
+        if (items.length) {
+          const connector = new Array(innerWidth).fill(" ");
+          for (const [, , edgeCol] of items) {
+            if (edgeCol >= 0 && edgeCol < innerWidth) connector[edgeCol] = "│";
+          }
+          lines.push(connector.join(""));
+        }
+
+        lines.reverse();
+        return lines;
+      }
+
+      function renderTwoSided(name, left, right, numbering = "ccw") {
+        if (!left.length && !right.length) {
+          throw new Error("At least one pin must be provided.");
+        }
+
+        const totalPins = left.length + right.length;
+        const showNumbers = numbering !== "none";
+
+        let pinWidth;
+        let leftNums;
+        let rightNums;
+
+        if (numbering === "seq") {
+          pinWidth = Math.max(2, String(Math.max(left.length, right.length, 1)).length);
+          leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+          rightNums = [...Array(right.length).keys()].map((i) => i + 1);
+        } else {
+          pinWidth = Math.max(2, String(Math.max(totalPins, 1)).length);
+          leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+          rightNums = [...Array(right.length).keys()].map((i) => totalPins - i);
+        }
+
+        const leftWidth = left.length ? Math.max(...left.map((p) => p.length)) : 1;
+        const rightWidth = right.length ? Math.max(...right.map((p) => p.length)) : 1;
+        const innerWidth = Math.max(4, name.length + 2);
+        const nameRows = renderWrappedCenterText(name, innerWidth);
+        const rows = Math.max(left.length, right.length, nameRows.length, 1);
+
+        const leftIndent = showNumbers ? pinWidth + 1 + leftWidth + 3 : leftWidth + 3;
+        const rightTrailing = showNumbers ? 3 + rightWidth + 1 + pinWidth : 3 + rightWidth;
+
+        const lines = [];
+        lines.push(" ".repeat(leftIndent) + "┌" + "─".repeat(innerWidth) + "┐");
+
+        const nameStart = Math.floor((rows - nameRows.length) / 2);
+
+        for (let idx = 0; idx < rows; idx += 1) {
+          let leftPrefix;
+          if (idx < left.length) {
+            const llabel = left[idx];
+            leftPrefix = showNumbers
+              ? llabel.padEnd(leftWidth) + " " + String(leftNums[idx]).padStart(pinWidth) + " ──┤"
+              : llabel.padEnd(leftWidth) + " ──┤";
+          } else {
+            leftPrefix = " ".repeat(leftIndent) + "│";
+          }
+
+          const body = nameStart <= idx && idx < nameStart + nameRows.length ? nameRows[idx - nameStart] : " ".repeat(innerWidth);
+
+          let rightSuffix;
+          if (idx < right.length) {
+            const rlabel = right[idx];
+            rightSuffix = showNumbers
+              ? "├── " + String(rightNums[idx]).padStart(pinWidth) + "   " + rlabel.padEnd(rightWidth)
+              : "├── " + rlabel.padEnd(rightWidth);
+          } else {
+            rightSuffix = "│" + " ".repeat(rightTrailing);
+          }
+
+          lines.push(leftPrefix + body + rightSuffix);
+        }
+
+        lines.push(" ".repeat(leftIndent) + "└" + "─".repeat(innerWidth) + "┘");
+        return lines.join("\n");
+      }
+
+      function renderFourSided(name, top, right, bottom, left, verticalSpread = false, numbering = "ccw") {
+        const totalPins = top.length + right.length + bottom.length + left.length;
+        if (totalPins === 0) throw new Error("At least one pin must be provided.");
+
+        const showNumbers = numbering !== "none";
+        const pinWidth = numbering === "seq"
+          ? Math.max(2, String(Math.max(top.length, right.length, bottom.length, left.length, 1)).length)
+          : Math.max(2, String(totalPins).length);
+
+        let leftNums;
+        let bottomNums;
+        let rightNumsTopDown;
+        let topNumsLeftToRight;
+
+        if (numbering === "ccw" || numbering === "none") {
+          leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+          bottomNums = [...Array(bottom.length).keys()].map((i) => left.length + i + 1);
+          rightNumsTopDown = [...Array(right.length).keys()].map((i) => left.length + bottom.length + right.length - i);
+          topNumsLeftToRight = [...Array(top.length).keys()].map((i) => totalPins - i);
+        } else if (numbering === "cw") {
+          topNumsLeftToRight = [...Array(top.length).keys()].map((i) => i + 1);
+          rightNumsTopDown = [...Array(right.length).keys()].map((i) => top.length + i + 1);
+          bottomNums = [...Array(bottom.length).keys()].map((i) => top.length + right.length + bottom.length - i);
+          leftNums = [...Array(left.length).keys()].map((i) => totalPins - i);
+        } else if (numbering === "seq") {
+          leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+          bottomNums = [...Array(bottom.length).keys()].map((i) => i + 1);
+          rightNumsTopDown = [...Array(right.length).keys()].map((i) => i + 1);
+          topNumsLeftToRight = [...Array(top.length).keys()].map((i) => i + 1);
+        } else {
+          throw new Error("Unknown numbering schema: " + numbering);
+        }
+
+        const leftWidth = left.length ? Math.max(...left.map((p) => p.length)) : 1;
+        const rightWidth = right.length ? Math.max(...right.map((p) => p.length)) : 1;
+
+        const horizontalLabelWidth = Math.max(
+          1,
+          ...top.concat(bottom).flatMap((label) => splitLabelSegments(label).map((seg) => seg.length)),
+        );
+
+        const cellWidth = Math.max(3, pinWidth, horizontalLabelWidth);
+        const topSpan = segmentWidth(top.length, cellWidth);
+        const bottomSpan = segmentWidth(bottom.length, cellWidth);
+
+        const topEntryWidth = showNumbers
+          ? Math.max(1, ...top.map((label, idx) => (String(topNumsLeftToRight[idx]).padStart(pinWidth) + " " + label).length))
+          : Math.max(1, ...top.map((label) => label.length));
+        const bottomEntryWidth = showNumbers
+          ? Math.max(1, ...bottom.map((label, idx) => (String(bottomNums[idx]).padStart(pinWidth) + " " + label).length))
+          : Math.max(1, ...bottom.map((label) => label.length));
+
+        let bodyInnerWidth;
+        let trackWidth;
+        let verticalPinRightPadding;
+
+        if (verticalSpread) {
+          const topSpreadBonus = Math.max(0, Math.min(Math.max(0, top.length - 1), 10 - topEntryWidth));
+          const bottomSpreadBonus = Math.max(0, Math.min(Math.max(0, bottom.length - 1), 10 - bottomEntryWidth));
+          const topTrackWidth = topEntryWidth + top.length + 2 + topSpreadBonus;
+          const bottomTrackWidth = bottomEntryWidth + bottom.length + 2 + bottomSpreadBonus;
+          trackWidth = Math.max(4, topTrackWidth, bottomTrackWidth);
+
+          const minBodyForMarkers = Math.max(top.length, bottom.length) * 2 + 1;
+          bodyInnerWidth = Math.max(4, name.length + 2, minBodyForMarkers);
+
+          const activeCounts = [top.length, bottom.length].filter((count) => count > 1);
+          let guard = 0;
+          while (activeCounts.some((count) => (bodyInnerWidth - 3) % (count - 1) !== 0)) {
+            bodyInnerWidth += 1;
+            guard += 1;
+            if (guard > 128) break;
+          }
+
+          const maxEntryWidth = Math.max(topEntryWidth, bottomEntryWidth);
+          verticalPinRightPadding = Math.max(0, Math.min(Math.max(top.length, bottom.length), Math.floor((maxEntryWidth - 18) / 3)));
+        } else {
+          bodyInnerWidth = Math.max(4, name.length + 2, topSpan, bottomSpan);
+          trackWidth = bodyInnerWidth;
+          verticalPinRightPadding = 0;
+        }
+
+        const nameRows = renderWrappedCenterText(name, bodyInnerWidth);
+
+        const topEdgeCols = verticalSpread && top.length
+          ? distributeColumns(1, Math.max(1, bodyInnerWidth - 2 - verticalPinRightPadding), top.length)
+          : [];
+        const bottomEdgeCols = verticalSpread && bottom.length
+          ? distributeColumns(1, Math.max(1, bodyInnerWidth - 2 - verticalPinRightPadding), bottom.length)
+          : [];
+
+        const topMarkers = verticalSpread && top.length ? topEdgeCols : pinCenters(top.length, bodyInnerWidth, cellWidth);
+        const bottomMarkers = verticalSpread && bottom.length ? bottomEdgeCols : pinCenters(bottom.length, bodyInnerWidth, cellWidth);
+
+        const leftIndent = showNumbers ? pinWidth + 1 + leftWidth + 3 : leftWidth + 3;
+        const rightTrailing = showNumbers ? 3 + rightWidth + 1 + pinWidth : 3 + rightWidth;
+        const rows = Math.max(left.length, right.length, nameRows.length, 3);
+
+        const lines = [];
+
+        if (top.length) {
+          if (verticalSpread) {
+            const topPinLines = renderTopVerticalTrails(top, topNumsLeftToRight, pinWidth, trackWidth, topEdgeCols, showNumbers);
+            for (const pinLine of topPinLines) {
+              lines.push(" ".repeat(leftIndent + 1) + pinLine);
+            }
+          } else {
+            const topLabelRows = renderWrappedCells(top, bodyInnerWidth, cellWidth);
+            const topStemsLine = renderStems(top.length, bodyInnerWidth, cellWidth);
+            for (const row of topLabelRows) lines.push(" ".repeat(leftIndent + 1) + row);
+            if (showNumbers) {
+              const topNumbersLine = renderCells(topNumsLeftToRight.map(String), bodyInnerWidth, cellWidth);
+              lines.push(" ".repeat(leftIndent + 1) + topNumbersLine);
+            }
+            lines.push(" ".repeat(leftIndent + 1) + topStemsLine);
+          }
+        }
+
+        lines.push(
+          " ".repeat(leftIndent) +
+            renderEdgeBorder(bodyInnerWidth, topMarkers, "┌", "┐", "┴"),
+        );
+
+        const nameStart = Math.floor((rows - nameRows.length) / 2);
+        for (let idx = 0; idx < rows; idx += 1) {
+          let leftPrefix;
+          if (idx < left.length) {
+            const llabel = left[idx];
+            leftPrefix = showNumbers
+              ? llabel.padEnd(leftWidth) + " " + String(leftNums[idx]).padStart(pinWidth) + " ──┤"
+              : llabel.padEnd(leftWidth) + " ──┤";
+          } else {
+            leftPrefix = " ".repeat(leftIndent) + "│";
+          }
+
+          const body = nameStart <= idx && idx < nameStart + nameRows.length ? nameRows[idx - nameStart] : " ".repeat(bodyInnerWidth);
+
+          let rightSuffix;
+          if (idx < right.length) {
+            const rlabel = right[idx];
+            rightSuffix = showNumbers
+              ? "├── " + String(rightNumsTopDown[idx]).padStart(pinWidth) + "   " + rlabel.padEnd(rightWidth)
+              : "├── " + rlabel.padEnd(rightWidth);
+          } else {
+            rightSuffix = "│" + " ".repeat(rightTrailing);
+          }
+
+          lines.push(leftPrefix + body + rightSuffix);
+        }
+
+        lines.push(
+          " ".repeat(leftIndent) +
+            renderEdgeBorder(bodyInnerWidth, bottomMarkers, "└", "┘", "┬"),
+        );
+
+        if (bottom.length) {
+          if (verticalSpread) {
+            const bottomPinLines = renderBottomVerticalTrails(bottom, bottomNums, pinWidth, trackWidth, bottomEdgeCols, showNumbers);
+            for (const pinLine of bottomPinLines) {
+              lines.push(" ".repeat(leftIndent + 1) + pinLine);
+            }
+          } else {
+            const bottomStems = renderStems(bottom.length, bodyInnerWidth, cellWidth);
+            const bottomLabelRows = renderWrappedCells(bottom, bodyInnerWidth, cellWidth);
+            lines.push(" ".repeat(leftIndent + 1) + bottomStems);
+            if (showNumbers) {
+              const bottomNumbersLine = renderCells(bottomNums.map(String), bodyInnerWidth, cellWidth);
+              lines.push(" ".repeat(leftIndent + 1) + bottomNumbersLine);
+            }
+            for (const row of bottomLabelRows) lines.push(" ".repeat(leftIndent + 1) + row);
+          }
+        }
+
+        return lines.join("\n");
+      }
+
+      function formatTextTable(headers, rows) {
+        const widths = headers.map((header, idx) =>
+          Math.max(
+            header.length,
+            ...rows.map((row) => String(row[idx] ?? "").length),
+          ),
+        );
+
+        const headerLine = headers.map((header, idx) => header.padEnd(widths[idx])).join(" | ");
+        const separator = widths.map((width) => "-".repeat(width)).join("-+-");
+        const body = rows.map((row) => row.map((cell, idx) => String(cell ?? "").padEnd(widths[idx])).join(" | "));
+        return [headerLine, separator, ...body].join("\n");
+      }
+
+      function buildTabularOutputTwo(left, right, numbering) {
+        const totalPins = left.length + right.length;
+        const showNumbers = numbering !== "none";
+
+        const leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+        const rightNums = numbering === "seq"
+          ? [...Array(right.length).keys()].map((i) => i + 1)
+          : [...Array(right.length).keys()].map((i) => totalPins - i);
+
+        const rows = [];
+        for (let idx = 0; idx < left.length; idx += 1) {
+          rows.push(["left", idx + 1, showNumbers ? leftNums[idx] : "", left[idx]]);
+        }
+        for (let idx = 0; idx < right.length; idx += 1) {
+          rows.push(["right", idx + 1, showNumbers ? rightNums[idx] : "", right[idx]]);
+        }
+
+        return formatTextTable(["Side", "Pos", "Pin", "Label"], rows);
+      }
+
+      function buildTabularOutputFour(top, right, bottom, left, numbering) {
+        const totalPins = top.length + right.length + bottom.length + left.length;
+        const showNumbers = numbering !== "none";
+
+        let leftNums;
+        let bottomNums;
+        let rightNumsTopDown;
+        let topNumsLeftToRight;
+
+        if (numbering === "ccw" || numbering === "none") {
+          leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+          bottomNums = [...Array(bottom.length).keys()].map((i) => left.length + i + 1);
+          rightNumsTopDown = [...Array(right.length).keys()].map((i) => left.length + bottom.length + right.length - i);
+          topNumsLeftToRight = [...Array(top.length).keys()].map((i) => totalPins - i);
+        } else if (numbering === "cw") {
+          topNumsLeftToRight = [...Array(top.length).keys()].map((i) => i + 1);
+          rightNumsTopDown = [...Array(right.length).keys()].map((i) => top.length + i + 1);
+          bottomNums = [...Array(bottom.length).keys()].map((i) => top.length + right.length + bottom.length - i);
+          leftNums = [...Array(left.length).keys()].map((i) => totalPins - i);
+        } else {
+          leftNums = [...Array(left.length).keys()].map((i) => i + 1);
+          bottomNums = [...Array(bottom.length).keys()].map((i) => i + 1);
+          rightNumsTopDown = [...Array(right.length).keys()].map((i) => i + 1);
+          topNumsLeftToRight = [...Array(top.length).keys()].map((i) => i + 1);
+        }
+
+        const rows = [];
+        for (let idx = 0; idx < top.length; idx += 1) rows.push(["top", idx + 1, showNumbers ? topNumsLeftToRight[idx] : "", top[idx]]);
+        for (let idx = 0; idx < right.length; idx += 1) rows.push(["right", idx + 1, showNumbers ? rightNumsTopDown[idx] : "", right[idx]]);
+        for (let idx = 0; idx < bottom.length; idx += 1) rows.push(["bottom", idx + 1, showNumbers ? bottomNums[idx] : "", bottom[idx]]);
+        for (let idx = 0; idx < left.length; idx += 1) rows.push(["left", idx + 1, showNumbers ? leftNums[idx] : "", left[idx]]);
+
+        return formatTextTable(["Side", "Pos", "Pin", "Label"], rows);
+      }
+
+      function generateFromInputs() {
+        const packageType = getSelectedPackageType();
+        const pins = parsePinList(el.pinLabels.value);
+        const sequence = el.sequence.value;
+        const start = el.start.value;
+        const numbering = el.numbering.value;
+        const name = el.icName.value.trim();
+
+        if (!name) throw new Error("Name cannot be empty.");
+
+        if (packageType === "two") {
+          const [leftCount, rightCount] = parseSideCounts(el.pinCounts.value, 2, "--counts");
+          const [left, right] = assignOrderedTwoSided(pins, leftCount, rightCount, sequence, start);
+          return {
+            ascii: renderTwoSided(name, left, right, numbering),
+            table: buildTabularOutputTwo(left, right, numbering),
+          };
+        }
+
+        const [topCount, rightCount, bottomCount, leftCount] = parseSideCounts(el.pinCounts.value, 4, "--counts");
+        const [top, right, bottom, left] = assignOrderedFourSided(pins, topCount, rightCount, bottomCount, leftCount, sequence, start);
+        return {
+          ascii: renderFourSided(name, top, right, bottom, left, isVerticalSpreadEnabled(), numbering),
+          table: buildTabularOutputFour(top, right, bottom, left, numbering),
+        };
+      }
+
+      function setStatus(message, isError) {
+        el.status.textContent = message;
+        el.status.className = isError ? "status error" : "status ok";
+      }
+
+      function setRegexStatus(message, isError) {
+        el.regexStatus.textContent = message;
+        el.regexStatus.className = isError ? "status error" : "status ok";
+      }
+
+      function setParserExpanded(expanded) {
+        el.toggleParserBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+        el.toggleParserBtn.textContent = expanded ? "Hide datasheet parser" : "Show datasheet parser";
+        el.parserBox.hidden = !expanded;
+      }
+
+      function normalizePinLabel(label) {
+        return String(label)
+          .replace(/[\u2012\u2013\u2014\u2212]/g, "-")
+          .replace(/\u00a0/g, " ")
+          .trim();
+      }
+
+      function isExcludedPinLabel(label) {
+        const blocked = new Set([
+          "TABLE",
+          "PIN",
+          "NAME",
+          "NO",
+          "DESCRIPTION",
+          "FUNCTION",
+          "FUNCTIONS",
+          "CONTINUED",
+          "PRODUCT",
+          "FOLDER",
+          "LINKS",
+          "COPYRIGHT",
+          "SUBMIT",
+          "DOCUMENT",
+          "FEEDBACK",
+          "WWW",
+          "COM",
+        ]);
+        return blocked.has(String(label || "").toUpperCase());
+      }
+
+      function scorePinSequence(pinSequence, pinMap) {
+        if (!pinSequence.length || !pinMap.size) return -Infinity;
+
+        const maxPin = Math.max(...pinSequence);
+        const minPin = Math.min(...pinSequence);
+        let score = 0;
+
+        // Prefer normal IC numbering tables that begin at 1 and climb.
+        if (pinSequence[0] === 1) score += 5;
+        if (minPin === 1) score += 2;
+
+        let ascTransitions = 0;
+        let descTransitions = 0;
+        for (let idx = 1; idx < pinSequence.length; idx += 1) {
+          if (pinSequence[idx] > pinSequence[idx - 1]) ascTransitions += 1;
+          else if (pinSequence[idx] < pinSequence[idx - 1]) descTransitions += 1;
+        }
+        score += ascTransitions * 2;
+        score -= descTransitions;
+
+        // Prefer dense pin coverage 1..N when available.
+        let missing = 0;
+        for (let pin = 1; pin <= maxPin; pin += 1) {
+          if (!pinMap.has(pin)) missing += 1;
+        }
+        score -= missing * 3;
+
+        return score;
+      }
+
+      function parsePinSpec(pinSpec) {
+        const normalized = String(pinSpec).replace(/[\u2012\u2013\u2014\u2212]/g, "-").trim();
+
+        const single = normalized.match(/^(\d+)$/);
+        if (single) {
+          return [Number.parseInt(single[1], 10)];
+        }
+
+        const range = normalized.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (range) {
+          const start = Number.parseInt(range[1], 10);
+          const end = Number.parseInt(range[2], 10);
+          if (!Number.isInteger(start) || !Number.isInteger(end)) return [];
+          const step = start <= end ? 1 : -1;
+          const out = [];
+          for (let pin = start; step > 0 ? pin <= end : pin >= end; pin += step) {
+            out.push(pin);
+          }
+          return out;
+        }
+
+        return [];
+      }
+
+      function extractPinsFromInlineIORows(raw) {
+        const byPin = new Map();
+        const collapsed = raw.replace(/\r?\n+/g, " ");
+        const ioRowRegex = /\b([A-Z][A-Z0-9_+\-\/().\u2012\u2013\u2014\u2212]{0,31})\s+(\d+(?:\s*[-\u2012\u2013\u2014\u2212]\s*\d+)?)(?=\s+(?:AIO|DIO|DI|DO|AI|AO|I\/O|I|O|P)\b)/g;
+
+        for (const match of collapsed.matchAll(ioRowRegex)) {
+          const label = normalizePinLabel(match[1]);
+          if (isExcludedPinLabel(label)) continue;
+          const pinSpec = match[2];
+          const pins = parsePinSpec(pinSpec);
+
+          for (const pin of pins) {
+            if (!Number.isInteger(pin) || pin <= 0 || !label) continue;
+            if (!byPin.has(pin)) {
+              byPin.set(pin, label);
+            }
+          }
+        }
+
+        return byPin;
+      }
+
+      function extractPinsFromTableRows(raw) {
+        const singleByPin = new Map();
+        const dualByPinA = new Map();
+        const dualByPinB = new Map();
+        const dualPinsA = [];
+        const dualPinsB = [];
+        const lines = raw.split(/\r?\n/);
+
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (!line) continue;
+
+          const dualNumberRow = line.match(/^([^\s]+)\s+(\d+)\s+(\d+)\b/);
+          if (dualNumberRow) {
+            const label = normalizePinLabel(dualNumberRow[1]);
+            if (isExcludedPinLabel(label)) continue;
+            const pinA = Number.parseInt(dualNumberRow[2], 10);
+            const pinB = Number.parseInt(dualNumberRow[3], 10);
+
+            if (Number.isInteger(pinA) && pinA > 0 && label && !dualByPinA.has(pinA)) {
+              dualByPinA.set(pinA, label);
+              dualPinsA.push(pinA);
+            }
+            if (Number.isInteger(pinB) && pinB > 0 && label && !dualByPinB.has(pinB)) {
+              dualByPinB.set(pinB, label);
+              dualPinsB.push(pinB);
+            }
+            continue;
+          }
+
+          // Handles common datasheet rows like: VOUT 1 PWR ...
+          // Also supports inverse rows like: 1 VOUT ...
+          const labelFirst = line.match(/^([A-Za-z][A-Za-z0-9_+\-\/().\u2012\u2013\u2014\u2212]*)\s+(\d+)\b/);
+          const pinFirst = line.match(/^(\d+)\s+([A-Za-z][A-Za-z0-9_+\-\/().\u2012\u2013\u2014\u2212]*)\b/);
+          const match = labelFirst || pinFirst;
+          if (!match) continue;
+
+          const pinRaw = labelFirst ? match[2] : match[1];
+          const labelRaw = labelFirst ? match[1] : match[2];
+          const pin = Number.parseInt(pinRaw, 10);
+          const label = normalizePinLabel(labelRaw);
+
+          if (!Number.isInteger(pin) || pin <= 0 || !label || isExcludedPinLabel(label)) continue;
+          if (!singleByPin.has(pin)) {
+            singleByPin.set(pin, label);
+          }
+        }
+
+        const dualScoreA = scorePinSequence(dualPinsA, dualByPinA);
+        const dualScoreB = scorePinSequence(dualPinsB, dualByPinB);
+
+        const inlineIoRows = extractPinsFromInlineIORows(raw);
+        inlineIoRows.forEach((label, pin) => {
+          singleByPin.set(pin, label);
+        });
+
+        const bestDualSize = Math.max(dualByPinA.size, dualByPinB.size);
+        if ((dualByPinA.size || dualByPinB.size) && bestDualSize >= 2 && bestDualSize >= singleByPin.size) {
+          return dualScoreA >= dualScoreB ? dualByPinA : dualByPinB;
+        }
+
+        return singleByPin;
+      }
+
+      function getSelectedPackageVariant() {
+        if (el.packageTwoChip.classList.contains("selected")) return "two";
+        if (el.packageFourSpreadChip.classList.contains("selected")) return "four-spread";
+        return "four-standard";
+      }
+
+      function getSelectedPackageType() {
+        return getSelectedPackageVariant() === "two" ? "two" : "four";
+      }
+
+      function setPackageVariant(variant) {
+        const useTwo = variant === "two";
+        const useFourSpread = variant === "four-spread";
+        const useFourStandard = variant === "four-standard";
+
+        el.packageTwoChip.classList.toggle("selected", useTwo);
+        el.packageTwoChip.setAttribute("aria-pressed", useTwo ? "true" : "false");
+
+        el.packageFourChip.classList.toggle("selected", useFourStandard);
+        el.packageFourChip.setAttribute("aria-pressed", useFourStandard ? "true" : "false");
+
+        el.packageFourSpreadChip.classList.toggle("selected", useFourSpread);
+        el.packageFourSpreadChip.setAttribute("aria-pressed", useFourSpread ? "true" : "false");
+      }
+
+      function setPackageType(type, verticalSpread = false) {
+        if (type === "two") {
+          setPackageVariant("two");
+          return;
+        }
+        setPackageVariant(verticalSpread ? "four-spread" : "four-standard");
+      }
+
+      function deriveCountsFromPinTotal(totalPins, packageType) {
+        if (packageType === "two") {
+          const left = Math.ceil(totalPins / 2);
+          const right = Math.floor(totalPins / 2);
+          return [left, right];
+        }
+
+        const base = Math.floor(totalPins / 4);
+        const remainder = totalPins % 4;
+        const counts = [base, base, base, base];
+        for (let idx = 0; idx < remainder; idx += 1) {
+          counts[idx] += 1;
+        }
+        return counts;
+      }
+
+      function autoPopulateCountsFromPins() {
+        const total = parsePinList(el.pinLabels.value).length;
+        if (total <= 0) {
+          return false;
+        }
+
+        const counts = deriveCountsFromPinTotal(total, getSelectedPackageType());
+        el.pinCounts.value = counts.join(",");
+        return true;
+      }
+
+      function isVerticalSpreadEnabled() {
+        return getSelectedPackageVariant() === "four-spread";
+      }
+
+      function getSelectedCommentMode() {
+        if (el.commentSlashChip.classList.contains("selected")) return "slash";
+        if (el.commentHashChip.classList.contains("selected")) return "hash";
+        if (el.commentCblockChip.classList.contains("selected")) return "cblock";
+        return "none";
+      }
+
+      function setCommentMode(mode) {
+        const mapping = {
+          none: el.commentNoneChip,
+          slash: el.commentSlashChip,
+          hash: el.commentHashChip,
+          cblock: el.commentCblockChip,
+        };
+        Object.entries(mapping).forEach(([key, chip]) => {
+          const selected = key === mode;
+          chip.classList.toggle("selected", selected);
+          chip.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+      }
+
+      function getSelectedOutputMode() {
+        return el.outputAsciiTableChip.classList.contains("selected") ? "ascii-table" : "ascii";
+      }
+
+      function setOutputMode(mode) {
+        const useTable = mode === "ascii-table";
+        el.outputAsciiChip.classList.toggle("selected", !useTable);
+        el.outputAsciiChip.setAttribute("aria-pressed", useTable ? "false" : "true");
+        el.outputAsciiTableChip.classList.toggle("selected", useTable);
+        el.outputAsciiTableChip.setAttribute("aria-pressed", useTable ? "true" : "false");
+      }
+
+      function applyCommentPrefix(text) {
+        const mode = getSelectedCommentMode();
+        if (mode === "none") return text;
+        if (mode === "slash") {
+          return text
+            .split("\n")
+            .map((line) => "// " + line)
+            .join("\n");
+        }
+        if (mode === "hash") {
+          return text
+            .split("\n")
+            .map((line) => "# " + line)
+            .join("\n");
+        }
+        return "/*\n" + text + "\n*/";
+      }
+
+      function refreshPreview() {
+        try {
+          const output = generateFromInputs();
+          const mergedOutput =
+            getSelectedOutputMode() === "ascii-table"
+              ? output.ascii + "\n\n" + output.table
+              : output.ascii;
+          el.preview.value = applyCommentPrefix(mergedOutput);
+          setStatus("Preview updated.", false);
+        } catch (err) {
+          el.preview.value = "";
+          setStatus(String(err.message || err), true);
+        }
+      }
+
+      function parseDatasheetTextByRegex() {
+        const raw = el.regexRaw.value;
+        const pattern = el.regexPattern.value.trim();
+        let flags = el.regexFlags.value.trim() || "gm";
+
+        if (!raw.trim()) {
+          setRegexStatus("Paste datasheet text first.", true);
+          return;
+        }
+        if (!pattern) {
+          setRegexStatus("Regex pattern is required.", true);
+          return;
+        }
+        if (!flags.includes("g")) {
+          flags += "g";
+        }
+
+        let regex;
+        try {
+          regex = new RegExp(pattern, flags);
+        } catch (err) {
+          setRegexStatus("Invalid regex: " + String(err.message || err), true);
+          return;
+        }
+
+        const byPin = new Map();
+        const matches = raw.matchAll(regex);
+        for (const match of matches) {
+          let pinRaw = "";
+          let labelRaw = "";
+
+          if (match.groups && match.groups.pin && match.groups.label) {
+            pinRaw = match.groups.pin;
+            labelRaw = match.groups.label;
+          } else if (match.length >= 3) {
+            pinRaw = match[1];
+            labelRaw = match[2];
+          } else {
+            continue;
+          }
+
+          const pin = Number.parseInt(String(pinRaw).trim(), 10);
+          const label = String(labelRaw).trim().replace(/\s+/g, " ");
+          if (!Number.isInteger(pin) || pin <= 0 || !label) continue;
+          if (!byPin.has(pin)) {
+            byPin.set(pin, label);
+          }
+        }
+
+        const fallback = extractPinsFromTableRows(raw);
+        // Prefer row-leading table labels when present; this handles NAME/NO style datasheet tables.
+        fallback.forEach((label, pin) => {
+          byPin.set(pin, label);
+        });
+
+        if (!byPin.size) {
+          setRegexStatus("No valid pin/label matches found. Use named groups pin and label.", true);
+          return;
+        }
+
+        const ordered = [...byPin.entries()].sort((a, b) => a[0] - b[0]);
+        const labels = ordered.map((entry) => entry[1]);
+        el.pinLabels.value = labels.join(",");
+
+        const total = labels.length;
+        let countsNote = "Counts unchanged.";
+        if (autoPopulateCountsFromPins()) {
+          countsNote = "Counts set to " + el.pinCounts.value + ".";
+        }
+
+        markCustomExample();
+        setStartOptions();
+        refreshPreview();
+        setRegexStatus("Parsed " + total + " pins. " + countsNote, false);
+      }
+
+      function setStartOptions() {
+        const packageType = getSelectedPackageType();
+        const sequence = el.sequence.value;
+
+        let options;
+        if (packageType === "two") {
+          if (sequence === "ccw") options = ["left-top", "right-bottom"];
+          else if (sequence === "cw") options = ["right-top", "left-bottom"];
+          else options = ["left-top", "right-top", "left-bottom", "right-bottom"];
+        } else if (sequence === "ccw") {
+          options = ["left-top", "bottom-left", "right-bottom", "top-right"];
+        } else if (sequence === "cw") {
+          options = ["top-left", "right-top", "bottom-right", "left-bottom"];
+        } else {
+          options = ["top-left", "right-top", "bottom-right", "left-bottom", "left-top", "bottom-left", "right-bottom", "top-right"];
+        }
+
+        const previous = el.start.value;
+        el.start.innerHTML = "";
+        for (const opt of options) {
+          const option = document.createElement("option");
+          option.value = opt;
+          option.textContent = opt;
+          el.start.appendChild(option);
+        }
+
+        if (options.includes(previous)) el.start.value = previous;
+        else el.start.value = packageType === "two" ? "left-top" : "left-top";
+
+      }
+
+      function applyDefaultsForType() {
+        if (getSelectedPackageType() === "two") {
+          setPackageType("two", false);
+          el.icName.value = "NE555";
+          el.pinLabels.value = "GND,TRIG,OUT,RESET,CTRL,THR,DISCH,VCC";
+          el.pinCounts.value = "4,4";
+          el.sequence.value = "ccw";
+          el.numbering.value = "ccw";
+        } else {
+          setPackageType("four", true);
+          el.icName.value = "ATtiny816";
+          el.pinLabels.value = "UPDI/VREFA,PA4,PA5,PA6,PA7,PB5,PB4,PB3,PB2,PB1,PB0,PA3,PA2,PA1,PA0,VDD";
+          el.pinCounts.value = "4,4,4,4";
+          el.sequence.value = "ccw";
+          el.numbering.value = "ccw";
+        }
+      }
+
+      function applyExample(exampleKey) {
+        const example = EXAMPLES[exampleKey];
+        if (!example) return;
+
+        setPackageType(example.packageType, Boolean(example.verticalSpread));
+        el.icName.value = example.name;
+        el.pinLabels.value = example.pins;
+        el.pinCounts.value = example.counts;
+        el.sequence.value = example.sequence;
+        el.numbering.value = example.numbering;
+        setStartOptions();
+        el.start.value = example.start;
+        refreshPreview();
+      }
+
+      function markCustomExample() {
+        if (el.exampleSelect.value !== "custom") {
+          el.exampleSelect.value = "custom";
+        }
+      }
+
+      const THEME_STORAGE_KEY = "nomdetom-theme-mode";
+      const autoThemeMediaQuery = window.matchMedia
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
+      let themeMode = "auto";
+
+      function capitalizeWord(value) {
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      }
+
+      function getStoredThemeMode() {
+        const stored = localStorage.getItem(THEME_STORAGE_KEY);
+        if (stored === "light" || stored === "dark" || stored === "auto") {
+          return stored;
+        }
+        return "auto";
+      }
+
+      function getResolvedTheme(mode) {
+        if (mode === "auto") {
+          return autoThemeMediaQuery && autoThemeMediaQuery.matches
+            ? "dark"
+            : "light";
+        }
+        return mode === "dark" ? "dark" : "light";
+      }
+
+      function getNextThemeMode(mode) {
+        if (mode === "light") return "dark";
+        if (mode === "dark") return "auto";
+        return "light";
+      }
+
+      function updateThemeButton(mode) {
+        el.theme.textContent = "Theme: " + capitalizeWord(mode);
+      }
+
+      function applyThemeMode(mode, shouldPersist) {
+        themeMode = mode === "light" || mode === "dark" || mode === "auto"
+          ? mode
+          : "auto";
+
+        const resolved = getResolvedTheme(themeMode);
+        document.documentElement.setAttribute("data-theme", resolved);
+        el.theme.setAttribute("aria-pressed", "false");
+        updateThemeButton(themeMode);
+
+        if (shouldPersist) {
+          localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+        }
+      }
+
+      function cycleTheme() {
+        applyThemeMode(getNextThemeMode(themeMode), true);
+      }
+
+      el.generate.addEventListener("click", refreshPreview);
+
+      el.reset.addEventListener("click", () => {
+        applyDefaultsForType();
+        setOutputMode("ascii");
+        setCommentMode("none");
+        setStartOptions();
+        el.exampleSelect.value = "custom";
+        refreshPreview();
+        setRegexStatus("", false);
+      });
+
+      el.clear.addEventListener("click", () => {
+        el.preview.value = "";
+        setStatus("Output cleared.", false);
+      });
+
+      el.copy.addEventListener("click", async () => {
+        if (!el.preview.value) {
+          setStatus("Nothing to copy.", true);
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(el.preview.value);
+          setStatus("Copied to clipboard.", false);
+        } catch {
+          setStatus("Clipboard copy failed in this browser context.", true);
+        }
+      });
+
+      function handlePackageTypeChange() {
+        if (!autoPopulateCountsFromPins()) {
+          el.pinCounts.value = getSelectedPackageType() === "two" ? "4,4" : "4,4,4,4";
+        }
+
+        setStartOptions();
+        markCustomExample();
+        refreshPreview();
+      }
+
+      [
+        [el.packageFourChip, "four-standard"],
+        [el.packageFourSpreadChip, "four-spread"],
+        [el.packageTwoChip, "two"],
+      ].forEach(([chip, variant]) => {
+        chip.addEventListener("click", () => {
+          if (getSelectedPackageVariant() === variant) return;
+          setPackageVariant(variant);
+          handlePackageTypeChange();
+        });
+      });
+
+      el.refreshCountsBtn.addEventListener("click", () => {
+        if (!autoPopulateCountsFromPins()) {
+          setStatus("No pin labels found to derive counts.", true);
+          return;
+        }
+        setStartOptions();
+        markCustomExample();
+        refreshPreview();
+        setStatus("Counts refreshed from pin labels.", false);
+      });
+
+      [el.numbering, el.pinCounts, el.icName, el.start].forEach((node) => {
+        node.addEventListener("input", refreshPreview);
+        node.addEventListener("change", () => {
+          refreshPreview();
+          markCustomExample();
+        });
+      });
+
+      el.pinLabels.addEventListener("input", () => {
+        autoPopulateCountsFromPins();
+        refreshPreview();
+      });
+
+      el.pinLabels.addEventListener("change", () => {
+        autoPopulateCountsFromPins();
+        setStartOptions();
+        refreshPreview();
+        markCustomExample();
+      });
+
+      [
+        [el.outputAsciiChip, "ascii"],
+        [el.outputAsciiTableChip, "ascii-table"],
+      ].forEach(([chip, mode]) => {
+        chip.addEventListener("click", () => {
+          setOutputMode(mode);
+          refreshPreview();
+        });
+      });
+
+      [
+        [el.commentNoneChip, "none"],
+        [el.commentSlashChip, "slash"],
+        [el.commentHashChip, "hash"],
+        [el.commentCblockChip, "cblock"],
+      ].forEach(([chip, mode]) => {
+        chip.addEventListener("click", () => {
+          setCommentMode(mode);
+          refreshPreview();
+        });
+      });
+
+      el.sequence.addEventListener("change", () => {
+        setStartOptions();
+        refreshPreview();
+        markCustomExample();
+      });
+
+      el.exampleSelect.addEventListener("change", () => {
+        if (el.exampleSelect.value === "custom") return;
+        applyExample(el.exampleSelect.value);
+        setRegexStatus("", false);
+      });
+
+      el.parseRegexBtn.addEventListener("click", parseDatasheetTextByRegex);
+
+      el.theme.addEventListener("click", cycleTheme);
+
+      if (autoThemeMediaQuery) {
+        if (autoThemeMediaQuery.addEventListener) {
+          autoThemeMediaQuery.addEventListener("change", () => {
+            if (themeMode === "auto") {
+              applyThemeMode("auto", false);
+            }
+          });
+        } else if (autoThemeMediaQuery.addListener) {
+          autoThemeMediaQuery.addListener(() => {
+            if (themeMode === "auto") {
+              applyThemeMode("auto", false);
+            }
+          });
+        }
+      }
+
+      el.toggleLicense.addEventListener("click", () => {
+        const expanded = el.toggleLicense.getAttribute("aria-expanded") === "true";
+        el.toggleLicense.setAttribute("aria-expanded", expanded ? "false" : "true");
+        el.toggleLicense.textContent = expanded ? "Show license" : "Hide license";
+        el.licenseBlock.hidden = expanded;
+      });
+
+      el.toggleParserBtn.addEventListener("click", () => {
+        const expanded = el.toggleParserBtn.getAttribute("aria-expanded") === "true";
+        setParserExpanded(!expanded);
+      });
+
+      applyThemeMode(getStoredThemeMode(), false);
+      setParserExpanded(false);
+      if (el.exampleSelect.value === "custom") {
+        setStartOptions();
+        refreshPreview();
+      } else {
+        applyExample(el.exampleSelect.value);
+      }
+    </script>
+  </body>
+</html>

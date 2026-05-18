@@ -364,12 +364,18 @@ def pin_centers(count: int, inner_width: int, cell_width: int) -> list[int]:
     return [offset + idx * (cell_width + 1) + (cell_width // 2) for idx in range(count)]
 
 
-def render_edge_border(inner_width: int, marker_positions: Sequence[int]) -> str:
-    border = ["-"] * inner_width
+def render_edge_border(
+    inner_width: int,
+    marker_positions: Sequence[int],
+    left_corner: str,
+    right_corner: str,
+    marker_char: str,
+) -> str:
+    border = ["─"] * inner_width
     for pos in marker_positions:
         if 0 <= pos < inner_width:
-            border[pos] = "+"
-    return "+" + "".join(border) + "+"
+            border[pos] = marker_char
+    return left_corner + "".join(border) + right_corner
 
 
 def render_cells(items: Sequence[str], inner_width: int, cell_width: int) -> str:
@@ -457,7 +463,7 @@ def render_stems(count: int, inner_width: int, cell_width: int) -> str:
 
     for center in pin_centers(count, inner_width, cell_width):
         if 0 <= center < inner_width:
-            line[center] = "|"
+            line[center] = "│"
 
     return "".join(line)
 
@@ -470,9 +476,9 @@ def render_pipe_dash_trails(count: int, inner_width: int, cell_width: int) -> st
     for center in pin_centers(count, inner_width, cell_width):
         for pos in (center - 1, center + 1):
             if 0 <= pos < inner_width:
-                line[pos] = "-"
+                line[pos] = "─"
         if 0 <= center < inner_width:
-            line[center] = "|"
+            line[center] = "│"
 
     return "".join(line)
 
@@ -490,9 +496,14 @@ def distribute_columns(start: int, end: int, count: int) -> list[int]:
     if count == 1:
         return [(start + end) // 2]
 
+    span = end - start
+    # Prefer perfectly even steps whenever the span allows it.
+    if span % (count - 1) == 0:
+        step = span // (count - 1)
+        return [start + idx * step for idx in range(count)]
+
     cols: list[int] = []
     prev = start - 1
-    span = end - start
 
     for idx in range(count):
         col = start + round(idx * span / (count - 1))
@@ -519,10 +530,10 @@ def draw_horizontal_segment(line: list[str], start: int, end: int) -> None:
     for pos in range(start, end + 1):
         if not (0 <= pos < len(line)):
             continue
-        if line[pos] == "|":
-            line[pos] = "+"
+        if line[pos] == "│":
+            line[pos] = "┼"
         elif line[pos] == " ":
-            line[pos] = "-"
+            line[pos] = "─"
 
 
 def render_top_vertical_trails(
@@ -535,37 +546,46 @@ def render_top_vertical_trails(
 ) -> list[str]:
     lines: list[str] = []
     items = list(zip(labels, numbers, edge_cols))
+    if items:
+        if show_numbers:
+            contents = [f"{num:>{pin_width}} {label}" for label, num, _ in items]
+        else:
+            contents = [label for label, _, _ in items]
+        required_width = max(
+            [inner_width]
+            + [edge_col + 3 + len(content) for (_, _, edge_col), content in zip(items, contents)]  # Adjusted spacing
+        )
+        inner_width = max(inner_width, required_width)
+
     ordered_edge_cols = [edge_col for _, _, edge_col in items]
 
     for row_index, (label, num, edge_col) in enumerate(items):
-        content = f"T{num:>{pin_width}} {label}" if show_numbers else label
+        content = f"{num:>{pin_width}} {label}" if show_numbers else label
         line = [" "] * inner_width
 
         for prev_col in ordered_edge_cols[:row_index]:
             if 0 <= prev_col < inner_width:
-                line[prev_col] = "|"
+                line[prev_col] = "│"
 
         if not (0 <= edge_col < inner_width):
             lines.append("".join(line))
             continue
 
-        max_content_len = max(1, inner_width - edge_col - 1)
-        content = content[-max_content_len:]
-        content_start = inner_width - len(content)
-        draw_horizontal_segment(line, edge_col + 1, content_start - 1)
+        content_start = max(edge_col + 3, inner_width - len(content))  # Ensure alignment is preserved
+        draw_horizontal_segment(line, edge_col + 1, content_start - 2)
         write_text(line, content_start, content)
-        line[edge_col] = "+"
+        # Top fan-out rows connect from package (below) to labels (right).
+        line[edge_col] = "┌"
         lines.append("".join(line))
 
     if items:
         connector_row = [" "] * inner_width
         for edge_col in ordered_edge_cols:
             if 0 <= edge_col < inner_width:
-                connector_row[edge_col] = "|"
+                connector_row[edge_col] = "│"
         lines.append("".join(connector_row))
 
     return lines
-
 
 def render_bottom_vertical_trails(
     labels: Sequence[str],
@@ -583,28 +603,38 @@ def render_bottom_vertical_trails(
     nearest the IC border.
     """
     items = list(zip(labels, numbers, edge_cols))
+    if items:
+        if show_numbers:
+            contents = [f"{num:>{pin_width}} {label}" for label, num, _ in items]
+        else:
+            contents = [label for label, _, _ in items]
+        required_width = max(
+            [inner_width]
+            + [edge_col + 3 + len(content) for (_, _, edge_col), content in zip(items, contents)]  # Adjusted spacing
+        )
+        inner_width = max(inner_width, required_width)
+
     lines: list[str] = []
     rendered_cols: list[int] = []
 
     for label, num, edge_col in items:
-        content = f"B{num:>{pin_width}} {label}" if show_numbers else label
+        content = f"{num:>{pin_width}} {label}" if show_numbers else label
         line = [" "] * inner_width
 
         for col in rendered_cols:
             if 0 <= col < inner_width:
-                line[col] = "|"
+                line[col] = "│"
 
         if not (0 <= edge_col < inner_width):
             lines.append("".join(line))
             rendered_cols.append(edge_col)
             continue
 
-        max_content_len = max(1, inner_width - edge_col - 1)
-        content = content[-max_content_len:]
-        content_start = inner_width - len(content)
-        draw_horizontal_segment(line, edge_col + 1, content_start - 1)
+        content_start = max(edge_col + 3, inner_width - len(content))  # Ensure alignment is preserved
+        draw_horizontal_segment(line, edge_col + 1, content_start - 2)
         write_text(line, content_start, content)
-        line[edge_col] = "+"
+        # Bottom fan-out rows connect from package (above) to labels (right).
+        line[edge_col] = "└"
         lines.append("".join(line))
         rendered_cols.append(edge_col)
 
@@ -612,7 +642,7 @@ def render_bottom_vertical_trails(
         connector_row = [" "] * inner_width
         for _, _, edge_col in items:
             if 0 <= edge_col < inner_width:
-                connector_row[edge_col] = "|"
+                connector_row[edge_col] = "│"
         lines.append("".join(connector_row))
 
     lines.reverse()
@@ -657,18 +687,18 @@ def render_two_sided(
         right_trailing = 3 + right_width
 
     lines: list[str] = []
-    lines.append(" " * left_indent + "+" + "-" * inner_width + "+")
+    lines.append(" " * left_indent + "┌" + "─" * inner_width + "┐")
 
     name_start = (rows - len(name_rows)) // 2
     for idx in range(rows):
         if idx < len(left):
             llabel = left[idx]
             if show_numbers:
-                left_prefix = f"{left_nums[idx]:>{pin_width}} {llabel:<{left_width}} --|"
+                left_prefix = f"{llabel:<{left_width}} {left_nums[idx]:>{pin_width}} ──┤"
             else:
-                left_prefix = f"{llabel:<{left_width}} --|"
+                left_prefix = f"{llabel:<{left_width}} ──┤"
         else:
-            left_prefix = " " * left_indent + "|"
+            left_prefix = " " * left_indent + "│"
 
         if name_start <= idx < name_start + len(name_rows):
             body = name_rows[idx - name_start]
@@ -678,15 +708,17 @@ def render_two_sided(
         if idx < len(right):
             rlabel = right[idx]
             if show_numbers:
-                right_suffix = f"|-- {rlabel:<{right_width}} {right_nums[idx]:<{pin_width}}"
+                right_suffix = (
+                    f"├── {right_nums[idx]:>{pin_width}}   {rlabel:<{right_width}}"
+                )
             else:
-                right_suffix = f"|-- {rlabel:<{right_width}}"
+                right_suffix = f"├── {rlabel:<{right_width}}"
         else:
-            right_suffix = "|" + " " * right_trailing
+            right_suffix = "│" + " " * right_trailing
 
         lines.append(left_prefix + body + right_suffix)
 
-    lines.append(" " * left_indent + "+" + "-" * inner_width + "+")
+    lines.append(" " * left_indent + "└" + "─" * inner_width + "┘")
     return "\n".join(lines)
 
 
@@ -754,11 +786,11 @@ def render_four_sided(
 
     if show_numbers:
         top_entry_width = max(
-            [len(f"T{num:>{pin_width}} {label}") for label, num in zip(top, top_nums_left_to_right)]
+            [len(f"{num:>{pin_width}} {label}") for label, num in zip(top, top_nums_left_to_right)]
             or [1]
         )
         bottom_entry_width = max(
-            [len(f"B{num:>{pin_width}} {label}") for label, num in zip(bottom, bottom_nums)]
+            [len(f"{num:>{pin_width}} {label}") for label, num in zip(bottom, bottom_nums)]
             or [1]
         )
     else:
@@ -766,32 +798,64 @@ def render_four_sided(
         bottom_entry_width = max([len(label) for label in bottom] or [1])
 
     if vertical_spread:
+        # Give short labels a little extra horizontal fan-out so adjacent
+        # vertical tracks are easier to read, while keeping long labels compact.
+        top_spread_bonus = max(0, min(max(0, len(top) - 1), 10 - top_entry_width))
+        bottom_spread_bonus = max(0, min(max(0, len(bottom) - 1), 10 - bottom_entry_width))
         # Keep width just large enough for the longest trail label plus one
         # distinct connector column per pin.
-        top_track_width = top_entry_width + len(top) + 2
-        bottom_track_width = bottom_entry_width + len(bottom) + 2
-        inner_width = max(4, top_track_width, bottom_track_width)
-    else:
-        inner_width = max(4, len(name) + 2, top_span, bottom_span)
+        top_track_width = top_entry_width + len(top) + 2 + top_spread_bonus
+        bottom_track_width = bottom_entry_width + len(bottom) + 2 + bottom_spread_bonus
+        track_width = max(4, top_track_width, bottom_track_width)
+        # Keep the IC body compact; it does not need to match label trail width.
+        min_body_for_markers = max(len(top), len(bottom)) * 2 + 1
+        body_inner_width = max(4, len(name) + 2, min_body_for_markers)
 
-    name_rows = render_wrapped_center_text(name, inner_width)
+        # Nudge width to support even marker spacing for active top/bottom sides.
+        active_counts = [count for count in (len(top), len(bottom)) if count > 1]
+        if active_counts:
+            guard = 0
+            while any((body_inner_width - 3) % (count - 1) != 0 for count in active_counts):
+                body_inner_width += 1
+                guard += 1
+                if guard > 128:
+                    break
+
+        # Long labels can make trails too dominant; shift all marker columns left
+        # by reserving a little right margin as a fallback.
+        max_entry_width = max(top_entry_width, bottom_entry_width)
+        vertical_pin_right_padding = max(0, min(max(len(top), len(bottom)), (max_entry_width - 18) // 3))
+    else:
+        body_inner_width = max(4, len(name) + 2, top_span, bottom_span)
+        track_width = body_inner_width
+        vertical_pin_right_padding = 0
+
+    name_rows = render_wrapped_center_text(name, body_inner_width)
 
     top_edge_cols = (
-        distribute_columns(1, inner_width - top_entry_width - 2, len(top))
+        distribute_columns(
+            1,
+            max(1, body_inner_width - 2 - vertical_pin_right_padding),
+            len(top),
+        )
         if vertical_spread and top
         else []
     )
     bottom_edge_cols = (
-        distribute_columns(1, inner_width - bottom_entry_width - 2, len(bottom))
+        distribute_columns(
+            1,
+            max(1, body_inner_width - 2 - vertical_pin_right_padding),
+            len(bottom),
+        )
         if vertical_spread and bottom
         else []
     )
 
     top_markers = top_edge_cols if vertical_spread and top else pin_centers(
-        len(top), inner_width, cell_width
+        len(top), body_inner_width, cell_width
     )
     bottom_markers = bottom_edge_cols if vertical_spread and bottom else pin_centers(
-        len(bottom), inner_width, cell_width
+        len(bottom), body_inner_width, cell_width
     )
 
     if show_numbers:
@@ -813,57 +877,75 @@ def render_four_sided(
                 top,
                 top_nums_left_to_right,
                 pin_width,
-                inner_width,
+                track_width,
                 top_edge_cols,
                 show_numbers=show_numbers,
             )
             for pin_line in top_pin_lines:
                 lines.append(" " * (left_indent + 1) + pin_line)
         else:
-            top_label_rows = render_wrapped_cells(top, inner_width, cell_width)
-            top_stems_line = render_stems(len(top), inner_width, cell_width)
-            top_trails_line = render_pipe_dash_trails(len(top), inner_width, cell_width)
+            top_label_rows = render_wrapped_cells(top, body_inner_width, cell_width)
+            top_stems_line = render_stems(len(top), body_inner_width, cell_width)
 
             for row in top_label_rows:
                 lines.append(" " * (left_indent + 1) + row)
             if show_numbers:
                 top_numbers_line = render_cells(
-                    [str(num) for num in top_nums_left_to_right], inner_width, cell_width
+                    [str(num) for num in top_nums_left_to_right], body_inner_width, cell_width
                 )
                 lines.append(" " * (left_indent + 1) + top_numbers_line)
             lines.append(" " * (left_indent + 1) + top_stems_line)
-            lines.append(" " * (left_indent + 1) + top_trails_line)
 
-    lines.append(" " * left_indent + render_edge_border(inner_width, top_markers))
+    lines.append(
+        " " * left_indent
+        + render_edge_border(
+            body_inner_width,
+            top_markers,
+            left_corner="┌",
+            right_corner="┐",
+            marker_char="┴",
+        )
+    )
 
     name_start = (rows - len(name_rows)) // 2
     for idx in range(rows):
         if idx < len(left):
             llabel = left[idx]
             if show_numbers:
-                left_prefix = f"{left_nums[idx]:>{pin_width}} {llabel:<{left_width}} --|"
+                left_prefix = f"{llabel:<{left_width}} {left_nums[idx]:>{pin_width}} ──┤"
             else:
-                left_prefix = f"{llabel:<{left_width}} --|"
+                left_prefix = f"{llabel:<{left_width}} ──┤"
         else:
-            left_prefix = " " * left_indent + "|"
+            left_prefix = " " * left_indent + "│"
 
         if name_start <= idx < name_start + len(name_rows):
             body = name_rows[idx - name_start]
         else:
-            body = " " * inner_width
+            body = " " * body_inner_width
 
         if idx < len(right):
             rlabel = right[idx]
             if show_numbers:
-                right_suffix = f"|-- {rlabel:<{right_width}} {right_nums_top_down[idx]:<{pin_width}}"
+                right_suffix = (
+                    f"├── {right_nums_top_down[idx]:>{pin_width}}   {rlabel:<{right_width}}"
+                )
             else:
-                right_suffix = f"|-- {rlabel:<{right_width}}"
+                right_suffix = f"├── {rlabel:<{right_width}}"
         else:
-            right_suffix = "|" + " " * right_trailing
+            right_suffix = "│" + " " * right_trailing
 
         lines.append(left_prefix + body + right_suffix)
 
-    lines.append(" " * left_indent + render_edge_border(inner_width, bottom_markers))
+    lines.append(
+        " " * left_indent
+        + render_edge_border(
+            body_inner_width,
+            bottom_markers,
+            left_corner="└",
+            right_corner="┘",
+            marker_char="┬",
+        )
+    )
 
     if bottom:
         if vertical_spread:
@@ -871,22 +953,20 @@ def render_four_sided(
                 bottom,
                 bottom_nums,
                 pin_width,
-                inner_width,
+                track_width,
                 bottom_edge_cols,
                 show_numbers=show_numbers,
             )
             for pin_line in bottom_pin_lines:
                 lines.append(" " * (left_indent + 1) + pin_line)
         else:
-            bottom_trails_line = render_pipe_dash_trails(len(bottom), inner_width, cell_width)
-            bottom_stems_line = render_stems(len(bottom), inner_width, cell_width)
-            bottom_label_rows = render_wrapped_cells(bottom, inner_width, cell_width)
+            bottom_stems_line = render_stems(len(bottom), body_inner_width, cell_width)
+            bottom_label_rows = render_wrapped_cells(bottom, body_inner_width, cell_width)
 
-            lines.append(" " * (left_indent + 1) + bottom_trails_line)
             lines.append(" " * (left_indent + 1) + bottom_stems_line)
             if show_numbers:
                 bottom_numbers_line = render_cells(
-                    [str(num) for num in bottom_nums], inner_width, cell_width
+                    [str(num) for num in bottom_nums], body_inner_width, cell_width
                 )
                 lines.append(" " * (left_indent + 1) + bottom_numbers_line)
             for row in bottom_label_rows:
