@@ -1,0 +1,1974 @@
+<!doctype html>
+<!-- Agentic tools: Claude Sonnet 4.6 -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>LoRa Airtime Calculator</title>
+    <style>
+      /* ============================================================
+         CSS VARIABLES
+         ============================================================ */
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+      }
+
+      /* ============================================================
+         SHARED BASE STYLES - do not modify
+         ============================================================ */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 72rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .results {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 2rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child,
+      .result:nth-child(2) {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .result-primary .result-value {
+        font-size: 1.5rem;
+        color: var(--accent);
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
+      .field-hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 400;
+      }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 1rem;
+        row-gap: 0.9rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .three-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        column-gap: 1rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .three-col-fields .field {
+        margin-bottom: 0;
+      }
+
+      .two-col-fields .field,
+      .two-col-fields .band-field,
+      .two-col-fields .checkbox-field {
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
+      /* Hint + Edit presets button sit under their respective columns */
+      .hint-button-row {
+        margin-top: -0.4rem;
+        align-items: start;
+      }
+
+
+
+      /* ============================================================
+         BAND TOGGLE SWITCH
+         ============================================================ */
+      .band-field {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        padding: 0.5rem 0;
+        margin-bottom: 0.9rem;
+      }
+
+      .band-field-label {
+        font-weight: 600;
+      }
+
+      .band-toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 2.75rem;
+        height: 1.4rem;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--border);
+        transition: background 0.18s;
+        border: 1px solid var(--border);
+      }
+
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        height: 1rem;
+        width: 1rem;
+        left: 0.15rem;
+        bottom: 0.15rem;
+        background: var(--panel-bg);
+        transition: transform 0.18s;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform: translateX(1.35rem);
+      }
+
+      .toggle-switch input:disabled + .toggle-slider {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .toggle-switch input:focus + .toggle-slider {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .band-label {
+        font-size: 0.95rem;
+      }
+
+      .band-label.band-active {
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .band-disabled-note {
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      /* ============================================================
+         INLINE CHECKBOX FIELDS
+         ============================================================ */
+      .checkbox-field {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .checkbox-field input[type="checkbox"] {
+        width: auto;
+        flex-shrink: 0;
+        margin-top: 0.2rem;
+        padding: 0;
+        accent-color: var(--accent);
+      }
+
+      .checkbox-field-text {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .checkbox-field-label {
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      /* ============================================================
+         COMPARISON CARDS
+         ============================================================ */
+      .comparison-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        gap: 1rem;
+      }
+
+      .comparison-header h2 {
+        margin: 0;
+      }
+
+      .comparison-empty {
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-style: italic;
+        margin: 0;
+      }
+
+      .comparison-card {
+        border: 1px solid var(--border);
+        padding: 0.9rem;
+        margin-top: 0.75rem;
+        background: var(--field-bg);
+      }
+
+      .comparison-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .comparison-card-title {
+        font-weight: 700;
+        font-size: 0.92rem;
+      }
+
+      .comparison-card-num {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 0.82rem;
+      }
+
+      .comparison-card-params {
+        color: var(--muted);
+        font-size: 0.8rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .comparison-card-results {
+        display: flex;
+        gap: 0.6rem;
+        align-items: stretch;
+        flex-wrap: wrap;
+      }
+
+      .comparison-card-metrics {
+        flex: 1;
+        min-width: 14rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+        gap: 0.4rem 1rem;
+        align-content: start;
+      }
+
+      .metrics-pkts-row {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+        gap: 0.4rem 1rem;
+        margin-top: 0.3rem;
+        padding-top: 0.45rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .comparison-card-hero-cell {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0.5rem 0.75rem;
+        background: var(--accent-soft);
+        min-width: 8.5rem;
+        flex-shrink: 0;
+      }
+
+      .comparison-card-cell {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .comparison-card-cell-label {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .comparison-card-cell-value {
+        font-weight: 700;
+        font-size: 0.88rem;
+      }
+
+      .comparison-card-hero-cell .comparison-card-cell-label {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.15rem;
+      }
+
+      .comparison-card-hero-cell .comparison-card-cell-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1.2;
+      }
+
+.comparison-card-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+
+      /* ============================================================
+         EXPORT / PRESET EDITOR PANELS
+         ============================================================ */
+      .export-panel textarea,
+      .preset-editor-inline textarea {
+        font-family: monospace;
+        font-size: 0.85rem;
+        resize: vertical;
+        min-height: 10rem;
+      }
+
+      .preset-editor-inline textarea {
+        min-height: 14rem;
+      }
+
+      .preset-editor-inline {
+        border: 1px solid var(--border);
+        padding: 0.85rem;
+        background: var(--field-bg);
+        margin-bottom: 0.9rem;
+      }
+
+      .preset-error {
+        color: #c0392b;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: none;
+      }
+
+      :root[data-theme="dark"] .preset-error {
+        color: #ff7b72;
+      }
+
+      .preset-error.visible {
+        display: block;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        gap: 1rem;
+      }
+
+      .section-header h2 {
+        margin: 0;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: 0.6rem;
+        margin-top: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>LoRa Airtime Calculator</h1>
+        <p class="subtitle">
+          Compute Time-on-Air for LoRa packets. Supports Meshtastic channel
+          presets from MeshRadio.h.
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 &bull; By NomDeTom &bull;
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            &bull;
+            <a
+              class="attribution-link"
+              href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <!-- ============================================================
+           INPUTS
+           ============================================================ -->
+      <section>
+        <h2>Inputs</h2>
+        <form id="calculator-form">
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="input-radio-type"
+                >Radio type
+                <select id="input-radio-type">
+                  <option value="all" selected>All / Generic</option>
+                  <option value="sx1276_sx1278">SX1276 / SX1278</option>
+                  <option value="sx1262">SX1262</option>
+                  <option value="sx1280">SX1280 (2.4 GHz)</option>
+                  <option value="llcc68">LLCC68</option>
+                  <option value="lr1110">LR1110</option>
+                  <option value="lr1121">LR1121</option>
+                  <option value="lr2021">LR2021</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field">
+              <label for="input-preset"
+                >Meshtastic preset
+                <select id="input-preset">
+                  <!-- Populated by JS -->
+                </select>
+              </label>
+            </div>
+          </div>
+          <!-- Hint + button row: both sit directly under their respective columns -->
+          <div class="two-col-fields hint-button-row">
+            <span id="radio-type-hint" class="field-hint"></span>
+            <div style="text-align:right;">
+              <button
+                id="toggle-presets-btn"
+                class="action-btn"
+                type="button"
+                aria-expanded="false"
+              >
+                Edit presets
+              </button>
+            </div>
+          </div>
+
+          <!-- Preset editor — inline, hidden by default, full width -->
+          <div id="preset-editor-panel" hidden class="preset-editor-inline">
+            <p class="field-hint" style="margin: 0 0 0.6rem;">
+              Markdown table — columns: Key, Name, BW std (kHz), BW wide (kHz),
+              SF, CR. Invalid rows are highlighted on apply.
+            </p>
+            <textarea
+              id="preset-textarea"
+              aria-label="Preset editor table"
+            ></textarea>
+            <div id="preset-error" class="preset-error" role="alert"></div>
+            <div class="panel-actions">
+              <button id="apply-presets-btn" class="action-btn" type="button">
+                Apply presets
+              </button>
+              <button id="reset-presets-btn" class="action-btn" type="button">
+                Reset to defaults
+              </button>
+            </div>
+          </div>
+
+          <div class="band-field">
+            <span class="band-field-label">Band</span>
+            <div class="band-toggle-wrap">
+              <span class="band-label band-active" id="band-label-sub"
+                >Sub-GHz</span
+              >
+              <label
+                class="toggle-switch"
+                aria-label="Toggle band: Sub-GHz / 2.4 GHz"
+              >
+                <input type="checkbox" id="band-toggle-input" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="band-label" id="band-label-wide">2.4 GHz</span>
+            </div>
+            <span
+              id="band-disabled-note"
+              class="band-disabled-note"
+              hidden
+              >Auto-set by radio type</span
+            >
+          </div>
+
+          <div class="three-col-fields">
+            <div class="field">
+              <label for="input-bw"
+                >Bandwidth
+                <select id="input-bw">
+                  <!-- Populated by JS -->
+                </select>
+              </label>
+            </div>
+
+            <div class="field">
+              <label for="input-sf"
+                >Spreading factor
+                <select id="input-sf">
+                  <!-- Populated by JS -->
+                </select>
+              </label>
+            </div>
+
+            <div class="field">
+              <label for="input-cr"
+                >Coding rate
+                <select id="input-cr">
+                  <!-- Populated by JS -->
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="input-preamble"
+                >Preamble length
+                <span class="optional">(symbols)</span>
+                <input
+                  id="input-preamble"
+                  type="number"
+                  inputmode="decimal"
+                  step="1"
+                  min="6"
+                  value="16"
+                />
+              </label>
+            </div>
+
+            <div class="field">
+              <label for="input-payload">
+                <span id="payload-label-text">Total LoRa payload</span>
+                <span class="optional" id="payload-hint-inline">(bytes, 1&ndash;255)</span>
+                <input
+                  id="input-payload"
+                  type="number"
+                  inputmode="decimal"
+                  step="1"
+                  min="1"
+                  max="255"
+                  value="40"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="two-col-fields">
+            <div class="checkbox-field">
+              <input type="checkbox" id="input-crc" checked />
+              <div class="checkbox-field-text">
+                <label class="checkbox-field-label" for="input-crc"
+                  >CRC enabled</label
+                >
+                <span class="field-hint">Adds 16 bits to effective payload.</span>
+              </div>
+            </div>
+
+            <div class="checkbox-field">
+              <input
+                type="checkbox"
+                id="input-meshtastic-header"
+                checked
+              />
+              <div class="checkbox-field-text">
+                <label class="checkbox-field-label" for="input-meshtastic-header"
+                  >Include Meshtastic 16-byte header</label
+                >
+                <span class="field-hint"
+                  >Adds 16 bytes for the Meshtastic protocol header.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="input-header-mode"
+                >LoRa Header
+                <select id="input-header-mode">
+                  <option value="explicit" selected>Enabled</option>
+                  <option value="implicit">Disabled</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field">
+              <label for="input-ldro"
+                >Low data rate optimisation
+                <select id="input-ldro">
+                  <option value="auto" selected>
+                    Auto (enable when T_sym &gt; 16 ms)
+                  </option>
+                  <option value="on">Always on</option>
+                  <option value="off">Always off</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- ============================================================
+           RESULTS
+           ============================================================ -->
+      <section>
+        <h2>Results</h2>
+        <output
+          class="results"
+          id="results-output"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div class="result result-primary">
+            <span class="result-label">Time on Air</span>
+            <span class="result-value" id="out-toa">&mdash;</span>
+          </div>
+          <div class="result result-primary">
+            <span class="result-label">Nominal data rate</span>
+            <span class="result-value" id="out-throughput">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Symbol time</span>
+            <span class="result-value" id="out-sym-time">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Application throughput
+              <span class="optional">(payload / ToA)</span></span
+            >
+            <span class="result-value" id="out-app-throughput">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Preamble length <span class="optional">(configured)</span></span>
+            <span class="result-value" id="out-preamble-syms">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Preamble duration</span>
+            <span class="result-value" id="out-preamble-dur">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Overhead symbols
+              <span class="optional">(sync word)</span></span
+            >
+            <span class="result-value" id="out-overhead-syms">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Overhead duration</span>
+            <span class="result-value" id="out-overhead-dur">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Payload symbols</span>
+            <span class="result-value" id="out-payload-syms">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Payload duration</span>
+            <span class="result-value" id="out-payload-dur">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">LDRO active</span>
+            <span class="result-value" id="out-ldro">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Max pkts/hr
+              <span class="optional">(40% util &mdash; Meshtastic hard limit)</span></span
+            >
+            <span class="result-value" id="out-max-40">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Max pkts/hr
+              <span class="optional">(25% util &mdash; Meshtastic polite)</span></span
+            >
+            <span class="result-value" id="out-max-25">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Max pkts/hr
+              <span class="optional">(10% util)</span></span
+            >
+            <span class="result-value" id="out-max-10">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Max pkts/hr
+              <span class="optional">(5% util)</span></span
+            >
+            <span class="result-value" id="out-max-5">&mdash;</span>
+          </div>
+          <div class="result">
+            <span class="result-label"
+              >Max pkts/hr
+              <span class="optional">(2.5% util)</span></span
+            >
+            <span class="result-value" id="out-max-2p5">&mdash;</span>
+          </div>
+        </output>
+      </section>
+
+      <!-- ============================================================
+           COMPARISON CARDS
+           ============================================================ -->
+      <section id="comparison-section">
+        <div class="comparison-header">
+          <h2>Comparison</h2>
+          <button id="save-comparison-btn" class="action-btn" type="button">
+            Save to comparison
+          </button>
+        </div>
+        <p class="comparison-empty" id="comparison-empty">
+          No saved comparisons yet. Use &ldquo;Save to comparison&rdquo; to pin
+          a result.
+        </p>
+        <div id="comparison-cards"></div>
+      </section>
+
+      <!-- ============================================================
+           EXPORT PANEL
+           ============================================================ -->
+      <section class="export-panel">
+        <div class="section-header">
+          <h2>Export</h2>
+          <button
+            id="toggle-export-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Show export
+          </button>
+        </div>
+        <div id="export-content" hidden>
+          <textarea
+            id="export-textarea"
+            readonly
+            aria-label="Markdown export table"
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           FORMULAS
+           ============================================================ -->
+      <section class="formulas-section">
+        <h2>Formulas</h2>
+        <p class="formula-note">
+          <span
+            ><strong>Symbol time</strong>: T_sym (ms) = 2^SF / BW_kHz</span
+          >
+          <span
+            ><strong>Preamble duration</strong>: T_pre = (preamble_len + 4.25
+            sync word) &times; T_sym &mdash; the +4.25 is the LoRa sync word
+            overhead (always present, independent of header mode)</span
+          >
+          <span
+            ><strong>Payload bits</strong>: 8&times;PL &minus; 4&times;SF + 8 +
+            16&times;CRC + 20&times;(explicit header) &ge; 0 &mdash; the LoRa
+            header overhead (20 bits) is encoded in the first payload codewords,
+            not the preamble</span
+          >
+          <span
+            ><strong>Bits per symbol</strong>: SF &minus; 2 (LDRO on) or SF
+            (LDRO off)</span
+          >
+          <span
+            ><strong>Payload symbols</strong>:
+            ceil(payload_bits / 4 / bits_per_sym) &times; CR_denom + 8</span
+          >
+          <span
+            ><strong>Overhead symbols</strong>: 4.25 sync word &mdash; appended
+            to the configured preamble length; appears in every packet,
+            independent of payload size or header mode</span
+          >
+          <span
+            ><strong>Time on Air</strong>: T_pre + payload_symbols &times;
+            T_sym</span
+          >
+          <span
+            ><strong>LDRO auto</strong>: enabled when T_sym &gt; 16 ms
+            (SX127x/SX126x requirement)</span
+          >
+          <span
+            ><strong>Meshtastic limits</strong> (from airtime.h): hard limit
+            40% channel utilisation/hour; polite limit 25%</span
+          >
+          <span
+            >Formula source: Semtech SX127x/SX126x datasheet; cross-referenced
+            with ifTNT/lora-air-time</span
+          >
+        </p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== CALCULATOR LOGIC ====================
+
+        // ----- Data -----
+
+        var DEFAULT_PRESETS = [
+          { key: "LONG_FAST",     name: "Long Fast (default)", bw: 250,  bwWide: 812.5,  sf: 11, cr: 5 },
+          { key: "LONG_SLOW",     name: "Long Slow",           bw: 125,  bwWide: 406.25, sf: 12, cr: 8 },
+          { key: "LONG_MODERATE", name: "Long Moderate",       bw: 125,  bwWide: 406.25, sf: 11, cr: 8 },
+          { key: "LONG_TURBO",    name: "Long Turbo",          bw: 500,  bwWide: 1625,   sf: 11, cr: 8 },
+          { key: "MEDIUM_FAST",   name: "Medium Fast",         bw: 250,  bwWide: 812.5,  sf: 9,  cr: 5 },
+          { key: "MEDIUM_SLOW",   name: "Medium Slow",         bw: 250,  bwWide: 812.5,  sf: 10, cr: 5 },
+          { key: "SHORT_TURBO",   name: "Short Turbo",         bw: 500,  bwWide: 1625,   sf: 7,  cr: 5 },
+          { key: "SHORT_FAST",    name: "Short Fast",          bw: 250,  bwWide: 812.5,  sf: 7,  cr: 5 },
+          { key: "SHORT_SLOW",    name: "Short Slow",          bw: 250,  bwWide: 812.5,  sf: 8,  cr: 5 },
+          { key: "LITE_FAST",     name: "Lite Fast",           bw: 125,  bwWide: 125,    sf: 9,  cr: 5 },
+          { key: "LITE_SLOW",     name: "Lite Slow",           bw: 125,  bwWide: 125,    sf: 10, cr: 5 },
+          { key: "NARROW_FAST",   name: "Narrow Fast",         bw: 62.5, bwWide: 62.5,   sf: 7,  cr: 6 },
+          { key: "NARROW_SLOW",     name: "Narrow Slow",             bw: 62.5, bwWide: 62.5,   sf: 8,  cr: 6 },
+          { key: "MESHCORE_DEFAULT", name: "MeshCore Default (EU)", bw: 62.5, bwWide: 62.5,   sf: 8,  cr: 8 },
+        ];
+
+        var activePresets = DEFAULT_PRESETS.slice();
+
+        // Radio type constraints.
+        // band: 'sub' | 'wide' | null (null = user chooses)
+        // bwSub/bwWide: available bandwidths for each mode (empty = that band not supported)
+        var RADIO_CONFIGS = {
+          "all": {
+            band: null,
+            sfMin: 5, sfMax: 12,
+            bwSub:  [7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500],
+            bwWide: [203.125, 406.25, 812.5, 1625],
+            crOpts: [5, 6, 7, 8],
+          },
+          "sx1276_sx1278": {
+            band: "sub",
+            sfMin: 6, sfMax: 12,
+            bwSub:  [7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500],
+            bwWide: [],
+            crOpts: [5, 6, 7, 8],
+          },
+          "sx1262": {
+            band: "sub",
+            sfMin: 5, sfMax: 12,
+            bwSub:  [7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500],
+            bwWide: [],
+            crOpts: [5, 6, 7, 8],
+          },
+          "sx1280": {
+            band: "wide",
+            sfMin: 5, sfMax: 12,
+            bwSub:  [],
+            bwWide: [203.125, 406.25, 812.5, 1625],
+            crOpts: [5, 6, 7, 8],
+          },
+          "llcc68": {
+            band: "sub",
+            sfMin: 5, sfMax: 11,
+            bwSub:  [125, 250, 500],
+            bwWide: [],
+            crOpts: [5, 6, 7, 8],
+          },
+          "lr1110": {
+            band: "sub",
+            sfMin: 5, sfMax: 12,
+            bwSub:  [125, 250, 500],
+            bwWide: [],
+            crOpts: [5, 6, 7, 8],
+          },
+          "lr1121": {
+            band: null,
+            sfMin: 5, sfMax: 12,
+            bwSub:  [125, 250, 500],
+            bwWide: [203.125, 406.25, 812.5, 1625],
+            crOpts: [5, 6, 7, 8],
+          },
+          "lr2021": {
+            band: null,
+            sfMin: 5, sfMax: 12,
+            bwSub:  [125, 250, 500],
+            bwWide: [203.125, 406.25, 812.5, 1625],
+            crOpts: [5, 6, 7, 8],
+          },
+        };
+
+        // ----- DOM refs -----
+        var inputRadioType   = document.getElementById("input-radio-type");
+        var inputPreset      = document.getElementById("input-preset");
+        var bandToggleInput  = document.getElementById("band-toggle-input");
+        var bandLabelSub     = document.getElementById("band-label-sub");
+        var bandLabelWide    = document.getElementById("band-label-wide");
+        var bandDisabledNote = document.getElementById("band-disabled-note");
+        var inputBW          = document.getElementById("input-bw");
+        var inputSF          = document.getElementById("input-sf");
+        var inputCR          = document.getElementById("input-cr");
+        var inputPreamble    = document.getElementById("input-preamble");
+        var inputPayload     = document.getElementById("input-payload");
+        var inputMeshHdr     = document.getElementById("input-meshtastic-header");
+        var inputHeaderMode  = document.getElementById("input-header-mode");
+        var inputCRC         = document.getElementById("input-crc");
+        var inputLDRO        = document.getElementById("input-ldro");
+        var payloadLabelText  = document.getElementById("payload-label-text");
+        var payloadHintInline = document.getElementById("payload-hint-inline");
+
+        var outSymTime       = document.getElementById("out-sym-time");
+        var outLDRO          = document.getElementById("out-ldro");
+        var outPreambleSyms  = document.getElementById("out-preamble-syms");
+        var outPreambleDur   = document.getElementById("out-preamble-dur");
+        var outOverheadSyms  = document.getElementById("out-overhead-syms");
+        var outOverheadDur   = document.getElementById("out-overhead-dur");
+        var outPayloadSyms   = document.getElementById("out-payload-syms");
+        var outPayloadDur    = document.getElementById("out-payload-dur");
+        var outToa           = document.getElementById("out-toa");
+        var outThroughput    = document.getElementById("out-throughput");
+        var outAppThroughput = document.getElementById("out-app-throughput");
+        var outMax40         = document.getElementById("out-max-40");
+        var outMax25         = document.getElementById("out-max-25");
+        var outMax10         = document.getElementById("out-max-10");
+        var outMax5          = document.getElementById("out-max-5");
+        var outMax2p5        = document.getElementById("out-max-2p5");
+
+        var comparisonCards  = document.getElementById("comparison-cards");
+        var comparisonEmpty  = document.getElementById("comparison-empty");
+        var exportContent    = document.getElementById("export-content");
+        var exportTextarea   = document.getElementById("export-textarea");
+        var toggleExportBtn  = document.getElementById("toggle-export-btn");
+        var presetPanel      = document.getElementById("preset-editor-panel");
+        var presetTextarea   = document.getElementById("preset-textarea");
+        var presetError      = document.getElementById("preset-error");
+        var togglePresetsBtn = document.getElementById("toggle-presets-btn");
+        var applyPresetsBtn  = document.getElementById("apply-presets-btn");
+        var resetPresetsBtn  = document.getElementById("reset-presets-btn");
+        var saveCompBtn      = document.getElementById("save-comparison-btn");
+        var radioTypeHint    = document.getElementById("radio-type-hint");
+
+        // ----- State -----
+        var preambleTouched    = false;
+        var suppressReset      = false;
+        var cardIdCounter      = 0;
+        var savedCards         = [];
+        var lastResult         = null;
+
+        // ----- Helpers -----
+        function toNumber(value) {
+          var p = parseFloat(value);
+          return Number.isFinite(p) ? p : 0;
+        }
+
+        function formatDuration(ms) {
+          if (!Number.isFinite(ms) || ms < 0) return "—";
+          if (ms < 1) return (ms * 1000).toFixed(1) + " µs";
+          if (ms < 200) return ms.toFixed(2) + " ms";
+          return ms.toFixed(0) + " ms / " + (ms / 1000).toFixed(3) + " s";
+        }
+
+        function formatSymbolTime(ms) {
+          if (!Number.isFinite(ms) || ms < 0) return "—";
+          if (ms < 1) return (ms * 1000).toFixed(3) + " µs";
+          return ms.toFixed(3) + " ms";
+        }
+
+        function formatThroughput(bps) {
+          if (!Number.isFinite(bps) || bps <= 0) return "—";
+          if (bps >= 1000000) return (bps / 1000000).toFixed(3) + " Mbit/s";
+          if (bps >= 1000)    return (bps / 1000).toFixed(2) + " kbit/s";
+          return bps.toFixed(1) + " bit/s";
+        }
+
+        function isWide() {
+          return bandToggleInput.checked;
+        }
+
+        function getRadioCfg() {
+          return RADIO_CONFIGS[inputRadioType.value] || RADIO_CONFIGS["all"];
+        }
+
+        function findPreset(key) {
+          var found = null;
+          activePresets.forEach(function (p) {
+            if (p.key === key) found = p;
+          });
+          return found;
+        }
+
+        function closestBW(opts, target) {
+          if (!opts.length) return null;
+          var best = opts[0];
+          var bestDiff = Math.abs(opts[0] - target);
+          opts.forEach(function (v) {
+            var d = Math.abs(v - target);
+            if (d < bestDiff) { best = v; bestDiff = d; }
+          });
+          return best;
+        }
+
+        function escHtml(s) {
+          return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        // ----- Rebuild selects -----
+        function rebuildBWSelect(preserve) {
+          var cfg  = getRadioCfg();
+          var opts = isWide() ? cfg.bwWide : cfg.bwSub;
+          var prev = preserve ? toNumber(inputBW.value) : null;
+          inputBW.innerHTML = "";
+          opts.forEach(function (bw) {
+            var o = document.createElement("option");
+            o.value = bw;
+            o.textContent = bw + " kHz";
+            inputBW.appendChild(o);
+          });
+          if (prev !== null && opts.length) {
+            inputBW.value = closestBW(opts, prev);
+          }
+        }
+
+        function rebuildSFSelect(preserve) {
+          var cfg = getRadioCfg();
+          var prev = preserve ? parseInt(inputSF.value, 10) : null;
+          inputSF.innerHTML = "";
+          for (var sf = cfg.sfMin; sf <= cfg.sfMax; sf++) {
+            var o = document.createElement("option");
+            o.value = sf;
+            o.textContent = "SF" + sf;
+            inputSF.appendChild(o);
+          }
+          if (prev !== null) {
+            var clamped = Math.max(cfg.sfMin, Math.min(cfg.sfMax, prev));
+            inputSF.value = clamped;
+          }
+        }
+
+        function rebuildCRSelect(preserve) {
+          var cfg = getRadioCfg();
+          var prev = preserve ? parseInt(inputCR.value, 10) : null;
+          inputCR.innerHTML = "";
+          cfg.crOpts.forEach(function (cr) {
+            var o = document.createElement("option");
+            o.value = cr;
+            o.textContent = "4/" + cr;
+            inputCR.appendChild(o);
+          });
+          if (prev !== null && cfg.crOpts.indexOf(prev) !== -1) {
+            inputCR.value = prev;
+          }
+        }
+
+        function rebuildPresetSelect(targetKey) {
+          var prev = targetKey !== undefined ? targetKey : inputPreset.value;
+          inputPreset.innerHTML = "";
+          activePresets.forEach(function (p) {
+            var o = document.createElement("option");
+            o.value = p.key;
+            o.textContent = p.name;
+            inputPreset.appendChild(o);
+          });
+          var custom = document.createElement("option");
+          custom.value = "custom";
+          custom.textContent = "Custom";
+          inputPreset.appendChild(custom);
+          if (prev && inputPreset.querySelector('option[value="' + prev + '"]')) {
+            inputPreset.value = prev;
+          } else {
+            inputPreset.value = activePresets.length ? activePresets[0].key : "custom";
+          }
+        }
+
+        // ----- Band label UI -----
+        function updateBandLabels() {
+          var wide = isWide();
+          if (wide) {
+            bandLabelSub.className  = "band-label";
+            bandLabelWide.className = "band-label band-active";
+          } else {
+            bandLabelSub.className  = "band-label band-active";
+            bandLabelWide.className = "band-label";
+          }
+        }
+
+        // ----- Band-based preamble default -----
+        function bandDefaultPreamble() {
+          return isWide() ? 12 : 16;
+        }
+
+        // ----- Handlers -----
+        function buildRadioHint(key) {
+          if (key === "all") return "";
+          var cfg = RADIO_CONFIGS[key];
+          if (!cfg) return "";
+          var parts = [];
+          if (cfg.band === "sub")   parts.push("Sub-GHz only");
+          else if (cfg.band === "wide") parts.push("2.4 GHz only");
+          else if (cfg.band === null && cfg.bwSub.length && cfg.bwWide.length) parts.push("Dual-band");
+          parts.push("SF" + cfg.sfMin + "–" + cfg.sfMax);
+          var bwList = isWide() ? cfg.bwWide : cfg.bwSub;
+          if (bwList.length > 0) {
+            if (bwList.length <= 5) {
+              parts.push(bwList.join(", ") + " kHz");
+            } else {
+              parts.push(bwList[0] + "–" + bwList[bwList.length - 1] + " kHz");
+            }
+          }
+          if (cfg.crOpts.length < 4) {
+            parts.push("CR 4/" + cfg.crOpts.join(", 4/"));
+          }
+          return parts.join(" · ");
+        }
+
+        function onRadioTypeChange() {
+          var cfg = getRadioCfg();
+          if (cfg.band === "sub") {
+            bandToggleInput.checked  = false;
+            bandToggleInput.disabled = true;
+            bandDisabledNote.hidden  = false;
+          } else if (cfg.band === "wide") {
+            bandToggleInput.checked  = true;
+            bandToggleInput.disabled = true;
+            bandDisabledNote.hidden  = false;
+          } else {
+            bandToggleInput.disabled = false;
+            bandDisabledNote.hidden  = true;
+          }
+          radioTypeHint.textContent = buildRadioHint(inputRadioType.value);
+          updateBandLabels();
+          rebuildBWSelect(true);
+          rebuildSFSelect(true);
+          rebuildCRSelect(true);
+          calculate();
+        }
+
+        function onBandToggle() {
+          updateBandLabels();
+          rebuildBWSelect(true);
+          if (!preambleTouched) {
+            inputPreamble.value = bandDefaultPreamble();
+          }
+          // Re-seat preset BW when a named preset is active
+          if (inputPreset.value !== "custom") {
+            var preset = findPreset(inputPreset.value);
+            if (preset) {
+              var bwTarget = isWide() ? preset.bwWide : preset.bw;
+              inputBW.value = bwTarget;
+            }
+          }
+          calculate();
+        }
+
+        function onPresetChange() {
+          var key = inputPreset.value;
+          if (key === "custom") { calculate(); return; }
+          var preset = findPreset(key);
+          if (!preset) return;
+          suppressReset = true;
+          inputBW.value       = isWide() ? preset.bwWide : preset.bw;
+          inputSF.value       = preset.sf;
+          inputCR.value       = preset.cr;
+          preambleTouched     = false;
+          inputPreamble.value = bandDefaultPreamble();
+          suppressReset       = false;
+          calculate();
+        }
+
+        function setCustomIfChanged() {
+          if (suppressReset) return;
+          if (inputPreset.value === "custom") { calculate(); return; }
+          var preset = findPreset(inputPreset.value);
+          if (!preset) { inputPreset.value = "custom"; calculate(); return; }
+          var bwExpected = isWide() ? preset.bwWide : preset.bw;
+          var bwActual   = toNumber(inputBW.value);
+          var sfActual   = parseInt(inputSF.value, 10);
+          var crActual   = parseInt(inputCR.value, 10);
+          if (Math.abs(bwActual - bwExpected) > 0.01 || sfActual !== preset.sf || crActual !== preset.cr) {
+            inputPreset.value = "custom";
+          }
+          calculate();
+        }
+
+        // ----- Main calculation -----
+        function calculate() {
+          var bwKHz  = toNumber(inputBW.value);
+          var sf     = parseInt(inputSF.value, 10);
+          var cr     = parseInt(inputCR.value, 10);
+          var pre    = toNumber(inputPreamble.value);
+          var appPL  = toNumber(inputPayload.value);
+          var pl     = appPL + (inputMeshHdr.checked ? 16 : 0);
+          var expHdr = inputHeaderMode.value === "explicit";
+          var crcOn  = inputCRC.checked;
+          var ldroMode = inputLDRO.value;
+
+          if (bwKHz <= 0 || sf < 5 || sf > 12 || cr < 5 || cr > 8 || pl < 1) {
+            var dash = "—";
+            [outSymTime, outLDRO, outPreambleSyms, outPreambleDur,
+             outOverheadSyms, outOverheadDur,
+             outPayloadSyms, outPayloadDur, outToa, outThroughput, outAppThroughput,
+             outMax40, outMax25, outMax10, outMax5, outMax2p5].forEach(function (el) {
+              el.textContent = dash;
+            });
+            return;
+          }
+
+          var symTime_ms = Math.pow(2, sf) / bwKHz;
+          var ldroActive = ldroMode === "on" ||
+                           (ldroMode === "auto" && symTime_ms > 16.0);
+
+          var nPreamble   = pre + 4.25;
+          var tPreamble   = nPreamble * symTime_ms;
+
+          var payloadBits = 8 * pl - 4 * sf + 8;
+          if (crcOn)  payloadBits += 16;
+          if (expHdr) payloadBits += 20;
+          payloadBits = Math.max(payloadBits, 0);
+
+          var bitsPerSym = ldroActive ? (sf - 2) : sf;
+          var nPayload   = Math.ceil(payloadBits / 4 / bitsPerSym) * cr + 8;
+          var tPayload   = nPayload * symTime_ms;
+
+          var toa        = tPreamble + tPayload;
+          // Semtech nominal data rate: SF * (4/CR) * BW / 2^SF
+          var nominalDR  = sf * (4 / cr) * (bwKHz * 1000) / Math.pow(2, sf);
+          var appThroughput = (pl * 8) / (toa / 1000);
+
+          function maxPkts(pct) {
+            return toa > 0 ? Math.floor(3600000 * pct / toa) : 0;
+          }
+
+          outSymTime.textContent      = formatSymbolTime(symTime_ms);
+          outLDRO.textContent         = ldroActive
+            ? "Yes" + (ldroMode === "auto" ? " (auto)" : " (forced)")
+            : "No";
+          outPreambleSyms.textContent = String(pre);
+          outPreambleDur.textContent  = formatDuration(tPreamble);
+          var overheadSyms = 4.25;
+          outOverheadSyms.textContent = overheadSyms.toFixed(2);
+          outOverheadDur.textContent  = formatDuration(overheadSyms * symTime_ms);
+          outPayloadSyms.textContent  = String(nPayload);
+          outPayloadDur.textContent   = formatDuration(tPayload);
+          outToa.textContent          = formatDuration(toa);
+          outThroughput.textContent   = formatThroughput(nominalDR);
+          outAppThroughput.textContent = formatThroughput(appThroughput);
+          outMax40.textContent        = maxPkts(0.40) + " pkts";
+          outMax25.textContent        = maxPkts(0.25) + " pkts";
+          outMax10.textContent        = maxPkts(0.10) + " pkts";
+          outMax5.textContent         = maxPkts(0.05) + " pkts";
+          outMax2p5.textContent       = maxPkts(0.025) + " pkts";
+
+          lastResult = {
+            radioType:    inputRadioType.options[inputRadioType.selectedIndex].text,
+            presetName:   inputPreset.options[inputPreset.selectedIndex].text,
+            band:         isWide() ? "2.4 GHz" : "Sub-GHz",
+            bw: bwKHz, sf: sf, cr: cr, preamble: pre,
+            appPayload: appPL, payload: pl,
+            meshHeader:   inputMeshHdr.checked,
+            explicitHeader: expHdr,
+            crcOn:        crcOn,
+            ldroMode:     ldroMode,
+            symTime_ms:   symTime_ms,
+            ldroActive:   ldroActive,
+            nPreamble:    nPreamble,
+            tPreamble:    tPreamble,
+            nPayload:     nPayload,
+            tPayload:     tPayload,
+            toa:          toa,
+            throughput:      nominalDR,
+            appThroughput:   appThroughput,
+            max40:  maxPkts(0.40),
+            max25:  maxPkts(0.25),
+            max10:  maxPkts(0.10),
+            max5:   maxPkts(0.05),
+            max2p5: maxPkts(0.025),
+          };
+
+          if (!exportContent.hidden) updateExport();
+        }
+
+        // ----- Meshtastic header checkbox -----
+        function updatePayloadLabel() {
+          if (inputMeshHdr.checked) {
+            payloadLabelText.textContent  = "Application payload";
+            payloadHintInline.textContent = "(Max application payload is 239\xa0B, capped at 200\xa0B for text)";
+          } else {
+            payloadLabelText.textContent  = "Total LoRa payload";
+            payloadHintInline.textContent = "(bytes, 1–255)";
+          }
+        }
+
+        inputMeshHdr.addEventListener("change", function () {
+          updatePayloadLabel();
+          calculate();
+        });
+
+        // ----- Comparison cards -----
+        function saveToComparison() {
+          if (!lastResult) return;
+          cardIdCounter++;
+          savedCards.push({ id: cardIdCounter, r: lastResult });
+          renderCards();
+          if (!exportContent.hidden) updateExport();
+        }
+
+        function removeCard(id) {
+          savedCards = savedCards.filter(function (c) { return c.id !== id; });
+          renderCards();
+          if (!exportContent.hidden) updateExport();
+        }
+
+        function loadCard(id) {
+          var card = null;
+          savedCards.forEach(function (c) { if (c.id === id) card = c; });
+          if (!card) return;
+          var r = card.r;
+
+          // Radio type
+          for (var i = 0; i < inputRadioType.options.length; i++) {
+            if (inputRadioType.options[i].text === r.radioType) {
+              inputRadioType.selectedIndex = i;
+              break;
+            }
+          }
+          // Apply radio constraints + band
+          var cfg = getRadioCfg();
+          if (cfg.band === "sub") {
+            bandToggleInput.checked  = false;
+            bandToggleInput.disabled = true;
+            bandDisabledNote.hidden  = false;
+          } else if (cfg.band === "wide") {
+            bandToggleInput.checked  = true;
+            bandToggleInput.disabled = true;
+            bandDisabledNote.hidden  = false;
+          } else {
+            bandToggleInput.checked  = r.band !== "Sub-GHz";
+            bandToggleInput.disabled = false;
+            bandDisabledNote.hidden  = true;
+          }
+          updateBandLabels();
+          rebuildBWSelect(false);
+          rebuildSFSelect(false);
+          rebuildCRSelect(false);
+
+          suppressReset       = true;
+          inputBW.value       = r.bw;
+          inputSF.value       = r.sf;
+          inputCR.value       = r.cr;
+          inputPreamble.value = r.preamble;
+          inputPayload.value  = r.appPayload;
+          inputMeshHdr.checked = r.meshHeader;
+          payloadLabelText.textContent = r.meshHeader
+            ? "Application payload"
+            : "Total LoRa payload";
+          inputHeaderMode.value = r.explicitHeader ? "explicit" : "implicit";
+          inputCRC.checked      = r.crcOn;
+          inputLDRO.value       = r.ldroMode;
+          preambleTouched       = true;
+          suppressReset         = false;
+
+          // Try to match a preset
+          var matchKey = "custom";
+          activePresets.forEach(function (p) {
+            var bwExp = bandToggleInput.checked ? p.bwWide : p.bw;
+            if (Math.abs(bwExp - r.bw) < 0.01 && p.sf === r.sf && p.cr === r.cr) {
+              matchKey = p.key;
+            }
+          });
+          inputPreset.value = matchKey;
+          calculate();
+        }
+
+        function renderCards() {
+          if (savedCards.length === 0) {
+            comparisonEmpty.hidden = false;
+            comparisonCards.innerHTML = "";
+            return;
+          }
+          comparisonEmpty.hidden = true;
+          comparisonCards.innerHTML = savedCards.map(function (card) {
+            var r  = card.r;
+            var id = card.id;
+            return (
+              '<div class="comparison-card">' +
+                '<div class="comparison-card-header">' +
+                  '<div>' +
+                    '<div class="comparison-card-title">' +
+                      escHtml(r.presetName) +
+                      ' <span class="comparison-card-num">#' + id + '</span>' +
+                    '</div>' +
+                    '<div class="comparison-card-params">' +
+                      'SF' + r.sf + ' / BW ' + r.bw + ' kHz' +
+                      ' / CR 4/' + r.cr +
+                      ' / ' + escHtml(r.band) +
+                      ' / Preamble ' + r.preamble +
+                      ' / Payload ' + r.payload + ' B' +
+                    '</div>' +
+                  '</div>' +
+                  '<div class="comparison-card-actions">' +
+                    '<button class="action-btn" type="button" data-action="load" data-id="' + id + '">Load</button>' +
+                    '<button class="action-btn" type="button" data-action="remove" data-id="' + id + '">×</button>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="comparison-card-results">' +
+                  heroCell("Time on Air",  formatDuration(r.toa)) +
+                  '<div class="comparison-card-metrics">' +
+                    cardCell("Symbol time",  formatDuration(r.symTime_ms)) +
+                    cardCell("LDRO",         r.ldroActive ? "Yes" : "No") +
+                    cardCell("Preamble dur", formatDuration(r.tPreamble)) +
+                    cardCell("Payload syms", String(r.nPayload)) +
+                    '<div class="metrics-pkts-row">' +
+                      cardCell("@25%/hr",  r.max25 + " pkts") +
+                      cardCell("@10%/hr",  r.max10 + " pkts") +
+                      cardCell("@5%/hr",   r.max5  + " pkts") +
+                      cardCell("@2.5%/hr", r.max2p5 + " pkts") +
+                    '</div>' +
+                  '</div>' +
+                  heroCell("Throughput",   formatThroughput(r.throughput)) +
+                '</div>' +
+              '</div>'
+            );
+          }).join("");
+        }
+
+        function heroCell(label, value) {
+          return (
+            '<div class="comparison-card-hero-cell">' +
+              '<span class="comparison-card-cell-label">' + escHtml(label) + '</span>' +
+              '<span class="comparison-card-cell-value">' + escHtml(value) + '</span>' +
+            '</div>'
+          );
+        }
+
+        function cardCell(label, value) {
+          return (
+            '<div class="comparison-card-cell">' +
+              '<span class="comparison-card-cell-label">' + escHtml(label) + '</span>' +
+              '<span class="comparison-card-cell-value">' + escHtml(value) + '</span>' +
+            '</div>'
+          );
+        }
+
+        comparisonCards.addEventListener("click", function (e) {
+          var btn = e.target;
+          while (btn && btn !== comparisonCards) {
+            if (btn.tagName === "BUTTON" && btn.dataset.action) break;
+            btn = btn.parentNode;
+          }
+          if (!btn || !btn.dataset.action) return;
+          var id = parseInt(btn.dataset.id, 10);
+          if (btn.dataset.action === "load") loadCard(id);
+          if (btn.dataset.action === "remove") removeCard(id);
+        });
+
+        saveCompBtn.addEventListener("click", saveToComparison);
+
+        // ----- Markdown table builder (from template) -----
+        function buildMarkdownTableFromCells(headers, rows, alignments) {
+          if (!rows || rows.length === 0) return "";
+          var colWidths = headers.map(function () { return 0; });
+          rows.forEach(function (row) {
+            row.forEach(function (cell, i) {
+              colWidths[i] = Math.max(colWidths[i], String(cell).length);
+            });
+          });
+          headers.forEach(function (cell, i) {
+            colWidths[i] = Math.max(colWidths[i], cell.length);
+          });
+          var headerRow = "| " + headers.map(function (h, i) {
+            return String(h).padEnd(colWidths[i]);
+          }).join(" | ") + " |";
+          var dividerRow = "|" + colWidths.map(function (w, i) {
+            var align  = alignments && alignments[i];
+            var dashes = "-".repeat(w);
+            return align === "right"  ? " " + dashes.slice(0, -1) + ":" :
+                   align === "center" ? ":" + dashes.slice(0, -1) + ":" :
+                                        " " + dashes + " ";
+          }).join("|") + "|";
+          var dataRows = rows.map(function (row) {
+            return "| " + row.map(function (cell, i) {
+              return String(cell).padEnd(colWidths[i]);
+            }).join(" | ") + " |";
+          });
+          return [headerRow, dividerRow].concat(dataRows).join("\n");
+        }
+
+        // ----- Export -----
+        function updateExport() {
+          var headers = [
+            "Preset", "Band", "BW kHz", "SF", "CR",
+            "Preamble", "Payload B", "Header", "CRC", "LDRO",
+            "Symbol time", "Time on Air", "Throughput",
+            "@40%", "@25%", "@10%", "@5%", "@2.5%",
+          ];
+          var source = savedCards.length > 0
+            ? savedCards
+            : (lastResult ? [{ id: 0, r: lastResult }] : []);
+          if (!source.length) { exportTextarea.value = ""; return; }
+          var rows = source.map(function (card) {
+            var r = card.r;
+            return [
+              r.presetName, r.band, r.bw, r.sf, "4/" + r.cr,
+              r.preamble, r.payload,
+              r.explicitHeader ? "explicit" : "implicit",
+              r.crcOn ? "yes" : "no",
+              r.ldroActive ? "yes" : "no",
+              formatDuration(r.symTime_ms),
+              formatDuration(r.toa),
+              formatThroughput(r.throughput),
+              r.max40, r.max25, r.max10, r.max5, r.max2p5,
+            ];
+          });
+          exportTextarea.value = buildMarkdownTableFromCells(headers, rows, null);
+          exportTextarea.rows  = rows.length + 4;
+        }
+
+        toggleExportBtn.addEventListener("click", function () {
+          var wasHidden = exportContent.hidden;
+          exportContent.hidden = !wasHidden;
+          toggleExportBtn.textContent = wasHidden ? "Hide export" : "Show export";
+          toggleExportBtn.setAttribute("aria-expanded", wasHidden ? "true" : "false");
+          if (wasHidden) updateExport();
+        });
+
+        // ----- Preset editor -----
+        function buildPresetMarkdown(presets) {
+          var headers = ["Key", "Name", "BW std (kHz)", "BW wide (kHz)", "SF", "CR"];
+          var rows = presets.map(function (p) {
+            return [p.key, p.name, p.bw, p.bwWide, p.sf, p.cr];
+          });
+          return buildMarkdownTableFromCells(headers, rows, null);
+        }
+
+        function parsePresetMarkdownWithErrors(text) {
+          var lines = text.split("\n").map(function (l) { return l.trim(); });
+          var valid  = [];
+          var errors = [];
+          var dataLines = lines.filter(function (l) {
+            return l.charAt(0) === "|" && !(/^\|[-:\s|]+\|$/).test(l);
+          });
+          // First data line is the header row; skip it
+          dataLines.slice(1).forEach(function (line, idx) {
+            var rowNum = idx + 2; // 1-based, offset past header
+            var cells = line.split("|").map(function (c) { return c.trim(); });
+            cells = cells.filter(function (c) { return c.length > 0; });
+            if (cells.length < 6) { errors.push("row " + rowNum + " (too few columns)"); return; }
+            var key    = cells[0].replace(/\s+/g, "_").toUpperCase();
+            var name   = cells[1];
+            var bw     = parseFloat(cells[2]);
+            var bwWide = parseFloat(cells[3]);
+            var sf     = parseInt(cells[4], 10);
+            var cr     = parseInt(cells[5], 10);
+            var crValid = [5, 6, 7, 8].indexOf(cr) !== -1;
+            if (!key)                        { errors.push("row " + rowNum + " (missing key)"); return; }
+            if (!name)                       { errors.push("row " + rowNum + " (missing name)"); return; }
+            if (!Number.isFinite(bw))        { errors.push("row " + rowNum + " (invalid BW std)"); return; }
+            if (!Number.isFinite(bwWide))    { errors.push("row " + rowNum + " (invalid BW wide)"); return; }
+            if (sf < 5 || sf > 12)           { errors.push("row " + rowNum + " (SF must be 5–12)"); return; }
+            if (!crValid)                    { errors.push("row " + rowNum + " (CR must be 5/6/7/8)"); return; }
+            valid.push({ key: key, name: name, bw: bw, bwWide: bwWide, sf: sf, cr: cr });
+          });
+          return { valid: valid, errors: errors };
+        }
+
+        togglePresetsBtn.addEventListener("click", function () {
+          var wasHidden = presetPanel.hidden;
+          presetPanel.hidden = !wasHidden;
+          togglePresetsBtn.textContent = wasHidden ? "Hide presets editor" : "Edit presets";
+          togglePresetsBtn.setAttribute("aria-expanded", wasHidden ? "true" : "false");
+          if (wasHidden) {
+            presetTextarea.value = buildPresetMarkdown(activePresets);
+          }
+        });
+
+        applyPresetsBtn.addEventListener("click", function () {
+          var result = parsePresetMarkdownWithErrors(presetTextarea.value);
+          presetError.className = "preset-error";
+          if (result.valid.length === 0) {
+            presetError.textContent = "No valid rows found. Check columns: Key | Name | BW std (kHz) | BW wide (kHz) | SF | CR.";
+            presetError.className = "preset-error visible";
+            return;
+          }
+          if (result.errors.length > 0) {
+            presetError.textContent = "Skipped " + result.errors.length +
+              " invalid row(s): " + result.errors.join(", ") + ".";
+            presetError.className = "preset-error visible";
+          }
+          activePresets = result.valid;
+          var currentKey = inputPreset.value;
+          rebuildPresetSelect(currentKey);
+          calculate();
+        });
+
+        resetPresetsBtn.addEventListener("click", function () {
+          activePresets = DEFAULT_PRESETS.slice();
+          presetTextarea.value = buildPresetMarkdown(activePresets);
+          presetError.className = "preset-error";
+          rebuildPresetSelect("LONG_FAST");
+          onPresetChange();
+        });
+
+        // ----- Wire up events -----
+        inputRadioType.addEventListener("change", onRadioTypeChange);
+        inputPreset.addEventListener("change", onPresetChange);
+        bandToggleInput.addEventListener("change", onBandToggle);
+        inputBW.addEventListener("change", setCustomIfChanged);
+        inputSF.addEventListener("change", setCustomIfChanged);
+        inputCR.addEventListener("change", setCustomIfChanged);
+        inputPreamble.addEventListener("input",  function () { preambleTouched = true; calculate(); });
+        inputPreamble.addEventListener("change", function () { preambleTouched = true; calculate(); });
+        inputPayload.addEventListener("input",  calculate);
+        inputPayload.addEventListener("change", calculate);
+        inputHeaderMode.addEventListener("change", calculate);
+        inputCRC.addEventListener("change", calculate);
+        inputLDRO.addEventListener("change", calculate);
+
+        // ==================== INITIALISATION ====================
+        applyThemeMode(getStoredThemeMode(), false);
+
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) hostedNote.hidden = true;
+        }
+
+        // Sync payload label with default checkbox state
+        updatePayloadLabel();
+
+        radioTypeHint.textContent = buildRadioHint(inputRadioType.value);
+        rebuildPresetSelect("LONG_FAST");
+        rebuildBWSelect(false);
+        rebuildSFSelect(false);
+        rebuildCRSelect(false);
+        updateBandLabels();
+        onPresetChange();
+
+      })();
+    </script>
+  </body>
+</html>
