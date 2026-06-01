@@ -97,6 +97,29 @@
       li + li {
         margin-top: 0.45rem;
       }
+
+      .calc-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem 2rem;
+        align-items: start;
+      }
+
+      .calc-group h3 {
+        margin: 0 0 0.5rem;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3rem;
+      }
+
+      @media (max-width: 560px) {
+        .calc-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
@@ -120,58 +143,45 @@
 
       <section>
         <h2>Tiny Calculators</h2>
+        <div class="calc-grid">
+          <div class="calc-group">
+            <h3>Power</h3>
+            <ul>
+              <li><a href="solar-panel-sense-checker.html">Solar Panel Sense Checker</a></li>
+              <li><a href="voltage-divider-calculator.html">Voltage Divider Calculator</a></li>
+              <li><a href="ohms-law-calculator.html">Ohm's Law Calculator</a></li>
+              <li><a href="capacitor-calculator.html">Capacitor Discharge Calculator</a></li>
+              <li><a href="wire-voltage-drop-calculator.html">Wire Voltage Drop Calculator</a></li>
+              <li><a href="battery-runtime-calculator.html">Battery Runtime Calculator</a></li>
+            </ul>
+          </div>
+
+          <div class="calc-group">
+            <h3>Data</h3>
+            <ul>
+              <li><a href="computing-units.html">Computing Units</a></li>
+              <li><a href="unit-conversion.html">Unit Converter and Calculator</a></li>
+              <li><a href="datatype-converter.html">Datatype Byte Converter</a></li>
+              <li><a href="protobuf-encoding-demonstrator.html">Protobuf Encoding Demonstrator</a></li>
+              <li><a href="ascii-unicode-converter.html">ASCII and Unicode Converter</a></li>
+              <li><a href="discord-timestamps.html">Discord Timestamp Generator</a></li>
+            </ul>
+          </div>
+
+          <div class="calc-group">
+            <h3>RF</h3>
+            <ul>
+              <li><a href="lora-airtime-calculator.html">LoRa Airtime Calculator</a></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Tiny Tools</h2>
         <ul>
           <li>
-            <a href="solar-panel-sense-checker.html"
-              >Solar Panel Sense Checker</a
-            >
-          </li>
-          <li>
-            <a href="voltage-divider-calculator.html"
-              >Voltage Divider Calculator</a
-            >
-          </li>
-          <li><a href="ohms-law-calculator.html">Ohm's Law Calculator</a></li>
-          <li>
-            <a href="capacitor-calculator.html"
-              >Capacitor Discharge Calculator</a
-            >
-          </li>
-          <li>
-            <a href="wire-voltage-drop-calculator.html"
-              >Wire Voltage Drop Calculator</a
-            >
-          </li>
-          <li>
-            <a href="battery-runtime-calculator.html"
-              >Battery Runtime Calculator</a
-            >
-          </li>
-          <li><a href="computing-units.html">Computing Units</a></li>
-          <li>
-            <a href="unit-conversion.html">Unit Converter and Calculator</a>
-          </li>
-          <li><a href="datatype-converter.html">Datatype Byte Converter</a></li>
-          <li>
-            <a href="protobuf-encoding-demonstrator.html"
-              >Protobuf Encoding Demonstrator</a
-            >
-          </li>
-          <li>
-            <a href="ascii-unicode-converter.html"
-              >ASCII and Unicode Converter</a>
-          </li>
-          <li>
-            <a href="discord-timestamps.html"
-              >Discord Timestamp Generator</a>
-          </li>
-          <li>
-            <a href="ic-pinout-generator.html"
-              >IC Pinout ASCII Generator (Interactive)</a
-            >
-          </li>
-          <li>
-            <a href="lora-airtime-calculator.html">LoRa Airtime Calculator</a>
+            <a href="ic-pinout-generator.html">IC Pinout ASCII Generator (Interactive)</a>
           </li>
         </ul>
       </section>
