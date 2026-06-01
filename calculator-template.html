@@ -17,9 +17,12 @@
         --field-bg: #ffffff;
         --text: #1f2520;
         --muted: #5c645d;
+        --disabled: #888a88;
         --border: #d9ddd4;
         --accent: #1d6b43;
         --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+        --error-text: #8c1d1d;
       }
 
       :root[data-theme="dark"] {
@@ -28,9 +31,12 @@
         --field-bg: #131b15;
         --text: #e5efe6;
         --muted: #b2beb4;
+        --disabled: #7a827b;
         --border: #3a4d40;
         --accent: #81d39d;
         --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+        --error-text: #ffb4b4;
       }
 
       /* ============================================================
@@ -247,6 +253,21 @@
         text-align: right;
       }
 
+      /* Hero / primary result — larger accent-coloured value.
+         Use for the one or two numbers the user cares about most. */
+      .result-primary .result-value {
+        font-size: 1.5rem;
+        color: var(--accent);
+      }
+
+      /* Muted parenthetical annotation inside a result-label.
+         e.g. <span class="result-label">Throughput <span class="optional">(payload / ToA)</span></span> */
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
       .formula-note {
         margin-top: 1rem;
         padding: 0.8rem 0.9rem;
@@ -283,6 +304,515 @@
         font-variant-numeric: tabular-nums;
       }
 
+      /* -------- checkbox field -------- */
+      .checkbox-field {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .checkbox-field input[type="checkbox"] {
+        width: auto;
+        flex-shrink: 0;
+        margin-top: 0.2rem;
+        padding: 0;
+        accent-color: var(--accent);
+      }
+
+      .checkbox-field-text {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .checkbox-field-label {
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      /* -------- pill toggle switch -------- */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 2.75rem;
+        height: 1.4rem;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: var(--border);
+        transition: background 0.18s;
+        border: 1px solid var(--border);
+      }
+
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        height: 1rem;
+        width: 1rem;
+        left: 0.15rem;
+        bottom: 0.15rem;
+        background: var(--panel-bg);
+        transition: transform 0.18s;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform: translateX(1.35rem);
+      }
+
+      .toggle-switch input:disabled + .toggle-slider {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .toggle-switch input:focus + .toggle-slider {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* Flanking labels — bold and accent the currently-active side */
+      .toggle-switch-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .switch-label { font-size: 0.95rem; }
+      .switch-label.active { font-weight: 700; color: var(--accent); }
+
+      /* -------- view switcher (joined tab bar) -------- */
+      .view-switch {
+        display: flex;
+        gap: 0;
+        margin-bottom: 0.9rem;
+      }
+
+      .view-switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .view-switch-btn + .view-switch-btn {
+        border-left: none;
+      }
+
+      .view-switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      /* -------- status / feedback line -------- */
+      .status {
+        margin-top: 0.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error { color: var(--error-text); }
+      .status.ok    { color: var(--accent); }
+
+      /* -------- section-header: heading + right-aligned inline chip controls -------- */
+      /* Used in Unit Converter/Calculator for grouping, decimal, and reset chips. */
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .section-header h2 {
+        margin: 0;
+      }
+
+      /* -------- field hint text -------- */
+      .field-hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 400;
+      }
+
+      /* -------- two-column field grid (matching heights) -------- */
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 1rem;
+        row-gap: 0.9rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .two-col-fields .field {
+        margin-bottom: 0;
+      }
+
+      /* Hint + button row sits directly under the columns it annotates */
+      .hint-button-row {
+        margin-top: -0.4rem;
+        align-items: start;
+      }
+
+      /* -------- inline preset / advanced editor panel -------- */
+      .preset-editor-inline {
+        border: 1px solid var(--border);
+        padding: 0.85rem;
+        background: var(--field-bg);
+        margin-bottom: 0.9rem;
+      }
+
+      .preset-editor-inline textarea {
+        font-family: monospace;
+        font-size: 0.85rem;
+        resize: vertical;
+        min-height: 10rem;
+      }
+
+      .preset-error {
+        color: var(--error-text);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: none;
+      }
+
+      .preset-error.visible {
+        display: block;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: 0.6rem;
+        margin-top: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      /* -------- chip / toggle-button group -------- */
+      .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .chip.selected:hover {
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .chip:disabled {
+        color: var(--disabled);
+        border-color: var(--border);
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      /* -------- expanding help / field-help (from Datatype Byte Converter)
+         Native <details>/<summary> wrapper with soft background.
+         Used inline near a control or group to explain behaviour in detail. -------- */
+      .field-help {
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        padding: 0.4rem 0.55rem;
+        color: var(--muted);
+      }
+
+      .field-help summary {
+        cursor: pointer;
+        font-size: 0.84rem;
+        color: var(--text);
+      }
+
+      .field-help-content {
+        margin-top: 0.45rem;
+        font-size: 0.84rem;
+        display: grid;
+        gap: 0.25rem;
+      }
+
+      .field-help-content p {
+        margin: 0;
+      }
+
+      /* -------- status pills (from Datatype Byte Converter)
+         Small inline badges for row-level status — live inside a result-label
+         or table cell. All share the same base shape; colour carries meaning.
+         warn and wrap have dark-mode overrides via --error-text / custom values. -------- */
+      .ok-pill,
+      .warn-pill,
+      .wrap-pill,
+      .bad-pill {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid;
+        padding: 0.1rem 0.35rem;
+      }
+
+      .ok-pill   { color: var(--accent);     border-color: var(--accent); }
+      .warn-pill { color: #8a6500;            border-color: #8a6500; }
+      .wrap-pill { color: #875400;            border-color: #875400; }
+      .bad-pill  { color: var(--error-text);  border-color: var(--error-text); }
+
+      :root[data-theme="dark"] .warn-pill { color: #f2cf70; border-color: #f2cf70; }
+      :root[data-theme="dark"] .wrap-pill { color: #f8bf65; border-color: #f8bf65; }
+
+      /* -------- self-labeling toggle button (from Datatype Byte Converter)
+         A single standalone button whose text announces its own state.
+         Soft-fill active style — same visual as filter chips but for a
+         binary on/off setting rather than filtering a group.
+         No pill shape, no transition, no companion buttons. -------- */
+      .chip-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.84rem;
+        padding: 0.4rem 0.65rem;
+        cursor: pointer;
+      }
+
+      .chip-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .chip-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* -------- soft-fill filter chips (from protobuf encoding demonstrator)
+         Active state uses accent-soft background + accent text — never a solid fill.
+         Inactive text is var(--muted), not var(--text), to de-emphasise unchosen options.
+         Use for filtering a table or list rather than committing to a value.
+         Compare with .chip (solid fill) and .toggle-btn (solid fill + transition). -------- */
+      .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .filter-chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.82rem;
+        padding: 0.35rem 0.6rem;
+        cursor: pointer;
+      }
+
+      .filter-chip.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .filter-chip:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* -------- toggle-btn group — good colour scheme (from Discord timestamp generator)
+         Key improvements over .chip:
+           • --chip-selected-text flips to dark text in dark mode so selected
+             state stays readable against the light accent colour
+           • 2 px border + transition give more tactile feedback
+           • .primary marks the most-used choices with accent colour before
+             they are selected, so the eye finds them instantly            -------- */
+      .toggle-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .toggle-btn {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 2px solid var(--border);
+        padding: 0.5rem 1rem;
+        font: inherit;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-radius: 20px;
+        transition: all 0.2s;
+      }
+
+      .toggle-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* .primary — accented border/text before selection */
+      .toggle-btn.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn.primary:hover:not(:disabled):not(.selected) {
+        background: var(--accent-soft);
+      }
+
+      /* selected — filled accent background, text flips via --chip-selected-text */
+      .toggle-btn.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn:disabled {
+        color: var(--disabled);
+        border-color: var(--disabled);
+        background: var(--field-bg);
+        cursor: not-allowed;
+      }
+
+      /* -------- spinner (▲/▼ inside the field) -------- */
+      .spin-wrap {
+        position: relative;
+      }
+
+      .spin-wrap input {
+        padding-right: 1.8rem;
+        width: 100%;
+      }
+
+      .spin-wrap input::-webkit-inner-spin-button,
+      .spin-wrap input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .spin-wrap input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      .spin-btns {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border);
+      }
+
+      .spin-up,
+      .spin-dn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.5rem;
+        line-height: 1;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spin-dn {
+        border-top: 1px solid var(--border);
+      }
+
+      .spin-up:hover,
+      .spin-dn:hover {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      /* -------- jog buttons (− input +) -------- */
+      .jog-wrap {
+        display: flex;
+      }
+
+      .jog-wrap input {
+        flex: 1;
+        border-left: 0;
+        border-right: 0;
+        text-align: center;
+        min-width: 0;
+      }
+
+      .jog-wrap input::-webkit-inner-spin-button,
+      .jog-wrap input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .jog-wrap input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      .jog-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.75rem 0.85rem;
+        cursor: pointer;
+        font: inherit;
+        font-size: 1rem;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+
+      .jog-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
       @media (max-width: 640px) {
         main {
           padding: 1.25rem 0.9rem 2rem;
@@ -298,6 +828,10 @@
 
         .add-calculator-actions {
           width: 100%;
+        }
+
+        .two-col-fields {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -351,44 +885,458 @@
       </header>
 
       <!-- ============================================================
+         CONTROL PATTERNS REFERENCE
+         Quick glossary of UI control types used throughout this template.
+         ============================================================ -->
+      <section style="background:var(--accent-soft);padding:1.2rem;margin:1.5rem 0;border-radius:0.35rem;">
+        <h2 style="margin-top:0;">Control Pattern Glossary</h2>
+        <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));">
+          <div>
+            <strong>Badge</strong><br/>
+            Small label showing count, notification, or status (e.g., notification bubble on an icon). Read-only, non-interactive.
+          </div>
+          <div>
+            <strong>Button</strong><br/>
+            Interactive element that triggers an action or navigation. Primary, secondary, or action variants.
+          </div>
+          <div>
+            <strong>Chip</strong><br/>
+            Selection or filtering control. Can be single-select (exclusive choice) or multi-select. Solid or soft-fill styling.
+          </div>
+          <div>
+            <strong>Pill</strong><br/>
+            Semantic status annotation inline with a value. Shows a property (OK, Warning, Invalid). Small, border-only style.
+          </div>
+          <div>
+            <strong>Tab</strong><br/>
+            Navigation control that switches between different views or sections. Usually in a joined button bar.
+          </div>
+          <div>
+            <strong>Toggle</strong><br/>
+            Binary on/off control. Includes checkboxes, pill switches, and self-labeling toggle buttons. Click to flip state.
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
          CALCULATOR CONTENT - customize this section for your use case
          ============================================================ -->
+
+      <!-- ============================================================
+           INPUT CONTROLS
+           Text, number, select inputs, spinners, jog buttons, native spins.
+           Patterns for capturing user data across different types.
+           ============================================================ -->
       <section>
-        <h2>Inputs</h2>
+        <h2>Input Controls</h2>
         <form id="calculator-form">
           <div class="field">
-            <label for="input-example"
-              >Example input field
-              <input
-                id="input-example"
-                type="number"
-                inputmode="decimal"
-                step="any"
-                value="10"
-              />
+            <label for="input-example">Example input field
+              <input id="input-example" type="number" inputmode="decimal" step="any" value="10" />
             </label>
           </div>
 
           <div class="field">
-            <label for="input-select"
-              >Example select field
+            <label for="input-select">Example select field
               <select id="input-select">
                 <option value="option1" selected>Option 1</option>
                 <option value="option2">Option 2</option>
               </select>
             </label>
           </div>
+
+          <!-- Two-column selects with matching heights.
+               .two-col-fields keeps both fields the same height via grid.
+               .hint-button-row is a second .two-col-fields row that sits
+               directly under the columns it annotates. -->
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="input-category">Category
+                <select id="input-category">
+                  <option value="all" selected>All / Generic</option>
+                  <option value="type-a">Type A</option>
+                  <option value="type-b">Type B</option>
+                  <option value="type-c">Type C</option>
+                </select>
+              </label>
+            </div>
+            <div class="field">
+              <label for="input-preset-select">Preset
+                <select id="input-preset-select">
+                  <!-- Populated by JS via rebuildPresetSelect() -->
+                </select>
+              </label>
+            </div>
+          </div>
+          <!-- Hint under left column, Edit presets button under right column -->
+          <div class="two-col-fields hint-button-row">
+            <span id="category-hint" class="field-hint"></span>
+            <div style="text-align:right;">
+              <button id="toggle-presets-btn" class="action-btn" type="button" aria-expanded="false">
+                Edit presets
+              </button>
+            </div>
+          </div>
+          <!-- Preset editor — hidden by default, shown by toggle button -->
+          <div id="preset-editor-panel" hidden class="preset-editor-inline">
+            <p class="field-hint" style="margin: 0 0 0.6rem;">
+              One preset per line: <code>key, display name, value</code>. Invalid rows are reported on apply.
+            </p>
+            <textarea id="preset-textarea" aria-label="Preset editor"></textarea>
+            <div id="preset-error" class="preset-error" role="alert"></div>
+            <div class="panel-actions">
+              <button id="apply-presets-btn" class="action-btn" type="button">Apply presets</button>
+              <button id="reset-presets-btn" class="action-btn" type="button">Reset to defaults</button>
+            </div>
+          </div>
+
+          <!-- Spinner: ▲/▼ inside the field, native spinners hidden -->
+          <div class="field">
+            <label for="input-spinner">Spinner input</label>
+            <div class="spin-wrap">
+              <input id="input-spinner" type="number" value="10" min="0" />
+              <div class="spin-btns">
+                <button type="button" class="spin-up" aria-label="Increase">▲</button>
+                <button type="button" class="spin-dn" aria-label="Decrease">▼</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jog buttons: − and + flanking the input -->
+          <div class="field">
+            <label for="input-jog">Jog button input</label>
+            <div class="jog-wrap">
+              <button type="button" class="jog-btn" data-jog="-1" aria-label="Decrease">−</button>
+              <input id="input-jog" type="number" value="10" min="0" />
+              <button type="button" class="jog-btn" data-jog="1" aria-label="Increase">+</button>
+            </div>
+          </div>
+
+          <!-- Native browser spin buttons: plain <input type="number">.
+               The browser renders its own ▲/▼ controls — no custom markup needed.
+               Used in the LoRa airtime calculator (preamble length field). -->
+          <div class="field">
+            <label for="input-native-spin">Native browser spin buttons
+              <input id="input-native-spin" type="number" inputmode="decimal" step="1" min="0" value="10" />
+            </label>
+          </div>
         </form>
       </section>
 
+      <!-- ============================================================
+           MULTIPLE-CHOICE CONTROLS
+           Toggle buttons, filter chips, toggle chips.
+           Variants: exclusive (solid fill) vs filtering (soft fill).
+           Self-labeling cycler chips that describe their own state.
+           ============================================================ -->
       <section>
-        <h2>Outputs</h2>
+        <h2>Multiple-Choice Controls — Exclusive</h2>
+
+        <!-- Chip toggle group: single-select, aria-pressed tracks state -->
+        <div class="field">
+          <label>Toggle group — bad colour scheme</label>
+          <div class="chip-group" id="chip-group-example" role="group" aria-label="Example toggle group">
+            <button type="button" class="chip selected" aria-pressed="true" data-option="option-a">Option A</button>
+            <button type="button" class="chip" aria-pressed="false" data-option="option-b">Option B</button>
+            <button type="button" class="chip" aria-pressed="false" data-option="option-c">Option C</button>
+          </div>
+        </div>
+
+        <!-- Toggle-btn group — good colour scheme (Discord timestamp generator style).
+             Differences from .chip above:
+               - .primary marks important choices with accent colour before selection
+               - selected text colour flips dark/light via --chip-selected-text
+               - 2 px border + transition for tactile feedback
+             .primary + .selected can be combined. Use disabled attr to block a choice. -->
+        <div class="field">
+          <label>Toggle group — good colour scheme</label>
+          <div class="toggle-group" id="toggle-group-example" role="group" aria-label="Toggle group example">
+            <button type="button" class="toggle-btn primary selected" aria-pressed="true"  data-toggle="a">Option A</button>
+            <button type="button" class="toggle-btn primary"          aria-pressed="false" data-toggle="b">Option B</button>
+            <button type="button" class="toggle-btn"                  aria-pressed="false" data-toggle="c">Option C</button>
+            <button type="button" class="toggle-btn"                  aria-pressed="false" data-toggle="d" disabled>Disabled</button>
+          </div>
+        </div>
+
+        <!-- Toggle chips section — section-header pattern from Unit Converter.
+             Chips cycle state and label themselves. Each chip has a paired
+             input/output so the effect is immediately visible. -->
+        <div class="section-header">
+          <h3>Toggle chips — state-cycling buttons</h3>
+          <div class="chip-group">
+            <!-- Thousand-separator cycler: Off → Spaces → Commas → Apostrophes -->
+            <button type="button" class="chip" id="grouping-chip">Grouping: Off</button>
+            <!-- Decimal separator cycler: toggles . ↔ , -->
+            <button type="button" class="chip" id="decimal-chip">Decimal: .</button>
+            <!-- Reset chip: restores the demo input to its default value -->
+            <button type="button" class="chip" id="reset-chip">Reset</button>
+          </div>
+        </div>
+
+        <!-- Grouping chip demo: type a large integer and watch the separators change -->
+        <div class="field">
+          <label for="input-grouping-demo">Thousand-separator demo
+            <input id="input-grouping-demo" type="number" inputmode="decimal" step="any" value="1234567" />
+          </label>
+        </div>
+        <div class="result" style="margin-bottom:0.9rem;">
+          <span class="result-label">Formatted</span>
+          <span class="result-value" id="output-grouping-demo" style="font-family:monospace;">1234567</span>
+        </div>
+
+        <!-- Decimal separator demo: type a decimal value and watch the point flip -->
+        <div class="field">
+          <label for="input-decimal-demo">Decimal separator demo
+            <input id="input-decimal-demo" type="number" inputmode="decimal" step="any" value="3.14159" />
+          </label>
+        </div>
+        <div class="result" style="margin-bottom:0.9rem;">
+          <span class="result-label">Formatted</span>
+          <span class="result-value" id="output-decimal-demo" style="font-family:monospace;">3.14159</span>
+        </div>
+
+        <!-- Reset chip demo: type anything, then hit Reset to clear back to default -->
+        <div class="field">
+          <label for="input-reset-demo">Reset demo (edit this, then hit Reset)
+            <input id="input-reset-demo" type="number" inputmode="decimal" step="any" value="42" />
+          </label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Multiple-Choice Controls — Filtering</h2>
+        <!-- Soft-fill filter chips — from protobuf encoding demonstrator (.family-chip).
+             Active state: accent-soft bg + accent text. Inactive: muted text.
+             Suited for filtering a table or list, not for committing to a value.
+             Multi-select: click to toggle each chip independently. -->
+        <div class="field">
+          <label>Filter chip (soft-fill, multi-select)</label>
+          <div class="filter-chips" id="filter-chip-group" role="group" aria-label="Status filter">
+            <button type="button" class="filter-chip active" data-filter="active">Active</button>
+            <button type="button" class="filter-chip active" data-filter="pending">Pending</button>
+            <button type="button" class="filter-chip" data-filter="archived">Archived</button>
+            <button type="button" class="filter-chip" data-filter="error">Error</button>
+          </div>
+        </div>
+        <div class="result">
+          <span class="result-label">Selected filters</span>
+          <span class="result-value" id="filter-chip-output">Active, Pending</span>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           BINARY/TOGGLE CONTROLS
+           Three ways to pick yes/no or on/off: checkbox, pill switch, self-labeling toggle.
+           ============================================================ -->
+      <section>
+        <h2>Binary/Toggle Controls</h2>
+
+        <div class="checkbox-field">
+          <input type="checkbox" id="input-checkbox-example" checked />
+          <div class="checkbox-field-text">
+            <label class="checkbox-field-label" for="input-checkbox-example">Enable feature</label>
+            <span class="field-hint">Adds extra processing to the calculation.</span>
+          </div>
+        </div>
+
+        <div class="checkbox-field">
+          <input type="checkbox" id="input-checkbox-disabled" disabled />
+          <div class="checkbox-field-text">
+            <label class="checkbox-field-label" for="input-checkbox-disabled">Disabled checkbox</label>
+            <span class="field-hint">Unavailable in this configuration.</span>
+          </div>
+        </div>
+
+        <!-- Use the toggle switch when the two states have distinct names
+             (e.g. "Sub-GHz / 2.4 GHz"). Flanking labels bold and accent the active side. -->
+        <div class="field">
+          <label>Toggle switch — pill style</label>
+          <div class="toggle-switch-row">
+            <span class="switch-label active" id="switch-label-off">Off</span>
+            <label class="toggle-switch" aria-label="Toggle feature">
+              <input type="checkbox" id="input-toggle-switch" />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="switch-label" id="switch-label-on">On</span>
+          </div>
+        </div>
+
+        <!-- Self-labeling toggle button — from Datatype Byte Converter (.chip-btn).
+             A single button whose text carries the current state ("Feature: Off/On").
+             Soft-fill active style. Use for a standalone binary setting — not a group,
+             not a checkbox, not a cycler. aria-pressed tracks state for accessibility. -->
+        <div class="field">
+          <label>Self-labeling toggle</label>
+          <button type="button" class="chip-btn" id="state-btn-example" aria-pressed="false">
+            Feature: Off
+          </button>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           OUTPUT & STATUS
+           Results display: primary hero, standard, annotated.
+           Status pills: OK, Warning, Wrapped, Invalid inline badges.
+           Inline output fields: live within the input flow.
+           ============================================================ -->
+      <section>
+        <h2>Output & Status — Results Display</h2>
         <output class="results" aria-live="polite" aria-atomic="true">
-          <div class="result">
-            <span class="result-label">Example output</span>
+
+          <!-- PRIMARY / HERO — use for the one or two key numbers.
+               Larger font, accent colour. From LoRa: "Time on Air". -->
+          <div class="result result-primary">
+            <span class="result-label">Primary result (hero)</span>
             <span class="result-value" id="output-example">0</span>
           </div>
+
+          <!-- STANDARD — default row for supporting values.
+               Label left, value right, separated by a top border. -->
+          <div class="result">
+            <span class="result-label">Standard result</span>
+            <span class="result-value" id="output-standard">0</span>
+          </div>
+
+          <!-- WITH ANNOTATION — label carries a muted parenthetical note.
+               Use .optional for units, caveats, or source hints.
+               From LoRa: "Application throughput (payload / ToA)". -->
+          <div class="result">
+            <span class="result-label">Result with annotation
+              <span class="optional">(units or caveat here)</span>
+            </span>
+            <span class="result-value" id="output-annotated">0</span>
+          </div>
+
         </output>
+      </section>
+
+      <section>
+        <h2>Output & Status — Status Pills</h2>
+        <!-- Status pills from Datatype Byte Converter.
+             Inline badges for row-level or cell-level status.
+             Four semantic variants: OK (green), Warning (amber), Wrapped (orange), Invalid (red).
+             Sit inside a result-label or table cell alongside the value they annotate. -->
+        <output class="results" aria-live="polite">
+          <div class="result">
+            <span class="result-label">Value fits exactly &nbsp;<span class="ok-pill">OK</span></span>
+            <span class="result-value" id="output-pill-ok">1.2345</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Precision reduced &nbsp;<span class="warn-pill">Warning</span></span>
+            <span class="result-value" id="output-pill-warn">1.23</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Modulo-wrapped &nbsp;<span class="wrap-pill">Wrapped</span></span>
+            <span class="result-value" id="output-pill-wrap">−12</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Out of range &nbsp;<span class="bad-pill">Invalid</span></span>
+            <span class="result-value" id="output-pill-bad">—</span>
+          </div>
+        </output>
+      </section>
+
+      <section>
+        <h2>Output & Status — Inline Fields</h2>
+        <!-- .output-value: a bordered read-only display that lives in the
+             inputs flow rather than a separate results section. -->
+        <div class="two-col-fields">
+          <div class="field">
+            <label for="input-for-output">Input value
+              <input id="input-for-output" type="number" inputmode="decimal" step="any" value="42" />
+            </label>
+          </div>
+          <div class="field">
+            <label>Computed (× 2)</label>
+            <div class="output-value" id="output-value-example">84</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           DISCLOSURE & HELP
+           Expanding help panels, collapsible sections, view switchers.
+           Patterns for revealing secondary content on-demand.
+           ============================================================ -->
+      <section>
+        <h2>Disclosure & Help — Expanding Help</h2>
+        <!-- Native <details>/<summary> with soft-fill background.
+             Sits inline near related controls to explain behaviour. -->
+        <details class="field-help">
+          <summary>Input mode help</summary>
+          <div class="field-help-content">
+            <p>
+              <strong>Auto:</strong> Accepts decimal and integer input. Default choice for most cases.
+            </p>
+            <p>
+              <strong>Integer only:</strong> Rejects non-integer values. Use for bit-width or count inputs.
+            </p>
+            <p>
+              <strong>Hex input:</strong> Parse as hexadecimal (0x prefix optional). Useful for raw bytes.
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <section>
+        <h2>Disclosure & Help — Collapsible Panel</h2>
+        <!-- action-btn toggle that shows/hides a panel of advanced options.
+             Button text and aria-expanded both flip with the panel state. -->
+        <button id="toggle-advanced-btn" class="action-btn" type="button" aria-expanded="false">
+          Show advanced options
+        </button>
+        <div id="advanced-panel" hidden style="margin-top:0.75rem; border:1px solid var(--border); padding:0.85rem; background:var(--field-bg);">
+          <div class="field">
+            <label for="input-advanced-a">Advanced setting A
+              <input id="input-advanced-a" type="number" value="0" />
+            </label>
+          </div>
+          <div class="field">
+            <label for="input-advanced-b">Advanced setting B
+              <input id="input-advanced-b" type="number" value="0" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Disclosure & Help — Tabs (joined button bar)</h2>
+        <!-- Joined button bar that swaps between distinct views.
+             No panel chrome — just the tab bar and the panels it controls.
+             From the protobuf encoding demonstrator. -->
+        <div class="view-switch" id="view-switch-example" role="group" aria-label="View mode">
+          <button type="button" class="view-switch-btn active" data-mode="view-a">View A</button>
+          <button type="button" class="view-switch-btn"        data-mode="view-b">View B</button>
+          <button type="button" class="view-switch-btn"        data-mode="view-c">View C</button>
+        </div>
+        <div class="view-panel-example" data-mode="view-a">
+          <p style="color:var(--muted);font-size:0.9rem;margin:0;">Content for View A.</p>
+        </div>
+        <div class="view-panel-example" data-mode="view-b" hidden>
+          <p style="color:var(--muted);font-size:0.9rem;margin:0;">Content for View B.</p>
+        </div>
+        <div class="view-panel-example" data-mode="view-c" hidden>
+          <p style="color:var(--muted);font-size:0.9rem;margin:0;">Content for View C.</p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           INTERACTION & FEEDBACK
+           Copy to clipboard, transient status messages.
+           Action buttons for secondary operations.
+           ============================================================ -->
+      <section>
+        <h2>Interaction & Feedback — Copy to Clipboard</h2>
+        <!-- .status: transient feedback beneath an action. Classes .ok and
+             .error colour the text; min-height prevents layout shift when
+             the message appears or disappears. -->
+        <div class="field">
+          <label for="copy-source-example">Content to copy
+            <textarea id="copy-source-example">Sample text to copy to the clipboard.</textarea>
+          </label>
+        </div>
+        <button id="copy-btn-example" class="action-btn" type="button">Copy to clipboard</button>
+        <div class="status" id="copy-status-example"></div>
       </section>
 
       <!-- FORMULAS SECTION - optional but recommended -->
@@ -510,7 +1458,145 @@
         var form = document.getElementById("calculator-form");
         var inputExample = document.getElementById("input-example");
         var inputSelect = document.getElementById("input-select");
-        var outputExample = document.getElementById("output-example");
+        var outputExample    = document.getElementById("output-example");
+        var outputStandard   = document.getElementById("output-standard");
+        var outputAnnotated  = document.getElementById("output-annotated");
+
+        // Chip group — single-select pattern
+        var selectedChipOption = "option-a";
+        var chipGroupEl = document.getElementById("chip-group-example");
+        var chipEls = chipGroupEl ? Array.from(chipGroupEl.querySelectorAll(".chip")) : [];
+
+        function setChipOption(option) {
+          selectedChipOption = option;
+          chipEls.forEach(function (chip) {
+            var active = chip.dataset.option === option;
+            chip.classList.toggle("selected", active);
+            chip.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          calculate();
+        }
+
+        chipEls.forEach(function (chip) {
+          chip.addEventListener("click", function () {
+            if (chip.dataset.option !== selectedChipOption) {
+              setChipOption(chip.dataset.option);
+            }
+          });
+        });
+
+        // Self-labeling toggle button — binary on/off, text reflects current state
+        var stateBtnExample = document.getElementById("state-btn-example");
+        var stateBtnOn = false;
+
+        function updateStateBtnLabel() {
+          stateBtnExample.textContent = "Feature: " + (stateBtnOn ? "On" : "Off");
+          stateBtnExample.classList.toggle("active", stateBtnOn);
+          stateBtnExample.setAttribute("aria-pressed", stateBtnOn ? "true" : "false");
+        }
+
+        stateBtnExample.addEventListener("click", function () {
+          stateBtnOn = !stateBtnOn;
+          updateStateBtnLabel();
+          calculate();
+        });
+
+        // Soft-fill filter chips — single-select, active state via .active class
+        var filterChipGroup  = document.getElementById("filter-chip-group");
+        var filterChipOutput = document.getElementById("filter-chip-output");
+        var filterChips = filterChipGroup
+          ? Array.from(filterChipGroup.querySelectorAll(".filter-chip")) : [];
+        var activeFilters = {}; // Track which filters are active
+
+        // Initialize from the HTML (chips with .active class)
+        filterChips.forEach(function (chip) {
+          activeFilters[chip.dataset.filter] = chip.classList.contains("active");
+        });
+
+        function updateFilterDisplay() {
+          var selected = Object.keys(activeFilters)
+            .filter(function (f) { return activeFilters[f]; })
+            .map(function (f) { return f.charAt(0).toUpperCase() + f.slice(1); });
+          filterChipOutput.textContent = selected.length ? selected.join(", ") : "(none selected)";
+          calculate();
+        }
+
+        filterChips.forEach(function (chip) {
+          chip.addEventListener("click", function () {
+            var filter = chip.dataset.filter;
+            activeFilters[filter] = !activeFilters[filter];
+            chip.classList.toggle("active", activeFilters[filter]);
+            updateFilterDisplay();
+          });
+        });
+
+        updateFilterDisplay();
+
+        // Toggle-btn group — good colour scheme (Discord style), single-select
+        var selectedToggleOption = "a";
+        var toggleGroupEl = document.getElementById("toggle-group-example");
+        var toggleBtns = toggleGroupEl ? Array.from(toggleGroupEl.querySelectorAll(".toggle-btn")) : [];
+
+        function setToggleOption(option) {
+          selectedToggleOption = option;
+          toggleBtns.forEach(function (btn) {
+            var active = btn.dataset.toggle === option;
+            btn.classList.toggle("selected", active);
+            btn.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          calculate();
+        }
+
+        toggleBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (!btn.disabled && btn.dataset.toggle !== selectedToggleOption) {
+              setToggleOption(btn.dataset.toggle);
+            }
+          });
+        });
+
+        // Spinner — ▲/▼ buttons inside the field
+        var inputSpinner = document.getElementById("input-spinner");
+        var spinWrap = inputSpinner ? inputSpinner.closest(".spin-wrap") : null;
+
+        if (spinWrap) {
+          spinWrap.addEventListener("click", function (e) {
+            var btn = e.target.closest(".spin-up, .spin-dn");
+            if (!btn) return;
+            var delta = btn.classList.contains("spin-up") ? 1 : -1;
+            inputSpinner.value = Math.max(0, (parseInt(inputSpinner.value, 10) || 0) + delta);
+            calculate();
+          });
+        }
+        if (inputSpinner) {
+          inputSpinner.addEventListener("input", calculate);
+          inputSpinner.addEventListener("change", calculate);
+        }
+
+        // Jog buttons — − and + flanking the input
+        var inputJog = document.getElementById("input-jog");
+        var jogWrap = inputJog ? inputJog.closest(".jog-wrap") : null;
+
+        if (jogWrap) {
+          jogWrap.addEventListener("click", function (e) {
+            var btn = e.target.closest(".jog-btn");
+            if (!btn) return;
+            var delta = parseInt(btn.dataset.jog, 10);
+            inputJog.value = Math.max(0, (parseInt(inputJog.value, 10) || 0) + delta);
+            calculate();
+          });
+        }
+        if (inputJog) {
+          inputJog.addEventListener("input", calculate);
+          inputJog.addEventListener("change", calculate);
+        }
+
+        // Native browser spin buttons — plain <input type="number">
+        var inputNativeSpin = document.getElementById("input-native-spin");
+        if (inputNativeSpin) {
+          inputNativeSpin.addEventListener("input", calculate);
+          inputNativeSpin.addEventListener("change", calculate);
+        }
 
         function toNumber(value) {
           var parsed = parseFloat(value);
@@ -633,13 +1719,293 @@
           return [headerRow, dividerRow].concat(dataRows).join("\n");
         }
 
+        // ---- Toggle chips (Unit Converter & Calculator pattern) ----
+        var groupingChip      = document.getElementById("grouping-chip");
+        var decimalChip       = document.getElementById("decimal-chip");
+        var resetChip         = document.getElementById("reset-chip");
+        var inputGroupingDemo = document.getElementById("input-grouping-demo");
+        var inputDecimalDemo  = document.getElementById("input-decimal-demo");
+        var inputResetDemo    = document.getElementById("input-reset-demo");
+        var outputGrouping    = document.getElementById("output-grouping-demo");
+        var outputDecimal     = document.getElementById("output-decimal-demo");
+
+        // Thousand-separator cycler state
+        var GROUPING_MODES  = ["off", "spaces", "commas", "apostrophes"];
+        var GROUPING_LABELS = { off: "Off", spaces: "Spaces", commas: "Commas", apostrophes: "Apostrophes" };
+        var groupingMode    = "off";
+
+        // Decimal separator cycler state
+        var DECIMAL_SEPARATORS = [".", ","];
+        var decimalSeparator   = ".";
+
+        function applyGrouping(intStr, gMode, dSep) {
+          if (gMode === "off") return intStr;
+          var sep = gMode === "spaces"       ? " "
+                  : gMode === "apostrophes"  ? "'"
+                  : dSep === ","             ? "."   // "commas" relabelled "Points"
+                                             : ",";
+          return intStr.replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+        }
+
+        function formatWithChips(rawValue, gMode, dSep) {
+          var n = parseFloat(rawValue);
+          if (!Number.isFinite(n)) return rawValue;
+          var str = String(n);
+          var parts = str.split(".");
+          return applyGrouping(parts[0], gMode, dSep) +
+                 (parts[1] ? dSep + parts[1] : "");
+        }
+
+        function refreshToggleDemos() {
+          outputGrouping.textContent = formatWithChips(inputGroupingDemo.value, groupingMode, decimalSeparator);
+          outputDecimal.textContent  = formatWithChips(inputDecimalDemo.value,  groupingMode, decimalSeparator);
+        }
+
+        function updateGroupingChipLabel() {
+          // "Commas" relabels to "Points" when the decimal separator is already a comma
+          var label = (groupingMode === "commas" && decimalSeparator === ",")
+            ? "Points" : GROUPING_LABELS[groupingMode];
+          groupingChip.textContent = "Grouping: " + label;
+        }
+
+        function updateDecimalChipLabel() {
+          decimalChip.textContent = "Decimal: " + decimalSeparator;
+        }
+
+        // Expose current format settings for use in calculate()
+        function getNumberFormat() {
+          return { grouping: groupingMode, decimal: decimalSeparator };
+        }
+
+        groupingChip.addEventListener("click", function () {
+          var idx = GROUPING_MODES.indexOf(groupingMode);
+          groupingMode = GROUPING_MODES[(idx + 1) % GROUPING_MODES.length];
+          updateGroupingChipLabel();
+          refreshToggleDemos();
+        });
+
+        decimalChip.addEventListener("click", function () {
+          var idx = DECIMAL_SEPARATORS.indexOf(decimalSeparator);
+          decimalSeparator = DECIMAL_SEPARATORS[(idx + 1) % DECIMAL_SEPARATORS.length];
+          updateDecimalChipLabel();
+          updateGroupingChipLabel();
+          refreshToggleDemos();
+        });
+
+        // Reset chip — restores the three demo inputs to their defaults
+        resetChip.addEventListener("click", function () {
+          inputGroupingDemo.value = "1234567";
+          inputDecimalDemo.value  = "3.14159";
+          inputResetDemo.value    = "42";
+          refreshToggleDemos();
+        });
+
+        inputGroupingDemo.addEventListener("input", refreshToggleDemos);
+        inputDecimalDemo.addEventListener("input", refreshToggleDemos);
+
+        updateGroupingChipLabel();
+        updateDecimalChipLabel();
+        refreshToggleDemos();
+
+        // ---- Checkbox field ----
+        var checkboxExample = document.getElementById("input-checkbox-example");
+        checkboxExample.addEventListener("change", calculate);
+
+        // ---- Pill toggle switch ----
+        var toggleSwitchInput = document.getElementById("input-toggle-switch");
+        var switchLabelOff    = document.getElementById("switch-label-off");
+        var switchLabelOn     = document.getElementById("switch-label-on");
+
+        function updateSwitchLabels() {
+          switchLabelOff.classList.toggle("active", !toggleSwitchInput.checked);
+          switchLabelOn.classList.toggle("active",   toggleSwitchInput.checked);
+        }
+
+        toggleSwitchInput.addEventListener("change", function () {
+          updateSwitchLabels();
+          calculate();
+        });
+
+        updateSwitchLabels();
+
+        // ---- Inline output field ----
+        var inputForOutput    = document.getElementById("input-for-output");
+        var outputValueExample = document.getElementById("output-value-example");
+
+        function updateInlineOutput() {
+          var v = parseFloat(inputForOutput.value);
+          outputValueExample.textContent = Number.isFinite(v) ? String(v * 2) : "—";
+        }
+
+        inputForOutput.addEventListener("input",  updateInlineOutput);
+        inputForOutput.addEventListener("change", updateInlineOutput);
+        updateInlineOutput();
+
+        // ---- Collapsible / disclosure ----
+        var toggleAdvancedBtn = document.getElementById("toggle-advanced-btn");
+        var advancedPanel     = document.getElementById("advanced-panel");
+
+        toggleAdvancedBtn.addEventListener("click", function () {
+          var wasHidden = advancedPanel.hidden;
+          advancedPanel.hidden = !wasHidden;
+          toggleAdvancedBtn.textContent = wasHidden ? "Hide advanced options" : "Show advanced options";
+          toggleAdvancedBtn.setAttribute("aria-expanded", wasHidden ? "true" : "false");
+        });
+
+        // ---- View switcher ----
+        var viewSwitchEl   = document.getElementById("view-switch-example");
+        var viewSwitchBtns = viewSwitchEl ? Array.from(viewSwitchEl.querySelectorAll(".view-switch-btn")) : [];
+        var viewPanels     = Array.from(document.querySelectorAll(".view-panel-example"));
+
+        function setActiveView(mode) {
+          viewSwitchBtns.forEach(function (btn) {
+            btn.classList.toggle("active", btn.dataset.mode === mode);
+          });
+          viewPanels.forEach(function (panel) {
+            panel.hidden = panel.dataset.mode !== mode;
+          });
+        }
+
+        viewSwitchBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () { setActiveView(btn.dataset.mode); });
+        });
+
+        // ---- Copy to clipboard + status line ----
+        var copyBtnExample    = document.getElementById("copy-btn-example");
+        var copySourceExample = document.getElementById("copy-source-example");
+        var copyStatusExample = document.getElementById("copy-status-example");
+
+        copyBtnExample.addEventListener("click", function () {
+          if (!copySourceExample.value) {
+            copyStatusExample.textContent = "Nothing to copy.";
+            copyStatusExample.className = "status error";
+            return;
+          }
+          navigator.clipboard.writeText(copySourceExample.value).then(function () {
+            copyStatusExample.textContent = "Copied to clipboard.";
+            copyStatusExample.className = "status ok";
+          }).catch(function () {
+            copyStatusExample.textContent = "Clipboard unavailable in this context.";
+            copyStatusExample.className = "status error";
+          });
+        });
+
         function calculate() {
           // Replace this with your calculator's actual logic
           var exampleValue = toNumber(inputExample.value);
           var result = exampleValue * 2; // Example: just double the input
 
-          outputExample.textContent = String(result.toFixed(2));
+          outputExample.textContent   = String(result.toFixed(2));
+          outputStandard.textContent  = String((result * 1.5).toFixed(2));
+          outputAnnotated.textContent = String((result / 2).toFixed(2));
         }
+
+        // ---- Two-column selects: hint text + preset editor ----
+        var inputCategory     = document.getElementById("input-category");
+        var inputPresetSelect = document.getElementById("input-preset-select");
+        var categoryHint      = document.getElementById("category-hint");
+        var presetPanel       = document.getElementById("preset-editor-panel");
+        var presetTextarea    = document.getElementById("preset-textarea");
+        var presetError       = document.getElementById("preset-error");
+        var togglePresetsBtn  = document.getElementById("toggle-presets-btn");
+        var applyPresetsBtn   = document.getElementById("apply-presets-btn");
+        var resetPresetsBtn   = document.getElementById("reset-presets-btn");
+
+        // Hint strings shown under the category select when a specific type is chosen.
+        // Return "" to show nothing for a given key.
+        var CATEGORY_HINTS = {
+          "all":    "",
+          "type-a": "Type A — full range of options.",
+          "type-b": "Type B — limited to low-power profiles.",
+          "type-c": "Type C — high-throughput mode only."
+        };
+
+        var DEFAULT_PRESETS = [
+          { key: "preset-1", name: "Preset 1", value: 10 },
+          { key: "preset-2", name: "Preset 2", value: 25 },
+          { key: "preset-3", name: "Preset 3", value: 50 }
+        ];
+        var activePresets = DEFAULT_PRESETS.slice();
+
+        function buildPresetText(presets) {
+          return presets.map(function (p) {
+            return p.key + ", " + p.name + ", " + p.value;
+          }).join("\n");
+        }
+
+        function parsePresetText(text) {
+          var valid = [], errors = [];
+          text.split("\n").forEach(function (line, i) {
+            var parts = line.split(",").map(function (s) { return s.trim(); });
+            if (!parts[0]) return;
+            var val = parseFloat(parts[2]);
+            if (parts.length < 3 || !parts[1] || !Number.isFinite(val)) {
+              errors.push("row " + (i + 1));
+              return;
+            }
+            valid.push({ key: parts[0], name: parts[1], value: val });
+          });
+          return { valid: valid, errors: errors };
+        }
+
+        function rebuildPresetSelect(keepKey) {
+          var prev = keepKey || inputPresetSelect.value;
+          inputPresetSelect.innerHTML = "";
+          activePresets.forEach(function (p) {
+            var opt = document.createElement("option");
+            opt.value = p.key;
+            opt.textContent = p.name;
+            if (p.key === prev) opt.selected = true;
+            inputPresetSelect.appendChild(opt);
+          });
+        }
+
+        function updateCategoryHint() {
+          categoryHint.textContent = CATEGORY_HINTS[inputCategory.value] || "";
+        }
+
+        togglePresetsBtn.addEventListener("click", function () {
+          var wasHidden = presetPanel.hidden;
+          presetPanel.hidden = !wasHidden;
+          togglePresetsBtn.textContent = wasHidden ? "Hide presets editor" : "Edit presets";
+          togglePresetsBtn.setAttribute("aria-expanded", wasHidden ? "true" : "false");
+          if (wasHidden) {
+            presetTextarea.value = buildPresetText(activePresets);
+            presetError.className = "preset-error";
+          }
+        });
+
+        applyPresetsBtn.addEventListener("click", function () {
+          var result = parsePresetText(presetTextarea.value);
+          presetError.className = "preset-error";
+          if (result.valid.length === 0) {
+            presetError.textContent = "No valid rows found. Format: key, display name, value";
+            presetError.className = "preset-error visible";
+            return;
+          }
+          if (result.errors.length > 0) {
+            presetError.textContent = "Skipped " + result.errors.length +
+              " invalid row(s): " + result.errors.join(", ") + ".";
+            presetError.className = "preset-error visible";
+          }
+          activePresets = result.valid;
+          rebuildPresetSelect();
+          calculate();
+        });
+
+        resetPresetsBtn.addEventListener("click", function () {
+          activePresets = DEFAULT_PRESETS.slice();
+          presetTextarea.value = buildPresetText(activePresets);
+          presetError.className = "preset-error";
+          rebuildPresetSelect("preset-1");
+          calculate();
+        });
+
+        inputCategory.addEventListener("change", function () {
+          updateCategoryHint();
+          calculate();
+        });
+        inputPresetSelect.addEventListener("change", calculate);
 
         // Wire up input handlers
         inputExample.addEventListener("input", calculate);
@@ -647,6 +2013,8 @@
         inputSelect.addEventListener("change", calculate);
 
         // ==================== INITIALIZATION ====================
+        rebuildPresetSelect("preset-1");
+        updateCategoryHint();
         applyThemeMode(getStoredThemeMode(), false);
 
         // Hide "save locally" tip when already running locally

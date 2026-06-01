@@ -20,6 +20,8 @@
         --border: #d9ddd4;
         --accent: #1d6b43;
         --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+        --error-text: #8c1d1d;
       }
 
       :root[data-theme="dark"] {
@@ -34,6 +36,8 @@
         --border: #3a4d40;
         --accent: #81d39d;
         --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+        --error-text: #ffb4b4;
       }
 
       * {
@@ -71,6 +75,9 @@
         background: var(--panel-bg);
         color: var(--text);
         padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
         cursor: pointer;
         text-decoration: none;
         display: inline-block;
@@ -84,6 +91,7 @@
       h1 {
         margin: 0;
         font-size: clamp(2rem, 5vw, 2.75rem);
+        font-weight: 700;
         line-height: 1.1;
       }
 
@@ -91,13 +99,6 @@
         margin: 0.5rem 0 0;
         color: var(--muted);
         font-size: 0.98rem;
-      }
-
-      .attribution-block {
-        margin-top: 0.7rem;
-        padding: 0.8rem;
-        border: 1px solid var(--border);
-        background: var(--accent-soft);
       }
 
       .hosted-note {
@@ -134,9 +135,16 @@
         overflow-x: auto;
       }
 
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
       .panel h2 {
         margin: 0 0 0.9rem;
-        font-size: 1.05rem;
       }
 
       .form-grid {
@@ -160,7 +168,8 @@
         display: block;
         margin: 0 0 0.35rem;
         font-size: 0.92rem;
-        color: var(--muted);
+        font-weight: 600;
+        color: var(--text);
       }
 
       input,
@@ -188,6 +197,11 @@
         resize: vertical;
       }
 
+      #ic-name {
+        font-family: inherit;
+        min-height: 3.5rem;
+      }
+
       #preview {
         min-height: 28rem;
         white-space: pre;
@@ -213,7 +227,7 @@
       }
 
       .status.error {
-        color: #b93030;
+        color: var(--error-text);
       }
 
       .status.ok {
@@ -319,19 +333,76 @@
         gap: 0.45rem;
       }
 
-      button:not(.action-btn):not(.chip) {
+      /* Good-colour-scheme toggle buttons (Discord timestamp generator style) */
+      .toggle-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .toggle-btn {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 2px solid var(--border);
+        padding: 0.5rem 1rem;
+        font: inherit;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-radius: 20px;
+        transition: all 0.2s;
+      }
+
+      .toggle-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .toggle-btn.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn.primary:hover:not(:disabled):not(.selected) {
+        background: var(--accent-soft);
+      }
+
+      .toggle-btn.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn:disabled {
+        color: var(--disabled);
+        border-color: var(--disabled);
+        background: var(--field-bg);
+        cursor: not-allowed;
+      }
+
+      #table-side-toggle,
+      #table-description-toggle {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+      }
+
+      button:not(.action-btn):not(.chip):not(.toggle-btn) {
         border: none;
         background: var(--accent);
-        color: #fff;
+        color: var(--chip-selected-text);
         padding: 0.65rem 0.9rem;
+        font: inherit;
+        font-size: 0.95rem;
+        font-weight: 600;
         cursor: pointer;
       }
 
-      button:not(.action-btn):not(.chip):hover {
+      button:not(.action-btn):not(.chip):not(.toggle-btn):hover {
         filter: brightness(1.08);
       }
 
-      button:not(.action-btn):not(.chip):active {
+      button:not(.action-btn):not(.chip):not(.toggle-btn):active {
         filter: brightness(0.94);
       }
 
@@ -339,6 +410,50 @@
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
+      }
+
+      /* Pin count jog boxes */
+      .count-jog-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .count-jog-group[hidden] {
+        display: none;
+      }
+
+      .count-jog-box {
+        flex: 1;
+        min-width: 4rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      /* Three-column flex: Left | centre column (Top stacked above Bottom) | Right.
+         align-items: center makes Left and Right sit mid-height of the centre column,
+         so their labels land within the Top input and their inputs overlap the Bottom label. */
+      .count-plus-grid {
+        display: flex;
+        gap: 0.35rem;
+        align-items: center;
+      }
+
+      .count-plus-center {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        flex: 1;
+      }
+
+      .count-jog-label {
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: var(--text);
+      }
+
+      .count-jog-input {
+        text-align: center;
       }
 
       .preview-controls {
@@ -356,7 +471,7 @@
         padding: 0.6rem 0.65rem;
       }
 
-      .preview-controls .chip-group {
+      .preview-controls .toggle-group {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
         gap: 0.5rem;
@@ -369,7 +484,7 @@
         gap: 0.7rem;
       }
 
-      .preview-controls .chip,
+      .preview-controls .toggle-btn,
       .preview-actions > button {
         width: 100%;
         text-align: center;
@@ -417,9 +532,9 @@
         <div class="top-actions">
           <a class="action-btn" href="index.html">Back to index</a>
           <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
-          <button id="toggle-license-btn" class="action-btn" type="button" aria-expanded="false">Show license</button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">Hide attribution</button>
         </div>
-        <div id="license-block" class="attribution-block" hidden>
+        <div id="attribution-block" class="attribution-block">
           <p id="hosted-note" class="hosted-note">
             Did you know: this calculator can be saved and used locally!
           </p>
@@ -428,9 +543,6 @@
             <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
             •
             <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
-          </p>
-          <p class="hosted-note">
-            Browser-side port of logic from this repository's pinout renderer and interactive testing performed with Playwright.
           </p>
         </div>
       </header>
@@ -451,42 +563,110 @@
               </select>
             </div>
 
-            <div class="row-2">
-              <div>
-                <label class="help-label">Package type
-                  <span class="help-tip" tabindex="0" data-tip="Choose 2-sided, 4-sided standard, or 4-sided with vertical spread trails.">?</span>
-                </label>
-                <div class="chip-group">
-                  <button id="package-four-chip" type="button" class="chip" aria-pressed="false">4-sided (standard)</button>
-                  <button id="package-four-spread-chip" type="button" class="chip selected" aria-pressed="true">4-sided (vertical spread)</button>
-                  <button id="package-two-chip" type="button" class="chip" aria-pressed="false">2-sided (DIP/SOIC)</button>
-                </div>
-              </div>
-              <div>
-                <label for="numbering" class="help-label">Numbering
-                  <span class="help-tip" tabindex="0" data-tip="ccw/cw follow package conventions, seq numbers each side independently, none hides pin numbers.">?</span>
-                </label>
-                <select id="numbering">
-                  <option value="ccw">ccw</option>
-                  <option value="cw">cw</option>
-                  <option value="seq">seq</option>
-                  <option value="none">none</option>
-                </select>
+            <div>
+              <label class="help-label">Package type
+                <span class="help-tip" tabindex="0" data-tip="Choose 2-sided, 4-sided standard, or 4-sided with vertical spread trails.">?</span>
+              </label>
+              <div class="toggle-group">
+                <button id="package-four-chip" type="button" class="toggle-btn" aria-pressed="false">4-sided (standard)</button>
+                <button id="package-four-spread-chip" type="button" class="toggle-btn selected" aria-pressed="true">4-sided (vertical spread)</button>
+                <button id="package-two-chip" type="button" class="toggle-btn" aria-pressed="false">2-sided (DIP/SOIC)</button>
               </div>
             </div>
 
             <div>
               <label for="ic-name" class="help-label">Name
-                <span class="help-tip" tabindex="0" data-tip="Center label shown inside the IC body.">?</span>
+                <span class="help-tip" tabindex="0" data-tip="Center label shown inside the IC body. Use newlines for multi-line names.">?</span>
               </label>
-              <input id="ic-name" type="text" value="ATtiny816" />
+              <textarea id="ic-name">ATtiny816</textarea>
+            </div>
+
+            <div class="row-2">
+              <div>
+                <label class="help-label">Counts
+                  <span class="help-tip" tabindex="0" data-tip="two-sided uses left,right. four-sided uses top,right,bottom,left.">?</span>
+                </label>
+                <!-- 4-sided jog boxes: Left | Top+Bottom centre column | Right -->
+                <div id="counts-four" class="count-jog-group count-plus-grid">
+                  <div class="count-jog-box">
+                    <label class="count-jog-label" for="count-left">Left</label>
+                    <input class="count-jog-input" id="count-left" type="number" min="0" value="4" />
+                  </div>
+                  <div class="count-plus-center">
+                    <div class="count-jog-box">
+                      <label class="count-jog-label" for="count-top">Top</label>
+                      <input class="count-jog-input" id="count-top" type="number" min="0" value="4" />
+                    </div>
+                    <div class="count-jog-box">
+                      <label class="count-jog-label" for="count-bottom">Bottom</label>
+                      <input class="count-jog-input" id="count-bottom" type="number" min="0" value="4" />
+                    </div>
+                  </div>
+                  <div class="count-jog-box">
+                    <label class="count-jog-label" for="count-right">Right</label>
+                    <input class="count-jog-input" id="count-right" type="number" min="0" value="4" />
+                  </div>
+                </div>
+                <!-- 2-sided jog boxes: left, right -->
+                <div id="counts-two" class="count-jog-group" hidden>
+                  <div class="count-jog-box">
+                    <label class="count-jog-label" for="count-left-2">Left</label>
+                    <input class="count-jog-input" id="count-left-2" type="number" min="0" value="4" />
+                  </div>
+                  <div class="count-jog-box">
+                    <label class="count-jog-label" for="count-right-2">Right</label>
+                    <input class="count-jog-input" id="count-right-2" type="number" min="0" value="4" />
+                  </div>
+                </div>
+                <!-- Hidden backing input consumed by existing JS -->
+                <input id="pin-counts" type="hidden" value="4,4,4,4" />
+                <div class="controls" style="margin-top: 0.45rem">
+                  <button id="refresh-counts-btn" class="action-btn" type="button">Refresh counts</button>
+                </div>
+              </div>
+              <div style="display:grid;gap:0.85rem;align-content:start">
+                <div>
+                  <label for="sequence" class="help-label">Sequence
+                    <span class="help-tip" tabindex="0" data-tip="ccw/cw walks one side at a time. alternating round-robins across sides.">?</span>
+                  </label>
+                  <select id="sequence">
+                    <option value="ccw">ccw</option>
+                    <option value="cw">cw</option>
+                    <option value="alternating">alternating</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="start" class="help-label">Start
+                    <span class="help-tip" tabindex="0" data-tip="Valid start points depend on package type and sequence direction.">?</span>
+                  </label>
+                  <select id="start"></select>
+                </div>
+                <div>
+                  <label for="numbering" class="help-label">Numbering
+                    <span class="help-tip" tabindex="0" data-tip="Sequential around: follows sequence direction. Per side: each side starts at 1. Custom: define your own numbers in the box below. None: hides all pin numbers.">?</span>
+                  </label>
+                  <select id="numbering">
+                    <option value="sequential">Sequential around</option>
+                    <option value="per-side">Per side</option>
+                    <option value="custom">Custom</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div>
-              <label for="pin-labels" class="help-label">Pin labels (comma-separated)
-                <span class="help-tip" tabindex="0" data-tip="Ordered labels consumed by sequence/start rules. Example: PA0,PA1,PA2,PA3">?</span>
+              <label for="pin-labels" class="help-label">Pin labels (one side per line)
+                <span class="help-tip" tabindex="0" data-tip="One line per side \u2014 Top, Right, Bottom, Left for 4-sided; Left, Right for 2-sided. Comma-separated within each line. ___ marks a blank pin. Updates automatically when counts or sequence change.">?</span>
               </label>
               <textarea id="pin-labels">UPDI/VREFA,PA4,PA5,PA6,PA7,PB5,PB4,PB3,PB2,PB1,PB0,PA3,PA2,PA1,PA0,VDD</textarea>
+            </div>
+
+            <div id="pin-numbers-section" hidden>
+              <label for="pin-numbers" class="help-label">Pin numbers (one side per line)
+                <span class="help-tip" tabindex="0" data-tip="Custom pin numbers in the same format as pin labels — one line per side in traversal order. Comma-separated. ___ or blank hides the number for that pin.">?</span>
+              </label>
+              <textarea id="pin-numbers"></textarea>
             </div>
 
             <div class="controls">
@@ -519,34 +699,6 @@
               <div id="regex-status" class="status"></div>
             </div>
 
-            <div class="row-3">
-              <div>
-                <label for="pin-counts" class="help-label">Counts
-                  <span class="help-tip" tabindex="0" data-tip="two-sided uses left,right. four-sided uses top,right,bottom,left.">?</span>
-                </label>
-                <input id="pin-counts" type="text" value="4,4,4,4" />
-                <div class="controls" style="margin-top: 0.45rem">
-                  <button id="refresh-counts-btn" class="action-btn" type="button">Refresh counts</button>
-                </div>
-              </div>
-              <div>
-                <label for="sequence" class="help-label">Sequence
-                  <span class="help-tip" tabindex="0" data-tip="ccw/cw walks one side at a time. alternating round-robins across sides.">?</span>
-                </label>
-                <select id="sequence">
-                  <option value="ccw">ccw</option>
-                  <option value="cw">cw</option>
-                  <option value="alternating">alternating</option>
-                </select>
-              </div>
-              <div>
-                <label for="start" class="help-label">Start
-                  <span class="help-tip" tabindex="0" data-tip="Valid start points depend on package type and sequence direction.">?</span>
-                </label>
-                <select id="start"></select>
-              </div>
-            </div>
-
             <div id="status" class="status"></div>
           </div>
         </article>
@@ -559,9 +711,13 @@
               <label class="help-label">Output mode
                 <span class="help-tip" tabindex="0" data-tip="Choose whether to show only ASCII or ASCII plus a tabular listing under it.">?</span>
               </label>
-              <div class="chip-group">
-                <button id="output-ascii-chip" type="button" class="chip selected" aria-pressed="true">Diagram only</button>
-                <button id="output-ascii-table-chip" type="button" class="chip" aria-pressed="false">Diagram + table</button>
+              <div class="toggle-group">
+                <button id="output-ascii-chip" type="button" class="toggle-btn selected" aria-pressed="true">Diagram only</button>
+                <button id="output-ascii-table-chip" type="button" class="toggle-btn" aria-pressed="false">Diagram + table</button>
+              </div>
+              <div class="toggle-group" style="margin-top: 0.5rem;">
+                <button id="table-side-toggle" type="button" class="toggle-btn selected" aria-pressed="true">side column</button>
+                <button id="table-description-toggle" type="button" class="toggle-btn" aria-pressed="false">description column</button>
               </div>
             </div>
 
@@ -569,11 +725,11 @@
               <label class="help-label">Comment option
                 <span class="help-tip" tabindex="0" data-tip="Choose output comment style for easy paste into code comments.">?</span>
               </label>
-              <div class="chip-group">
-                <button id="comment-none-chip" type="button" class="chip selected" aria-pressed="true">No comments</button>
-                <button id="comment-slash-chip" type="button" class="chip" aria-pressed="false">// line</button>
-                <button id="comment-hash-chip" type="button" class="chip" aria-pressed="false"># line</button>
-                <button id="comment-cblock-chip" type="button" class="chip" aria-pressed="false">/* block */</button>
+              <div class="toggle-group">
+                <button id="comment-none-chip" type="button" class="toggle-btn selected" aria-pressed="true">No comments</button>
+                <button id="comment-slash-chip" type="button" class="toggle-btn" aria-pressed="false">// line</button>
+                <button id="comment-hash-chip" type="button" class="toggle-btn" aria-pressed="false"># line</button>
+                <button id="comment-cblock-chip" type="button" class="toggle-btn" aria-pressed="false">/* block */</button>
               </div>
             </div>
 
@@ -608,7 +764,11 @@
         commentSlashChip: document.getElementById("comment-slash-chip"),
         commentHashChip: document.getElementById("comment-hash-chip"),
         commentCblockChip: document.getElementById("comment-cblock-chip"),
+        tableSideToggle: document.getElementById("table-side-toggle"),
+        tableDescriptionToggle: document.getElementById("table-description-toggle"),
         pinCounts: document.getElementById("pin-counts"),
+        pinNumbers: document.getElementById("pin-numbers"),
+        pinNumbersSection: document.getElementById("pin-numbers-section"),
         refreshCountsBtn: document.getElementById("refresh-counts-btn"),
         sequence: document.getElementById("sequence"),
         start: document.getElementById("start"),
@@ -626,8 +786,8 @@
         preview: document.getElementById("preview"),
         status: document.getElementById("status"),
         theme: document.getElementById("toggle-theme-btn"),
-        toggleLicense: document.getElementById("toggle-license-btn"),
-        licenseBlock: document.getElementById("license-block"),
+        toggleAttribution: document.getElementById("toggle-attribution-btn"),
+        attributionBlock: document.getElementById("attribution-block"),
       };
 
       const EXAMPLES = {
@@ -638,7 +798,7 @@
           counts: "4,4,4,4",
           sequence: "ccw",
           start: "left-top",
-          numbering: "ccw",
+          numbering: "sequential",
           verticalSpread: true,
         },
         "stm32-lqfp16": {
@@ -648,7 +808,7 @@
           counts: "4,4,4,4",
           sequence: "ccw",
           start: "left-top",
-          numbering: "ccw",
+          numbering: "sequential",
           verticalSpread: false,
         },
         ne555: {
@@ -658,7 +818,7 @@
           counts: "4,4",
           sequence: "ccw",
           start: "left-top",
-          numbering: "ccw",
+          numbering: "sequential",
           verticalSpread: false,
         },
       };
@@ -669,6 +829,195 @@
           .split(",")
           .map((item) => item.trim())
           .filter((item) => item.length > 0);
+      }
+
+      function parseSideRow(line, count) {
+        const labels = line.split(",").map((s) => {
+          const t = s.trim();
+          return t === "___" ? "" : t;
+        });
+        while (labels.length < count) labels.push("");
+        return labels.slice(0, count);
+      }
+
+      // Returns the order sides are walked and whether each side is traversed
+      // forward (fwd) or backward (rev) relative to its physical array.
+      // "rev" sides have pin numbers ascending in the reverse-physical direction,
+      // so we reverse their arrays when displaying and un-reverse when reading back.
+      // For "alternating" there is no sequential walk, so we fall back to fixed
+      // physical order with all-fwd (no reversal).
+      function getSideTraversalMeta(packageType, sequence, start) {
+        if (sequence === "alternating") {
+          return packageType === "two"
+            ? { sideOrder: ["left", "right"], orientation: { left: "fwd", right: "fwd" } }
+            : { sideOrder: ["top", "right", "bottom", "left"], orientation: { top: "fwd", right: "fwd", bottom: "fwd", left: "fwd" } };
+        }
+        const startSide = start.split("-")[0];
+        if (packageType === "two") {
+          const cycle       = sequence === "ccw" ? ["left", "right"] : ["right", "left"];
+          const orientation = sequence === "ccw"
+            ? { left: "fwd", right: "rev" }
+            : { right: "fwd", left: "rev" };
+          return { sideOrder: rotateCycle(cycle, startSide), orientation };
+        }
+        const cycle       = sequence === "ccw"
+          ? ["left", "bottom", "right", "top"]
+          : ["top", "right", "bottom", "left"];
+        const orientation = sequence === "ccw"
+          ? { left: "fwd", bottom: "fwd", right: "rev", top: "rev" }
+          : { top: "fwd", right: "fwd", bottom: "rev", left: "rev" };
+        return { sideOrder: rotateCycle(cycle, startSide), orientation };
+      }
+
+      function reformatLabelsBox(forceFlat) {
+        const packageType = getSelectedPackageType();
+        const sequence = el.sequence.value;
+        const start = el.start.value;
+        const current = el.pinLabels.value;
+        const isAlreadyFormatted = !forceFlat && current.includes("\n");
+
+        let sideCounts;
+        try {
+          sideCounts = packageType === "two"
+            ? parseSideCounts(el.pinCounts.value, 2, "--counts")
+            : parseSideCounts(el.pinCounts.value, 4, "--counts");
+        } catch { return; }
+
+        const total = sideCounts.reduce((a, b) => a + b, 0);
+
+        let meta;
+        try { meta = getSideTraversalMeta(packageType, sequence, start); } catch { return; }
+        const { sideOrder, orientation } = meta;
+
+        const countMap = packageType === "two"
+          ? { left: sideCounts[0], right: sideCounts[1] }
+          : { top: sideCounts[0], right: sideCounts[1], bottom: sideCounts[2], left: sideCounts[3] };
+
+        // physical[side] = array in physical render order (top-to-bottom / left-to-right)
+        let physical = {};
+
+        if (isAlreadyFormatted) {
+          // Rows are in sideOrder with pin-number ordering.
+          // Reverse "rev" sides to recover physical order.
+          const lines = current.split("\n").map((l) => l.trim());
+          sideOrder.forEach((side, i) => {
+            const count = countMap[side];
+            const raw = (lines[i] || "").split(",").map((s) => {
+              const t = s.trim();
+              return t === "___" ? "" : t;
+            });
+            while (raw.length < count) raw.push("");
+            const trimmed = raw.slice(0, count);
+            physical[side] = orientation[side] === "rev" ? [...trimmed].reverse() : trimmed;
+          });
+        } else {
+          const flat = parsePinList(current.replace(/\n/g, ","))
+            .map((l) => (l === "___" ? "" : l));
+          while (flat.length < total) flat.push("");
+          flat.length = total;
+          try {
+            if (packageType === "two") {
+              const [left, right] = assignOrderedTwoSided(flat, countMap.left, countMap.right, sequence, start);
+              physical = { left, right };
+            } else {
+              const [top, right, bottom, left] = assignOrderedFourSided(flat, countMap.top, countMap.right, countMap.bottom, countMap.left, sequence, start);
+              physical = { top, right, bottom, left };
+            }
+          } catch { return; }
+        }
+
+        // Write rows in traversal order; reverse "rev" sides so labels read in pin-number order.
+        el.pinLabels.value = sideOrder
+          .map((side) => {
+            const arr = physical[side] || [];
+            const display = orientation[side] === "rev" ? [...arr].reverse() : arr;
+            return display.map((l) => l || "___").join(", ");
+          })
+          .join("\n");
+      }
+
+      // Maps UI numbering values to the internal strings the render functions accept.
+      function resolveNumberingMode(numbering, sequence) {
+        if (numbering === "sequential") return sequence === "cw" ? "cw" : "ccw";
+        if (numbering === "per-side")   return "seq";
+        return numbering; // "none"; "custom" is handled before reaching the render functions
+      }
+
+      // Populates / reformats the custom pin-numbers textarea using the same
+      // traversal order and display direction as the pin-labels box.
+      function reformatNumbersBox(forceFlat) {
+        if (el.numbering.value !== "custom") return;
+
+        const packageType = getSelectedPackageType();
+        const sequence = el.sequence.value;
+        const start = el.start.value;
+        const current = el.pinNumbers.value;
+        const isAlreadyFormatted = !forceFlat && current.includes("\n");
+
+        let sideCounts;
+        try {
+          sideCounts = packageType === "two"
+            ? parseSideCounts(el.pinCounts.value, 2, "--counts")
+            : parseSideCounts(el.pinCounts.value, 4, "--counts");
+        } catch { return; }
+
+        let meta;
+        try { meta = getSideTraversalMeta(packageType, sequence, start); } catch { return; }
+        const { sideOrder } = meta;
+
+        const countMap = packageType === "two"
+          ? { left: sideCounts[0], right: sideCounts[1] }
+          : { top: sideCounts[0], right: sideCounts[1], bottom: sideCounts[2], left: sideCounts[3] };
+
+        if (isAlreadyFormatted) {
+          const lines = current.split("\n").map((l) => l.trim());
+          const rows = sideOrder.map((side, i) => {
+            const count = countMap[side];
+            const raw = (lines[i] || "").split(",").map((s) => s.trim());
+            while (raw.length < count) raw.push("___");
+            return raw.slice(0, count).join(", ");
+          });
+          el.pinNumbers.value = rows.join("\n");
+        } else {
+          // Generate default sequential numbers in the same display order as labels.
+          let pinNum = 1;
+          el.pinNumbers.value = sideOrder
+            .map((side) => {
+              const count = countMap[side];
+              return Array.from({ length: count }, () => pinNum++).join(", ");
+            })
+            .join("\n");
+        }
+      }
+
+      // Parses the custom pin-numbers textarea back into physical-order arrays.
+      function parseCustomNums(packageType, sequence, start, sideCounts) {
+        const content = el.pinNumbers.value;
+        if (!content.trim()) return null;
+
+        let meta;
+        try { meta = getSideTraversalMeta(packageType, sequence, start); } catch { return null; }
+        const { sideOrder, orientation } = meta;
+
+        const countMap = packageType === "two"
+          ? { left: sideCounts[0], right: sideCounts[1] }
+          : { top: sideCounts[0], right: sideCounts[1], bottom: sideCounts[2], left: sideCounts[3] };
+
+        const lines = content.split("\n").map((l) => l.trim());
+        const physical = {};
+
+        sideOrder.forEach((side, i) => {
+          const count = countMap[side];
+          const raw = (lines[i] || "").split(",").map((s) => {
+            const t = s.trim();
+            return (!t || t === "___") ? "" : t;
+          });
+          while (raw.length < count) raw.push("");
+          const trimmed = raw.slice(0, count);
+          physical[side] = orientation[side] === "rev" ? [...trimmed].reverse() : trimmed;
+        });
+
+        return physical;
       }
 
       function parseSideCounts(raw, expected, argName) {
@@ -933,13 +1282,15 @@
         if (!text) return [" ".repeat(width)];
 
         const rows = [];
-        for (const segment of splitLabelSegments(text)) {
-          if (!segment) {
-            rows.push("");
-            continue;
-          }
-          for (let start = 0; start < segment.length; start += width) {
-            rows.push(segment.slice(start, start + width));
+        for (const line of text.split("\n")) {
+          for (const segment of splitLabelSegments(line)) {
+            if (!segment) {
+              rows.push("");
+              continue;
+            }
+            for (let start = 0; start < segment.length; start += width) {
+              rows.push(segment.slice(start, start + width));
+            }
           }
         }
         if (!rows.length) rows.push("");
@@ -1101,19 +1452,24 @@
         return lines;
       }
 
-      function renderTwoSided(name, left, right, numbering = "ccw") {
+      function renderTwoSided(name, left, right, numbering = "ccw", customNums = null) {
         if (!left.length && !right.length) {
           throw new Error("At least one pin must be provided.");
         }
 
         const totalPins = left.length + right.length;
-        const showNumbers = numbering !== "none";
+        const showNumbers = customNums ? true : numbering !== "none";
 
         let pinWidth;
         let leftNums;
         let rightNums;
 
-        if (numbering === "seq") {
+        if (customNums) {
+          leftNums  = customNums.left  || left.map((_, i) => i + 1);
+          rightNums = customNums.right || right.map((_, i) => i + 1);
+          const all = [...leftNums, ...rightNums].map(String).filter(Boolean);
+          pinWidth = all.length ? Math.max(2, ...all.map((s) => s.length)) : 2;
+        } else if (numbering === "seq") {
           pinWidth = Math.max(2, String(Math.max(left.length, right.length, 1)).length);
           leftNums = [...Array(left.length).keys()].map((i) => i + 1);
           rightNums = [...Array(right.length).keys()].map((i) => i + 1);
@@ -1125,7 +1481,8 @@
 
         const leftWidth = left.length ? Math.max(...left.map((p) => p.length)) : 1;
         const rightWidth = right.length ? Math.max(...right.map((p) => p.length)) : 1;
-        const innerWidth = Math.max(4, name.length + 2);
+        const nameMaxWidth = Math.max(...name.split("\n").map((l) => l.length));
+        const innerWidth = Math.max(4, nameMaxWidth + 2);
         const nameRows = renderWrappedCenterText(name, innerWidth);
         const rows = Math.max(left.length, right.length, nameRows.length, 1);
 
@@ -1167,31 +1524,35 @@
         return lines.join("\n");
       }
 
-      function renderFourSided(name, top, right, bottom, left, verticalSpread = false, numbering = "ccw") {
+      function renderFourSided(name, top, right, bottom, left, verticalSpread = false, numbering = "ccw", customNums = null) {
         const totalPins = top.length + right.length + bottom.length + left.length;
         if (totalPins === 0) throw new Error("At least one pin must be provided.");
 
-        const showNumbers = numbering !== "none";
-        const pinWidth = numbering === "seq"
-          ? Math.max(2, String(Math.max(top.length, right.length, bottom.length, left.length, 1)).length)
-          : Math.max(2, String(totalPins).length);
+        const showNumbers = customNums ? true : numbering !== "none";
 
-        let leftNums;
-        let bottomNums;
-        let rightNumsTopDown;
-        let topNumsLeftToRight;
+        let leftNums, bottomNums, rightNumsTopDown, topNumsLeftToRight, pinWidth;
 
-        if (numbering === "ccw" || numbering === "none") {
+        if (customNums) {
+          leftNums           = customNums.left   || left.map((_, i) => i + 1);
+          bottomNums         = customNums.bottom || bottom.map((_, i) => i + 1);
+          rightNumsTopDown   = customNums.right  || right.map((_, i) => i + 1);
+          topNumsLeftToRight = customNums.top    || top.map((_, i) => i + 1);
+          const all = [...leftNums, ...bottomNums, ...rightNumsTopDown, ...topNumsLeftToRight].map(String).filter(Boolean);
+          pinWidth = all.length ? Math.max(2, ...all.map((s) => s.length)) : 2;
+        } else if (numbering === "ccw" || numbering === "none") {
+          pinWidth = Math.max(2, String(totalPins).length);
           leftNums = [...Array(left.length).keys()].map((i) => i + 1);
           bottomNums = [...Array(bottom.length).keys()].map((i) => left.length + i + 1);
           rightNumsTopDown = [...Array(right.length).keys()].map((i) => left.length + bottom.length + right.length - i);
           topNumsLeftToRight = [...Array(top.length).keys()].map((i) => totalPins - i);
         } else if (numbering === "cw") {
+          pinWidth = Math.max(2, String(totalPins).length);
           topNumsLeftToRight = [...Array(top.length).keys()].map((i) => i + 1);
           rightNumsTopDown = [...Array(right.length).keys()].map((i) => top.length + i + 1);
           bottomNums = [...Array(bottom.length).keys()].map((i) => top.length + right.length + bottom.length - i);
           leftNums = [...Array(left.length).keys()].map((i) => totalPins - i);
         } else if (numbering === "seq") {
+          pinWidth = Math.max(2, String(Math.max(top.length, right.length, bottom.length, left.length, 1)).length);
           leftNums = [...Array(left.length).keys()].map((i) => i + 1);
           bottomNums = [...Array(bottom.length).keys()].map((i) => i + 1);
           rightNumsTopDown = [...Array(right.length).keys()].map((i) => i + 1);
@@ -1231,7 +1592,8 @@
           trackWidth = Math.max(4, topTrackWidth, bottomTrackWidth);
 
           const minBodyForMarkers = Math.max(top.length, bottom.length) * 2 + 1;
-          bodyInnerWidth = Math.max(4, name.length + 2, minBodyForMarkers);
+          const nameMaxWidth4s = Math.max(...name.split("\n").map((l) => l.length));
+          bodyInnerWidth = Math.max(4, nameMaxWidth4s + 2, minBodyForMarkers);
 
           const activeCounts = [top.length, bottom.length].filter((count) => count > 1);
           let guard = 0;
@@ -1244,7 +1606,7 @@
           const maxEntryWidth = Math.max(topEntryWidth, bottomEntryWidth);
           verticalPinRightPadding = Math.max(0, Math.min(Math.max(top.length, bottom.length), Math.floor((maxEntryWidth - 18) / 3)));
         } else {
-          bodyInnerWidth = Math.max(4, name.length + 2, topSpan, bottomSpan);
+          bodyInnerWidth = Math.max(4, Math.max(...name.split("\n").map((l) => l.length)) + 2, topSpan, bottomSpan);
           trackWidth = bodyInnerWidth;
           verticalPinRightPadding = 0;
         }
@@ -1357,36 +1719,68 @@
         return [headerLine, separator, ...body].join("\n");
       }
 
-      function buildTabularOutputTwo(left, right, numbering) {
+      function buildTabularOutputTwo(left, right, numbering, customNums = null, showSide = true, showDescription = false) {
         const totalPins = left.length + right.length;
-        const showNumbers = numbering !== "none";
+        const showNumbers = customNums ? true : numbering !== "none";
 
-        const leftNums = [...Array(left.length).keys()].map((i) => i + 1);
-        const rightNums = numbering === "seq"
-          ? [...Array(right.length).keys()].map((i) => i + 1)
-          : [...Array(right.length).keys()].map((i) => totalPins - i);
+        let leftNums, rightNums;
+        if (customNums) {
+          leftNums  = customNums.left  || left.map((_, i) => i + 1);
+          rightNums = customNums.right || right.map((_, i) => i + 1);
+        } else {
+          leftNums  = [...Array(left.length).keys()].map((i) => i + 1);
+          rightNums = numbering === "seq"
+            ? [...Array(right.length).keys()].map((i) => i + 1)
+            : [...Array(right.length).keys()].map((i) => totalPins - i);
+        }
 
-        const rows = [];
+        const entries = [];
         for (let idx = 0; idx < left.length; idx += 1) {
-          rows.push(["left", idx + 1, showNumbers ? leftNums[idx] : "", left[idx]]);
+          entries.push({ side: "left", pin: showNumbers ? leftNums[idx] : "", label: left[idx] });
         }
         for (let idx = 0; idx < right.length; idx += 1) {
-          rows.push(["right", idx + 1, showNumbers ? rightNums[idx] : "", right[idx]]);
+          entries.push({ side: "right", pin: showNumbers ? rightNums[idx] : "", label: right[idx] });
         }
 
-        return formatTextTable(["Side", "Pos", "Pin", "Label"], rows);
+        // Sort by pin number if showing numbers, otherwise by side order
+        if (showNumbers) {
+          entries.sort((a, b) => {
+            const pinA = typeof a.pin === "string" ? parseInt(a.pin, 10) : a.pin;
+            const pinB = typeof b.pin === "string" ? parseInt(b.pin, 10) : b.pin;
+            return pinA - pinB;
+          });
+        }
+
+        const headers = [];
+        if (showSide) headers.push("Side");
+        if (showNumbers) headers.push("Pin");
+        headers.push("Label");
+        if (showDescription) headers.push("Description");
+
+        const rows = entries.map((e) => {
+          const row = [];
+          if (showSide) row.push(e.side);
+          if (showNumbers) row.push(e.pin);
+          row.push(e.label);
+          if (showDescription) row.push("");
+          return row;
+        });
+
+        return formatTextTable(headers, rows);
       }
 
-      function buildTabularOutputFour(top, right, bottom, left, numbering) {
+      function buildTabularOutputFour(top, right, bottom, left, numbering, customNums = null, showSide = true, showDescription = false) {
         const totalPins = top.length + right.length + bottom.length + left.length;
-        const showNumbers = numbering !== "none";
+        const showNumbers = customNums ? true : numbering !== "none";
 
-        let leftNums;
-        let bottomNums;
-        let rightNumsTopDown;
-        let topNumsLeftToRight;
+        let leftNums, bottomNums, rightNumsTopDown, topNumsLeftToRight;
 
-        if (numbering === "ccw" || numbering === "none") {
+        if (customNums) {
+          leftNums           = customNums.left   || left.map((_, i) => i + 1);
+          bottomNums         = customNums.bottom || bottom.map((_, i) => i + 1);
+          rightNumsTopDown   = customNums.right  || right.map((_, i) => i + 1);
+          topNumsLeftToRight = customNums.top    || top.map((_, i) => i + 1);
+        } else if (numbering === "ccw" || numbering === "none") {
           leftNums = [...Array(left.length).keys()].map((i) => i + 1);
           bottomNums = [...Array(bottom.length).keys()].map((i) => left.length + i + 1);
           rightNumsTopDown = [...Array(right.length).keys()].map((i) => left.length + bottom.length + right.length - i);
@@ -1403,39 +1797,118 @@
           topNumsLeftToRight = [...Array(top.length).keys()].map((i) => i + 1);
         }
 
-        const rows = [];
-        for (let idx = 0; idx < top.length; idx += 1) rows.push(["top", idx + 1, showNumbers ? topNumsLeftToRight[idx] : "", top[idx]]);
-        for (let idx = 0; idx < right.length; idx += 1) rows.push(["right", idx + 1, showNumbers ? rightNumsTopDown[idx] : "", right[idx]]);
-        for (let idx = 0; idx < bottom.length; idx += 1) rows.push(["bottom", idx + 1, showNumbers ? bottomNums[idx] : "", bottom[idx]]);
-        for (let idx = 0; idx < left.length; idx += 1) rows.push(["left", idx + 1, showNumbers ? leftNums[idx] : "", left[idx]]);
+        const entries = [];
+        for (let idx = 0; idx < top.length; idx += 1) {
+          entries.push({ side: "top", pin: showNumbers ? topNumsLeftToRight[idx] : "", label: top[idx] });
+        }
+        for (let idx = 0; idx < right.length; idx += 1) {
+          entries.push({ side: "right", pin: showNumbers ? rightNumsTopDown[idx] : "", label: right[idx] });
+        }
+        for (let idx = 0; idx < bottom.length; idx += 1) {
+          entries.push({ side: "bottom", pin: showNumbers ? bottomNums[idx] : "", label: bottom[idx] });
+        }
+        for (let idx = 0; idx < left.length; idx += 1) {
+          entries.push({ side: "left", pin: showNumbers ? leftNums[idx] : "", label: left[idx] });
+        }
 
-        return formatTextTable(["Side", "Pos", "Pin", "Label"], rows);
+        // Sort by pin number if showing numbers, otherwise by side order
+        if (showNumbers) {
+          entries.sort((a, b) => {
+            const pinA = typeof a.pin === "string" ? parseInt(a.pin, 10) : a.pin;
+            const pinB = typeof b.pin === "string" ? parseInt(b.pin, 10) : b.pin;
+            return pinA - pinB;
+          });
+        }
+
+        const headers = [];
+        if (showSide) headers.push("Side");
+        if (showNumbers) headers.push("Pin");
+        headers.push("Label");
+        if (showDescription) headers.push("Description");
+
+        const rows = entries.map((e) => {
+          const row = [];
+          if (showSide) row.push(e.side);
+          if (showNumbers) row.push(e.pin);
+          row.push(e.label);
+          if (showDescription) row.push("");
+          return row;
+        });
+
+        return formatTextTable(headers, rows);
       }
 
       function generateFromInputs() {
         const packageType = getSelectedPackageType();
-        const pins = parsePinList(el.pinLabels.value);
         const sequence = el.sequence.value;
         const start = el.start.value;
-        const numbering = el.numbering.value;
+        const numberingRaw = el.numbering.value;
         const name = el.icName.value.trim();
 
         if (!name) throw new Error("Name cannot be empty.");
 
+        // Resolve UI numbering names to the strings the render functions understand.
+        const numbering = resolveNumberingMode(numberingRaw, sequence);
+
+        const labelContent = el.pinLabels.value;
+        const isFormatted = labelContent.includes("\n");
+
         if (packageType === "two") {
           const [leftCount, rightCount] = parseSideCounts(el.pinCounts.value, 2, "--counts");
-          const [left, right] = assignOrderedTwoSided(pins, leftCount, rightCount, sequence, start);
+          let left, right;
+          if (isFormatted) {
+            const { sideOrder, orientation } = getSideTraversalMeta("two", sequence, start);
+            const countMap = { left: leftCount, right: rightCount };
+            const lines = labelContent.split("\n").map((l) => l.trim());
+            const physical = {};
+            sideOrder.forEach((side, i) => {
+              const raw = parseSideRow(lines[i] || "", countMap[side]);
+              physical[side] = orientation[side] === "rev" ? [...raw].reverse() : raw;
+            });
+            left  = physical.left  || new Array(leftCount).fill("");
+            right = physical.right || new Array(rightCount).fill("");
+          } else {
+            const pins = parsePinList(labelContent);
+            [left, right] = assignOrderedTwoSided(pins, leftCount, rightCount, sequence, start);
+          }
+          const customNums = numberingRaw === "custom"
+            ? parseCustomNums("two", sequence, start, [leftCount, rightCount])
+            : null;
+          const showSide = el.tableSideToggle.getAttribute("aria-pressed") === "true";
+          const showDescription = el.tableDescriptionToggle.getAttribute("aria-pressed") === "true";
           return {
-            ascii: renderTwoSided(name, left, right, numbering),
-            table: buildTabularOutputTwo(left, right, numbering),
+            ascii: renderTwoSided(name, left, right, numbering, customNums),
+            table: buildTabularOutputTwo(left, right, numbering, customNums, showSide, showDescription),
           };
         }
 
         const [topCount, rightCount, bottomCount, leftCount] = parseSideCounts(el.pinCounts.value, 4, "--counts");
-        const [top, right, bottom, left] = assignOrderedFourSided(pins, topCount, rightCount, bottomCount, leftCount, sequence, start);
+        let top, right, bottom, left;
+        if (isFormatted) {
+          const { sideOrder, orientation } = getSideTraversalMeta("four", sequence, start);
+          const countMap = { top: topCount, right: rightCount, bottom: bottomCount, left: leftCount };
+          const lines = labelContent.split("\n").map((l) => l.trim());
+          const physical = {};
+          sideOrder.forEach((side, i) => {
+            const raw = parseSideRow(lines[i] || "", countMap[side]);
+            physical[side] = orientation[side] === "rev" ? [...raw].reverse() : raw;
+          });
+          top    = physical.top    || new Array(topCount).fill("");
+          right  = physical.right  || new Array(rightCount).fill("");
+          bottom = physical.bottom || new Array(bottomCount).fill("");
+          left   = physical.left   || new Array(leftCount).fill("");
+        } else {
+          const pins = parsePinList(labelContent);
+          [top, right, bottom, left] = assignOrderedFourSided(pins, topCount, rightCount, bottomCount, leftCount, sequence, start);
+        }
+        const customNums = numberingRaw === "custom"
+          ? parseCustomNums("four", sequence, start, [topCount, rightCount, bottomCount, leftCount])
+          : null;
+        const showSide = el.tableSideToggle.getAttribute("aria-pressed") === "true";
+        const showDescription = el.tableDescriptionToggle.getAttribute("aria-pressed") === "true";
         return {
-          ascii: renderFourSided(name, top, right, bottom, left, isVerticalSpreadEnabled(), numbering),
-          table: buildTabularOutputFour(top, right, bottom, left, numbering),
+          ascii: renderFourSided(name, top, right, bottom, left, isVerticalSpreadEnabled(), numbering, customNums),
+          table: buildTabularOutputFour(top, right, bottom, left, numbering, customNums, showSide, showDescription),
         };
       }
 
@@ -1675,13 +2148,26 @@
       }
 
       function autoPopulateCountsFromPins() {
-        const total = parsePinList(el.pinLabels.value).length;
-        if (total <= 0) {
-          return false;
+        const current = el.pinLabels.value;
+        if (!current.trim()) return false;
+
+        if (current.includes("\n")) {
+          const packageType = getSelectedPackageType();
+          const expected = packageType === "two" ? 2 : 4;
+          const lines = current.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+          if (lines.length < expected) return false;
+          const counts = lines.slice(0, expected).map((line) =>
+            line.split(",").map((s) => s.trim()).filter((s) => s && s !== "___").length
+          );
+          if (counts.some((c) => c === 0)) return false;
+          setPinCounts(counts.join(","));
+          return true;
         }
 
+        const total = parsePinList(current).length;
+        if (total <= 0) return false;
         const counts = deriveCountsFromPinTotal(total, getSelectedPackageType());
-        el.pinCounts.value = counts.join(",");
+        setPinCounts(counts.join(","));
         return true;
       }
 
@@ -1720,6 +2206,8 @@
         el.outputAsciiChip.setAttribute("aria-pressed", useTable ? "false" : "true");
         el.outputAsciiTableChip.classList.toggle("selected", useTable);
         el.outputAsciiTableChip.setAttribute("aria-pressed", useTable ? "true" : "false");
+        el.tableSideToggle.disabled = !useTable;
+        el.tableDescriptionToggle.disabled = !useTable;
       }
 
       function applyCommentPrefix(text) {
@@ -1867,17 +2355,18 @@
           setPackageType("two", false);
           el.icName.value = "NE555";
           el.pinLabels.value = "GND,TRIG,OUT,RESET,CTRL,THR,DISCH,VCC";
-          el.pinCounts.value = "4,4";
+          setPinCounts("4,4");
           el.sequence.value = "ccw";
-          el.numbering.value = "ccw";
+          el.numbering.value = "sequential";
         } else {
           setPackageType("four", true);
           el.icName.value = "ATtiny816";
           el.pinLabels.value = "UPDI/VREFA,PA4,PA5,PA6,PA7,PB5,PB4,PB3,PB2,PB1,PB0,PA3,PA2,PA1,PA0,VDD";
-          el.pinCounts.value = "4,4,4,4";
+          setPinCounts("4,4,4,4");
           el.sequence.value = "ccw";
-          el.numbering.value = "ccw";
+          el.numbering.value = "sequential";
         }
+        reformatLabelsBox(true);
       }
 
       function applyExample(exampleKey) {
@@ -1887,11 +2376,12 @@
         setPackageType(example.packageType, Boolean(example.verticalSpread));
         el.icName.value = example.name;
         el.pinLabels.value = example.pins;
-        el.pinCounts.value = example.counts;
+        setPinCounts(example.counts);
         el.sequence.value = example.sequence;
         el.numbering.value = example.numbering;
         setStartOptions();
         el.start.value = example.start;
+        reformatLabelsBox(true);
         refreshPreview();
       }
 
@@ -1987,11 +2477,67 @@
         }
       });
 
-      function handlePackageTypeChange() {
-        if (!autoPopulateCountsFromPins()) {
-          el.pinCounts.value = getSelectedPackageType() === "two" ? "4,4" : "4,4,4,4";
-        }
+      // ---- Pin count jog boxes ----
+      const countsFour = document.getElementById("counts-four");
+      const countsTwo  = document.getElementById("counts-two");
+      const jogInputs  = {
+        four: [
+          document.getElementById("count-top"),
+          document.getElementById("count-right"),
+          document.getElementById("count-bottom"),
+          document.getElementById("count-left"),
+        ],
+        two: [
+          document.getElementById("count-left-2"),
+          document.getElementById("count-right-2"),
+        ],
+      };
 
+      function syncJoggersFromValue(val) {
+        const parts = val.split(",").map((s) => parseInt(s.trim(), 10) || 0);
+        if (parts.length >= 4) {
+          jogInputs.four[0].value = parts[0]; // top
+          jogInputs.four[1].value = parts[1]; // right
+          jogInputs.four[2].value = parts[2]; // bottom
+          jogInputs.four[3].value = parts[3]; // left
+        } else if (parts.length >= 2) {
+          jogInputs.two[0].value = parts[0]; // left
+          jogInputs.two[1].value = parts[1]; // right
+        }
+      }
+
+      function syncValueFromJoggers() {
+        const isTwoSided = getSelectedPackageType() === "two";
+        el.pinCounts.value = isTwoSided
+          ? jogInputs.two.map((i) => i.value).join(",")
+          : jogInputs.four.map((i) => i.value).join(",");
+      }
+
+      function updateJoggerVisibility() {
+        const isTwoSided = getSelectedPackageType() === "two";
+        countsFour.hidden = isTwoSided;
+        countsTwo.hidden  = !isTwoSided;
+      }
+
+      function setPinCounts(val) {
+        el.pinCounts.value = val;
+        syncJoggersFromValue(val);
+      }
+
+      // Typing directly into a jog input also syncs and reformats labels/numbers
+      [...jogInputs.four, ...jogInputs.two].forEach((inp) => {
+        inp.addEventListener("input", () => { syncValueFromJoggers(); reformatLabelsBox(); reformatNumbersBox(); refreshPreview(); });
+        inp.addEventListener("change", () => { syncValueFromJoggers(); reformatLabelsBox(); reformatNumbersBox(); refreshPreview(); markCustomExample(); });
+      });
+
+      // ---- end jog boxes ----
+
+      function handlePackageTypeChange() {
+        updateJoggerVisibility();
+        if (!autoPopulateCountsFromPins()) {
+          setPinCounts(getSelectedPackageType() === "two" ? "4,4" : "4,4,4,4");
+        }
+        reformatLabelsBox();
         setStartOptions();
         markCustomExample();
         refreshPreview();
@@ -2014,13 +2560,25 @@
           setStatus("No pin labels found to derive counts.", true);
           return;
         }
+        reformatLabelsBox();
         setStartOptions();
         markCustomExample();
         refreshPreview();
         setStatus("Counts refreshed from pin labels.", false);
       });
 
-      [el.numbering, el.pinCounts, el.icName, el.start].forEach((node) => {
+      el.numbering.addEventListener("change", () => {
+        const isCustom = el.numbering.value === "custom";
+        el.pinNumbersSection.hidden = !isCustom;
+        if (isCustom) reformatNumbersBox(true);
+        refreshPreview();
+        markCustomExample();
+      });
+
+      el.pinNumbers.addEventListener("input",  refreshPreview);
+      el.pinNumbers.addEventListener("change", () => { refreshPreview(); markCustomExample(); });
+
+      [el.pinCounts, el.icName].forEach((node) => {
         node.addEventListener("input", refreshPreview);
         node.addEventListener("change", () => {
           refreshPreview();
@@ -2029,13 +2587,10 @@
       });
 
       el.pinLabels.addEventListener("input", () => {
-        autoPopulateCountsFromPins();
         refreshPreview();
       });
 
       el.pinLabels.addEventListener("change", () => {
-        autoPopulateCountsFromPins();
-        setStartOptions();
         refreshPreview();
         markCustomExample();
       });
@@ -2062,8 +2617,31 @@
         });
       });
 
+      el.tableSideToggle.addEventListener("click", () => {
+        const isActive = el.tableSideToggle.getAttribute("aria-pressed") === "true";
+        el.tableSideToggle.setAttribute("aria-pressed", isActive ? "false" : "true");
+        el.tableSideToggle.classList.toggle("selected", !isActive);
+        refreshPreview();
+      });
+
+      el.tableDescriptionToggle.addEventListener("click", () => {
+        const isActive = el.tableDescriptionToggle.getAttribute("aria-pressed") === "true";
+        el.tableDescriptionToggle.setAttribute("aria-pressed", isActive ? "false" : "true");
+        el.tableDescriptionToggle.classList.toggle("selected", !isActive);
+        refreshPreview();
+      });
+
       el.sequence.addEventListener("change", () => {
+        if (!el.pinLabels.value.includes("\n")) reformatLabelsBox(true);
+        reformatNumbersBox();
         setStartOptions();
+        refreshPreview();
+        markCustomExample();
+      });
+
+      el.start.addEventListener("change", () => {
+        if (!el.pinLabels.value.includes("\n")) reformatLabelsBox(true);
+        reformatNumbersBox();
         refreshPreview();
         markCustomExample();
       });
@@ -2094,11 +2672,11 @@
         }
       }
 
-      el.toggleLicense.addEventListener("click", () => {
-        const expanded = el.toggleLicense.getAttribute("aria-expanded") === "true";
-        el.toggleLicense.setAttribute("aria-expanded", expanded ? "false" : "true");
-        el.toggleLicense.textContent = expanded ? "Show license" : "Hide license";
-        el.licenseBlock.hidden = expanded;
+      el.toggleAttribution.addEventListener("click", () => {
+        const expanded = el.toggleAttribution.getAttribute("aria-expanded") === "true";
+        el.toggleAttribution.setAttribute("aria-expanded", expanded ? "false" : "true");
+        el.toggleAttribution.textContent = expanded ? "Show attribution" : "Hide attribution";
+        el.attributionBlock.hidden = expanded;
       });
 
       el.toggleParserBtn.addEventListener("click", () => {
@@ -2106,10 +2684,14 @@
         setParserExpanded(!expanded);
       });
 
+      // Initialize output mode to set table toggle disabled state
+      setOutputMode("ascii");
+
       applyThemeMode(getStoredThemeMode(), false);
       setParserExpanded(false);
       if (el.exampleSelect.value === "custom") {
         setStartOptions();
+        reformatLabelsBox(true);
         refreshPreview();
       } else {
         applyExample(el.exampleSelect.value);
