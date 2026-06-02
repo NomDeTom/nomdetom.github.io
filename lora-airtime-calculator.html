@@ -579,6 +579,23 @@
           text-align: left;
         }
       }
+
+      input:disabled,
+      select:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ============================================================
+         LINK BUDGET
+         ============================================================ */
+      .lb-freq-presets {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.9rem;
+      }
+
     </style>
   </head>
   <body>
@@ -939,6 +956,175 @@
       </section>
 
       <!-- ============================================================
+           LINK BUDGET
+           ============================================================ -->
+      <section id="link-budget-section">
+        <div class="section-header">
+          <h2>Link Budget</h2>
+          <button
+            id="toggle-lb-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Show link budget
+          </button>
+        </div>
+
+        <div id="lb-content" hidden>
+          <p class="field-hint" style="margin: 0 0 1rem;">
+            SF and BW are taken from the Inputs above. Select the receiving
+            radio to use datasheet sensitivity figures.
+          </p>
+
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="lb-rx-radio-type"
+                >Receiving radio
+                <select id="lb-rx-radio-type">
+                  <option value="all" selected>All / Generic</option>
+                  <option value="sx1276_sx1278">SX1276 / SX1278</option>
+                  <option value="sx1262">SX1262</option>
+                  <option value="sx1280">SX1280 (2.4 GHz)</option>
+                  <option value="llcc68">LLCC68</option>
+                  <option value="lr1110">LR1110</option>
+                  <option value="lr1121">LR1121</option>
+                  <option value="lr2021">LR2021</option>
+                </select>
+              </label>
+            </div>
+            <div class="field">
+              <label for="lb-nf"
+                >Noise figure <span class="optional">(dB, Generic only)</span>
+                <input
+                  id="lb-nf"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.1"
+                  min="0"
+                  value="6"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="lb-frequency"
+                >Frequency <span class="optional">(MHz)</span>
+                <input
+                  id="lb-frequency"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.001"
+                  min="1"
+                  value="868"
+                />
+              </label>
+            </div>
+            <div class="field">
+              <label for="lb-tx-power"
+                >Tx power <span class="optional">(dBm)</span>
+                <input
+                  id="lb-tx-power"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.1"
+                  value="14"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="two-col-fields" style="margin-bottom: 0.9rem;">
+            <div id="lb-freq-presets" class="lb-freq-presets" style="margin-bottom:0;">
+              <button class="action-btn" type="button" data-freq="433">433 MHz</button>
+              <button class="action-btn" type="button" data-freq="868">868 MHz</button>
+              <button class="action-btn" type="button" data-freq="915">915 MHz</button>
+              <button class="action-btn" type="button" data-freq="2400">2.4 GHz</button>
+            </div>
+            <div id="lb-power-presets" class="lb-freq-presets" style="margin-bottom:0;">
+              <button class="action-btn" type="button" data-pwr="14">14 dBm</button>
+              <button class="action-btn" type="button" data-pwr="22">22 dBm</button>
+              <button class="action-btn" type="button" data-pwr="27">27 dBm</button>
+              <button class="action-btn" type="button" data-pwr="30">30 dBm</button>
+              <button class="action-btn" type="button" data-pwr="33">33 dBm</button>
+            </div>
+          </div>
+
+          <div class="three-col-fields">
+            <div class="field">
+              <label for="lb-tx-gain"
+                >Tx antenna gain <span class="optional">(dBi)</span>
+                <input
+                  id="lb-tx-gain"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.1"
+                  value="2.15"
+                />
+              </label>
+            </div>
+            <div class="field">
+              <label for="lb-rx-gain"
+                >Rx antenna gain <span class="optional">(dBi)</span>
+                <input
+                  id="lb-rx-gain"
+                  type="number"
+                  inputmode="decimal"
+                  step="0.1"
+                  value="2.15"
+                />
+              </label>
+            </div>
+            <div></div>
+          </div>
+
+          <div class="three-col-fields" style="margin-bottom: 0.9rem;">
+            <div id="lb-tx-gain-presets" class="lb-freq-presets" style="margin-bottom:0;">
+              <button class="action-btn" type="button" data-gain="0">0 dBi</button>
+              <button class="action-btn" type="button" data-gain="1">1 dBi</button>
+              <button class="action-btn" type="button" data-gain="2.15">2.15 dBi</button>
+              <button class="action-btn" type="button" data-gain="5">5 dBi</button>
+              <button class="action-btn" type="button" data-gain="8">8 dBi</button>
+            </div>
+            <div id="lb-rx-gain-presets" class="lb-freq-presets" style="margin-bottom:0;">
+              <button class="action-btn" type="button" data-gain="0">0 dBi</button>
+              <button class="action-btn" type="button" data-gain="1">1 dBi</button>
+              <button class="action-btn" type="button" data-gain="2.15">2.15 dBi</button>
+              <button class="action-btn" type="button" data-gain="5">5 dBi</button>
+              <button class="action-btn" type="button" data-gain="8">8 dBi</button>
+            </div>
+            <div></div>
+          </div>
+
+          <output
+            class="results"
+            id="lb-results-output"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <div class="result result-primary">
+              <span class="result-label">Rx sensitivity <span class="optional" id="lb-sens-source"></span></span>
+              <span class="result-value" id="lb-out-sensitivity">&mdash;</span>
+            </div>
+            <div class="result result-primary">
+              <span class="result-label">Max range <span class="optional">(free space)</span></span>
+              <span class="result-value" id="lb-out-maxrange">&mdash;</span>
+            </div>
+            <div class="result">
+              <span class="result-label">EIRP</span>
+              <span class="result-value" id="lb-out-eirp">&mdash;</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Link budget</span>
+              <span class="result-value" id="lb-out-budget">&mdash;</span>
+            </div>
+          </output>
+        </div>
+      </section>
+
+      <!-- ============================================================
            COMPARISON CARDS
            ============================================================ -->
       <section id="comparison-section">
@@ -1027,6 +1213,28 @@
           <span
             >Formula source: Semtech SX127x/SX126x datasheet; cross-referenced
             with ifTNT/lora-air-time</span
+          >
+          <span
+            ><strong>Rx sensitivity</strong>: datasheet figures used for SX1276/8,
+            SX1262, LLCC68, LR1121, LR20xx (RxBoosted, CR=4/5, PER=1%). Intermediate
+            SFs interpolated linearly between datasheet anchors; BW correction
+            10&thinsp;log&#x2081;&#x2080;(BW_selected / BW_anchor) applied when BW is
+            not in the table. SX1280 and LR1110 use the thermal noise formula
+            (&minus;174 + 10&thinsp;log&#x2081;&#x2080;(BW) + NF + SNR_min) with a
+            chip-appropriate NF. &ldquo;All / Generic&rdquo; uses the formula with
+            the user-supplied NF value.</span
+          >
+          <span
+            ><strong>EIRP</strong>: Tx power + Tx antenna gain</span
+          >
+          <span
+            ><strong>Link budget</strong>: EIRP + Rx antenna gain &minus; Rx sensitivity
+            &mdash; total dB available to overcome path loss</span
+          >
+          <span
+            ><strong>Max range</strong>: free-space path loss model &mdash;
+            FSPL (dB) = 20&thinsp;log&#x2081;&#x2080;(d_km) + 20&thinsp;log&#x2081;&#x2080;(f_MHz)
+            + 32.45; solve for d when FSPL = link budget</span
           >
         </p>
       </section>
@@ -1605,6 +1813,7 @@
           };
 
           if (!exportContent.hidden) updateExport();
+          calculateLinkBudget();
         }
 
         // ----- Meshtastic header checkbox -----
@@ -1926,6 +2135,231 @@
           presetError.className = "preset-error";
           rebuildPresetSelect("LONG_FAST");
           onPresetChange();
+        });
+
+        // ==================== LINK BUDGET ====================
+
+        // Minimum SNR (dB) per SF — Semtech LoRa modem design guide
+        var SNR_MIN_DB = { 5: -2.5, 6: -5, 7: -7.5, 8: -10, 9: -12.5, 10: -15, 11: -17.5, 12: -20 };
+
+        // Datasheet sensitivity tables {bwKHz: {sf: dBm}}.
+        // SX126x/LR11xx: RxBoosted mode, CR=4/5, PER=1%.
+        // SX127x: equivalent to SX126x at 125 kHz per datasheet summary.
+        // BW correction (10·log10 ratio) applied for BW not in table.
+        // SF interpolated linearly between available anchors; extrapolated at 2.5 dB/step.
+        var SENS_DS = {
+          // SX1276 Band 3 HF / LnaBoost (862–1020 MHz, highest LNA gain), 0.1% BER.
+          // SF9/10/12 missing at 10.4 kHz — interpolated by interpSF.
+          "sx1276_sx1278": {
+            10.4: { 6: -131, 7: -134, 8: -138, 11: -146 },
+            62.5: { 6: -121, 7: -126, 8: -129, 9: -132, 10: -135, 11: -137, 12: -139 },
+            125:  { 6: -118, 7: -123, 8: -126, 9: -129, 10: -132, 11: -133, 12: -136 },
+            250:  { 6: -115, 7: -120, 8: -123, 9: -125, 10: -128, 11: -130, 12: -133 },
+            500:  { 6: -111, 7: -116, 8: -119, 9: -122, 10: -125, 11: -128, 12: -130 },
+          },
+          "sx1262": {
+            10.4: { 7: -134, 12: -148 },
+            125:  { 7: -124, 12: -137 },
+            250:  { 7: -121, 12: -134 },
+            500:  { 7: -117, 12: -129 },
+          },
+          "llcc68": {
+            125: { 7: -124, 12: -137 },
+            250: { 7: -121, 12: -134 },
+            500: { 7: -117, 12: -129 },
+          },
+          "lr1121": {
+            62.5: { 7: -130, 12: -144 },
+            125:  { 7: -127, 12: -141 },
+            250:  { 7: -124, 12: -138 },
+            500:  { 7: -121, 12: -134 },
+          },
+          "lr2021": {
+            62.5:   { 7: -124.5, 12: -144.5 },
+            125:    { 5: -122.0, 6: -125.0, 7: -127.5, 8: -130.5, 9: -133.0, 10: -136.0, 11: -138.5, 12: -141.5 },
+            406.25: { 7: -122.5,  9: -128.5, 12: -136.5 },
+            500:    { 7: -122.0,  9: -127.5, 12: -135.5 },
+            812.5:  { 7: -118.0,  9: -124.0, 12: -132.0 },
+            1000:   { 7: -118.0,  9: -123.0, 12: -131.0 },
+          },
+        };
+
+        // LR1110 uses LR1121 figures — same LR11xx family, no separate datasheet data
+        var CHIP_ALIAS = { "lr1110": "lr1121" };
+
+        // Chips where we use the formula with a chip-specific NF
+        // (no BW×SF table, or datasheet coverage too sparse)
+        var SENS_NF_CHIP = {
+          "sx1280": 10,  // 2.4 GHz; NF back-calculated from datasheet anchor points
+        };
+
+        // Interpolate sensitivity at a given SF from a {sf: dBm} map.
+        // Uses linear interpolation between surrounding anchors;
+        // extrapolates at 2.5 dB/step (theoretical) beyond the range.
+        function interpSF(sfMap, sf) {
+          if (sfMap[sf] !== undefined) return sfMap[sf];
+          var sfs = Object.keys(sfMap).map(Number).sort(function (a, b) { return a - b; });
+          if (sf <= sfs[0])                  return sfMap[sfs[0]] + (sf - sfs[0]) * (-2.5);
+          if (sf >= sfs[sfs.length - 1])     return sfMap[sfs[sfs.length - 1]] + (sf - sfs[sfs.length - 1]) * (-2.5);
+          var lo, hi;
+          for (var i = 0; i < sfs.length - 1; i++) {
+            if (sf > sfs[i] && sf < sfs[i + 1]) { lo = sfs[i]; hi = sfs[i + 1]; break; }
+          }
+          return sfMap[lo] + (sf - lo) * (sfMap[hi] - sfMap[lo]) / (hi - lo);
+        }
+
+        // Return {sens: dBm, source: "ds"|"calc"}.
+        function lookupSensitivity(radioType, bwKHz, sf, nfUser) {
+          if (CHIP_ALIAS[radioType]) radioType = CHIP_ALIAS[radioType];
+          var snrReq = SNR_MIN_DB[sf] !== undefined ? SNR_MIN_DB[sf] : -20;
+
+          // Chip-specific NF override (formula mode)
+          if (SENS_NF_CHIP[radioType] !== undefined) {
+            return {
+              sens: -174 + 10 * Math.log10(bwKHz * 1000) + SENS_NF_CHIP[radioType] + snrReq,
+              source: "calc",
+            };
+          }
+
+          var table = SENS_DS[radioType];
+          if (!table) {
+            // Generic / unknown — user-supplied NF
+            return {
+              sens: -174 + 10 * Math.log10(bwKHz * 1000) + nfUser + snrReq,
+              source: "calc",
+            };
+          }
+
+          // Find closest BW in the table (log scale minimises relative error)
+          var bwKeys = Object.keys(table).map(Number);
+          var nearestBW = bwKeys[0];
+          var nearestDist = Math.abs(Math.log(bwKHz / nearestBW));
+          bwKeys.forEach(function (bw) {
+            var d = Math.abs(Math.log(bwKHz / bw));
+            if (d < nearestDist) { nearestDist = d; nearestBW = bw; }
+          });
+
+          var sensAtAnchor = interpSF(table[nearestBW], sf);
+          // BW correction: noise bandwidth scales as 10·log10(BW)
+          var bwCorr = 10 * Math.log10(bwKHz / nearestBW);
+          return { sens: sensAtAnchor + bwCorr, source: "ds" };
+        }
+
+        var lbContent       = document.getElementById("lb-content");
+        var toggleLbBtn     = document.getElementById("toggle-lb-btn");
+        var lbRxRadioType   = document.getElementById("lb-rx-radio-type");
+        var lbFrequency     = document.getElementById("lb-frequency");
+        var lbTxPower       = document.getElementById("lb-tx-power");
+        var lbTxGain        = document.getElementById("lb-tx-gain");
+        var lbRxGain        = document.getElementById("lb-rx-gain");
+        var lbNF            = document.getElementById("lb-nf");
+
+        toggleLbBtn.addEventListener("click", function () {
+          var wasHidden = lbContent.hidden;
+          lbContent.hidden = !wasHidden;
+          toggleLbBtn.textContent = wasHidden ? "Hide link budget" : "Show link budget";
+          toggleLbBtn.setAttribute("aria-expanded", wasHidden ? "true" : "false");
+          if (wasHidden) calculateLinkBudget();
+        });
+
+        var lbOutSens     = document.getElementById("lb-out-sensitivity");
+        var lbSensSource  = document.getElementById("lb-sens-source");
+        var lbOutMaxRange = document.getElementById("lb-out-maxrange");
+        var lbOutEirp     = document.getElementById("lb-out-eirp");
+        var lbOutBudget   = document.getElementById("lb-out-budget");
+
+        function formatDbm(v) {
+          if (!Number.isFinite(v)) return "—";
+          return (v >= 0 ? "+" : "") + v.toFixed(1) + " dBm";
+        }
+
+        function formatDb(v) {
+          if (!Number.isFinite(v)) return "—";
+          return (v >= 0 ? "+" : "") + v.toFixed(1) + " dB";
+        }
+
+        function formatRange(km) {
+          if (!Number.isFinite(km) || km <= 0) return "—";
+          if (km >= 1) return km.toFixed(2) + " km";
+          return (km * 1000).toFixed(0) + " m";
+        }
+
+        function calculateLinkBudget() {
+          var freqMHz   = toNumber(lbFrequency.value);
+          var txPow     = toNumber(lbTxPower.value);
+          var txGain    = toNumber(lbTxGain.value);
+          var rxGain    = toNumber(lbRxGain.value);
+          var nf        = toNumber(lbNF.value);
+          var bwKHz     = toNumber(inputBW.value);
+          var sf        = parseInt(inputSF.value, 10);
+          var radioType = lbRxRadioType.value;
+
+          var dash = [lbOutSens, lbOutMaxRange, lbOutEirp, lbOutBudget];
+
+          if (freqMHz <= 0 || bwKHz <= 0 || sf < 5 || sf > 12) {
+            dash.forEach(function (el) { el.textContent = "—"; });
+            lbSensSource.textContent = "";
+            return;
+          }
+
+          var eirp   = txPow + txGain;
+          var result = lookupSensitivity(radioType, bwKHz, sf, nf);
+          var sens   = result.sens;
+          var budget = eirp + rxGain - sens;
+          var maxRangeKm = Math.pow(10, (budget - 20 * Math.log10(freqMHz) - 32.45) / 20);
+
+          lbOutSens.textContent      = formatDbm(sens);
+          lbSensSource.textContent   = result.source === "ds" ? "(datasheet)" : "(calculated)";
+          lbOutMaxRange.textContent  = formatRange(maxRangeKm);
+          lbOutEirp.textContent      = formatDbm(eirp);
+          lbOutBudget.textContent    = formatDb(budget);
+        }
+
+        document.getElementById("lb-freq-presets").addEventListener("click", function (e) {
+          var btn = e.target;
+          if (btn.tagName === "BUTTON" && btn.dataset.freq) {
+            lbFrequency.value = btn.dataset.freq;
+            calculateLinkBudget();
+          }
+        });
+
+        document.getElementById("lb-power-presets").addEventListener("click", function (e) {
+          var btn = e.target;
+          if (btn.tagName === "BUTTON" && btn.dataset.pwr) {
+            lbTxPower.value = btn.dataset.pwr;
+            calculateLinkBudget();
+          }
+        });
+
+        document.getElementById("lb-tx-gain-presets").addEventListener("click", function (e) {
+          var btn = e.target;
+          if (btn.tagName === "BUTTON" && btn.dataset.gain) {
+            lbTxGain.value = btn.dataset.gain;
+            calculateLinkBudget();
+          }
+        });
+
+        document.getElementById("lb-rx-gain-presets").addEventListener("click", function (e) {
+          var btn = e.target;
+          if (btn.tagName === "BUTTON" && btn.dataset.gain) {
+            lbRxGain.value = btn.dataset.gain;
+            calculateLinkBudget();
+          }
+        });
+
+        function updateNFState() {
+          var type = lbRxRadioType.value;
+          lbNF.disabled = type !== "all";
+        }
+
+        lbRxRadioType.addEventListener("change", function () {
+          updateNFState();
+          calculateLinkBudget();
+        });
+        updateNFState();
+        [lbFrequency, lbTxPower, lbTxGain, lbRxGain, lbNF].forEach(function (el) {
+          el.addEventListener("change", calculateLinkBudget);
+          el.addEventListener("input",  calculateLinkBudget);
         });
 
         // ----- Wire up events -----
