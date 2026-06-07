@@ -654,7 +654,7 @@
       <section>
         <h2>Inputs</h2>
         <form id="calculator-form">
-          <div class="two-col-fields">
+          <div class="three-col-fields">
             <div class="field">
               <label for="input-radio-type"
                 >Radio type
@@ -666,7 +666,18 @@
                   <option value="llcc68">LLCC68</option>
                   <option value="lr1110">LR1110</option>
                   <option value="lr1121">LR1121</option>
-                  <option value="lr2021">LR2021</option>
+                  <option value="lr2021">LR2021 / LR2022</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field">
+              <label for="input-modulation"
+                >Modulation
+                <select id="input-modulation">
+                  <option value="lora" selected>LoRa</option>
+                  <option value="gfsk">GFSK / FSK</option>
+                  <option value="flrc">FLRC</option>
                 </select>
               </label>
             </div>
@@ -680,9 +691,10 @@
               </label>
             </div>
           </div>
-          <!-- Hint + button row: both sit directly under their respective columns -->
-          <div class="two-col-fields hint-button-row">
+          <!-- Hint + button row -->
+          <div class="three-col-fields hint-button-row">
             <span id="radio-type-hint" class="field-hint"></span>
+            <span id="modulation-hint" class="field-hint"></span>
             <div style="text-align:right;">
               <button
                 id="toggle-presets-btn"
@@ -740,27 +752,27 @@
           </div>
 
           <div class="three-col-fields">
-            <div class="field">
+            <div class="field" id="field-bw">
               <label for="input-bw"
-                >Bandwidth
+                ><span id="bw-label">Bandwidth</span>
                 <select id="input-bw">
                   <!-- Populated by JS -->
                 </select>
               </label>
             </div>
 
-            <div class="field">
+            <div class="field" id="field-sf">
               <label for="input-sf"
-                >Spreading factor
+                ><span id="sf-label">Spreading factor</span>
                 <select id="input-sf">
                   <!-- Populated by JS -->
                 </select>
               </label>
             </div>
 
-            <div class="field">
+            <div class="field" id="field-cr">
               <label for="input-cr"
-                >Coding rate
+                ><span id="cr-label">Coding rate</span>
                 <select id="input-cr">
                   <!-- Populated by JS -->
                 </select>
@@ -771,8 +783,8 @@
           <div class="two-col-fields">
             <div class="field">
               <label for="input-preamble"
-                >Preamble length
-                <span class="optional">(symbols)</span>
+                ><span id="preamble-main-label">Preamble length</span>
+                <span class="optional" id="preamble-unit-hint">(symbols)</span>
                 <input
                   id="input-preamble"
                   type="number"
@@ -802,7 +814,7 @@
           </div>
 
           <div class="two-col-fields">
-            <div class="checkbox-field">
+            <div id="field-crc-checkbox" class="checkbox-field">
               <input type="checkbox" id="input-crc" checked />
               <div class="checkbox-field-text">
                 <label class="checkbox-field-label" for="input-crc"
@@ -810,6 +822,16 @@
                 >
                 <span class="field-hint">Adds 16 bits to effective payload.</span>
               </div>
+            </div>
+            <div class="field" id="field-flrc-crc" hidden>
+              <label for="input-flrc-crc">CRC length
+                <select id="input-flrc-crc">
+                  <option value="0">None (0 bytes)</option>
+                  <option value="2" selected>2 bytes</option>
+                  <option value="3">3 bytes</option>
+                  <option value="4">4 bytes</option>
+                </select>
+              </label>
             </div>
 
             <div class="checkbox-field">
@@ -829,28 +851,40 @@
             </div>
           </div>
 
-          <div class="two-col-fields">
-            <div class="field">
+          <div class="two-col-fields" style="align-items: start;">
+            <div class="field" id="field-header-mode">
               <label for="input-header-mode"
-                >LoRa Header
+                ><span id="header-mode-label">LoRa Header</span>
                 <select id="input-header-mode">
-                  <option value="explicit" selected>Enabled</option>
-                  <option value="implicit">Disabled</option>
+                  <option value="explicit" selected>Enabled (explicit)</option>
+                  <option value="implicit">Disabled (implicit)</option>
                 </select>
               </label>
             </div>
 
-            <div class="field">
-              <label for="input-ldro"
-                >Low data rate optimisation
-                <select id="input-ldro">
-                  <option value="auto" selected>
-                    Auto (enable when T_sym &gt; 16 ms)
-                  </option>
-                  <option value="on">Always on</option>
-                  <option value="off">Always off</option>
-                </select>
-              </label>
+            <div>
+              <div class="field" id="field-ldro" style="margin-bottom:0;">
+                <label for="input-ldro"
+                  >Low data rate optimisation
+                  <select id="input-ldro">
+                    <option value="auto" selected>
+                      Auto (enable when T_sym &gt; 16 ms)
+                    </option>
+                    <option value="on">Always on</option>
+                    <option value="off">Always off</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field" id="field-syncword" hidden style="margin-bottom:0;">
+                <label for="input-syncword"
+                  >Sync word
+                  <select id="input-syncword">
+                    <option value="0">None (0 bytes)</option>
+                    <option value="4" selected>4 bytes (32 bits)</option>
+                    <option value="8">8 bytes (64 bits)</option>
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
         </form>
@@ -913,7 +947,7 @@
             <span class="result-label">Payload duration</span>
             <span class="result-value" id="out-payload-dur">&mdash;</span>
           </div>
-          <div class="result">
+          <div class="result" id="result-row-ldro">
             <span class="result-label">LDRO active</span>
             <span class="result-value" id="out-ldro">&mdash;</span>
           </div>
@@ -989,7 +1023,7 @@
                   <option value="llcc68">LLCC68</option>
                   <option value="lr1110">LR1110</option>
                   <option value="lr1121">LR1121</option>
-                  <option value="lr2021">LR2021</option>
+                  <option value="lr2021">LR2021 / LR2022</option>
                 </select>
               </label>
             </div>
@@ -1360,65 +1394,163 @@
 
         var activePresets = DEFAULT_PRESETS.slice();
 
+        // GFSK sub-GHz filter BW options (SX126x / SX127x RxBw register values, kHz)
+        var GFSK_BW_SUB  = [4.8, 5.8, 7.3, 9.7, 11.7, 14.6, 19.5, 23.4, 29.3, 39.0, 46.9, 58.6, 78.2, 93.8, 117.3, 156.2, 187.2, 234.3, 312.0, 373.6, 467.0];
+        // GFSK 2.4 GHz BW (SX1280)
+        var GFSK_BW_WIDE = [300, 600, 1200, 2400];
+        // SX1280 GFSK — BR+BW are paired (Table 14-1, SX1280 DS Rev 3.3), BR kbps / BW kHz
+        var GFSK_RATES_SX1280 = [
+          {br: 2000, bw: 2400},
+          {br: 1600, bw: 2400},
+          {br: 1000, bw: 2400},
+          {br: 1000, bw: 1200},
+          {br:  800, bw: 2400},
+          {br:  800, bw: 1200},
+          {br:  500, bw: 1200},
+          {br:  500, bw:  600},
+          {br:  400, bw: 1200},
+          {br:  400, bw:  600},
+          {br:  250, bw:  600},
+          {br:  250, bw:  300},
+          {br:  125, bw:  300},
+        ];
+        // LR20xx GFSK — continuous bit rate up to 2000 kbps (LR20xx DS §11)
+        var GFSK_BR_LR20XX = [1.2, 2.4, 4.8, 9.6, 19.2, 38.4, 57.6, 76.8, 100, 150, 200, 250, 300, 400, 500, 600, 800, 1000, 1200, 1600, 2000];
+        // Generic sub-GHz GFSK/FSK bit rates (kbps)
+        var GFSK_BR_SUB  = [1.2, 2.4, 4.8, 9.6, 19.2, 38.4, 57.6, 76.8, 100, 150, 200, 250, 300, 400, 500];
+
+        // FLRC BR+BW pairs — chip-specific, BW values differ between SX1280 and LR2021
+        // SX1280 Table 6-4 (DS Rev 3.3): BW in MHz DSB → 1.2/0.6/0.3 MHz
+        var FLRC_RATES_SX1280 = [
+          {br: 1300, bw: 1200},
+          {br: 1040, bw: 1200},
+          {br:  650, bw:  600},
+          {br:  520, bw:  600},
+          {br:  325, bw:  300},
+          {br:  260, bw:  300},
+        ];
+        // LR2021/LR2022 Table 18-1 (DS Rev 2.1): BW in MHz DSB → 2.666/2.222/1.333/0.740/0.571/0.357/0.307 MHz
+        var FLRC_RATES_LR2021 = [
+          {br: 2600, bw: 2666},
+          {br: 2080, bw: 2222},
+          {br: 1300, bw: 1333},
+          {br: 1040, bw: 1333},
+          {br:  650, bw:  740},
+          {br:  520, bw:  571},
+          {br:  325, bw:  357},
+          {br:  260, bw:  307},
+        ];
+        // CR options per chip for FLRC
+        var FLRC_CR_SX1280 = [{v:"flrc_1_2",t:"1/2"},{v:"flrc_3_4",t:"3/4"},{v:"flrc_1",t:"1 (uncoded)"}];
+        var FLRC_CR_LR2021 = [{v:"flrc_1_2",t:"1/2"},{v:"flrc_2_3",t:"2/3"},{v:"flrc_3_4",t:"3/4"},{v:"flrc_1",t:"1 (not recommended)"}];
+
         // Radio type constraints.
         // band: 'sub' | 'wide' | null (null = user chooses)
-        // bwSub/bwWide: available bandwidths for each mode (empty = that band not supported)
+        // modulations: which modulations this chip supports
+        // gfskBitRates: available GFSK/FSK bit rates (kbps)
+        // gfskBwSub/gfskBwWide: GFSK filter BW options per band (kHz)
+        // flrcRates: chip-specific FLRC BR+BW pair table
+        // flrcCROpts: chip-specific FLRC coding rate options
         var RADIO_CONFIGS = {
           "all": {
             band: null,
+            modulations: ["lora", "gfsk"],
             sfMin: 5, sfMax: 12,
             bwSub:  [7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500],
             bwWide: [203.125, 406.25, 812.5, 1625],
             crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_SUB,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: [],
           },
           "sx1276_sx1278": {
             band: "sub",
+            modulations: ["lora", "gfsk"],
             sfMin: 6, sfMax: 12,
             bwSub:  [7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500],
             bwWide: [],
             crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_SUB,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: [],
           },
           "sx1262": {
             band: "sub",
+            modulations: ["lora", "gfsk"],
             sfMin: 5, sfMax: 12,
             bwSub:  [7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500],
             bwWide: [],
             crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_SUB,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: [],
           },
           "sx1280": {
             band: "wide",
+            modulations: ["lora", "gfsk", "flrc"],
             sfMin: 5, sfMax: 12,
             bwSub:  [],
             bwWide: [203.125, 406.25, 812.5, 1625],
             crOpts: [5, 6, 7, 8],
+            gfskRates:   GFSK_RATES_SX1280,
+            flrcRates:    FLRC_RATES_SX1280,
+            flrcCROpts:   FLRC_CR_SX1280,
           },
           "llcc68": {
             band: "sub",
+            modulations: ["lora"],           // LoRa-only chip, no FSK
             sfMin: 5, sfMax: 11,
             bwSub:  [125, 250, 500],
             bwWide: [],
             crOpts: [5, 6, 7, 8],
           },
           "lr1110": {
-            band: "sub",
+            band: null,                      // sub-GHz + 2.4 GHz LoRa
+            modulations: ["lora", "gfsk"],
             sfMin: 5, sfMax: 12,
-            bwSub:  [125, 250, 500],
-            bwWide: [],
+            bwSub:  [62.5, 125, 250, 500],
+            bwWide: [203.125, 406.25, 812.5, 1625],
             crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_SUB,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: [],
           },
           "lr1121": {
             band: null,
+            modulations: ["lora", "gfsk"],
             sfMin: 5, sfMax: 12,
-            bwSub:  [125, 250, 500],
+            bwSub:  [62.5, 125, 250, 500],
             bwWide: [203.125, 406.25, 812.5, 1625],
             crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_SUB,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: [],
           },
           "lr2021": {
             band: null,
+            modulations: ["lora", "gfsk", "flrc"],  // LR2021/LR2022 supports FLRC, SX128x-compatible
             sfMin: 5, sfMax: 12,
-            bwSub:  [125, 250, 500],
+            bwSub:  [62.5, 125, 250, 500],
             bwWide: [203.125, 406.25, 812.5, 1625],
             crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_LR20XX,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: GFSK_BW_WIDE,
+            flrcRates:    FLRC_RATES_LR2021,
+            flrcCROpts:   FLRC_CR_LR2021,
+          },
+          "lr2022": {
+            band: null,
+            modulations: ["lora", "gfsk", "flrc"],
+            sfMin: 5, sfMax: 12,
+            bwSub:  [62.5, 125, 250, 500],
+            bwWide: [203.125, 406.25, 812.5, 1625],
+            crOpts: [5, 6, 7, 8],
+            gfskBitRates: GFSK_BR_LR20XX,
+            gfskBwSub:  GFSK_BW_SUB,
+            gfskBwWide: GFSK_BW_WIDE,
+            flrcRates:    FLRC_RATES_LR2021,
+            flrcCROpts:   FLRC_CR_LR2021,
           },
         };
 
@@ -1471,6 +1603,23 @@
         var resetPresetsBtn  = document.getElementById("reset-presets-btn");
         var saveCompBtn      = document.getElementById("save-comparison-btn");
         var radioTypeHint    = document.getElementById("radio-type-hint");
+        var inputModulation  = document.getElementById("input-modulation");
+        var inputSyncword    = document.getElementById("input-syncword");
+        var modulationHint   = document.getElementById("modulation-hint");
+        var sfLabelEl        = document.getElementById("sf-label");
+        var bwLabelEl        = document.getElementById("bw-label");
+        var crLabelEl        = document.getElementById("cr-label");
+        var headerModeLabelEl = document.getElementById("header-mode-label");
+        var preambleUnitHint = document.getElementById("preamble-unit-hint");
+        var fieldBW           = document.getElementById("field-bw");
+        var fieldCR           = document.getElementById("field-cr");
+        var fieldLDRO         = document.getElementById("field-ldro");
+        var fieldSyncword     = document.getElementById("field-syncword");
+        var resultRowLDRO     = document.getElementById("result-row-ldro");
+        var fieldHeaderMode   = document.getElementById("field-header-mode");
+        var fieldCrcCheckbox  = document.getElementById("field-crc-checkbox");
+        var fieldFlrcCrc      = document.getElementById("field-flrc-crc");
+        var inputFlrcCrc      = document.getElementById("input-flrc-crc");
 
         // ----- State -----
         var preambleTouched    = false;
@@ -1513,6 +1662,10 @@
           return RADIO_CONFIGS[inputRadioType.value] || RADIO_CONFIGS["all"];
         }
 
+        function getModulation() {
+          return inputModulation ? inputModulation.value : "lora";
+        }
+
         function findPreset(key) {
           var found = null;
           activePresets.forEach(function (p) {
@@ -1543,8 +1696,37 @@
         // ----- Rebuild selects -----
         function rebuildBWSelect(preserve) {
           var cfg  = getRadioCfg();
-          var opts = isWide() ? cfg.bwWide : cfg.bwSub;
+          var mod  = getModulation();
           var prev = preserve ? toNumber(inputBW.value) : null;
+          var opts;
+          fieldBW.hidden = false;
+          if (mod === "gfsk") {
+            if (cfg.gfskRates) {
+              // SX1280 GFSK: BR+BW are paired — BW drives available bit rates
+              var seen = {};
+              opts = [];
+              cfg.gfskRates.slice().reverse().forEach(function(r) {
+                if (!seen[r.bw]) { seen[r.bw] = true; opts.push(r.bw); }
+              });
+              bwLabelEl.textContent = "Modulation BW";
+            } else {
+              opts = isWide() ? (cfg.gfskBwWide || []) : (cfg.gfskBwSub || []);
+              bwLabelEl.textContent = "Filter BW";
+            }
+          } else if (mod === "flrc") {
+            // BW and BR are paired — BW drives which bit rates are available
+            var chipRates = cfg.flrcRates || [];
+            // Unique BW values in ascending order (reverse since chipRates is descending by BR)
+            var seen = {};
+            opts = [];
+            chipRates.slice().reverse().forEach(function(r) {
+              if (!seen[r.bw]) { seen[r.bw] = true; opts.push(r.bw); }
+            });
+            bwLabelEl.textContent = "Modulation BW";
+          } else {
+            opts = isWide() ? cfg.bwWide : cfg.bwSub;
+            bwLabelEl.textContent = "Bandwidth";
+          }
           inputBW.innerHTML = "";
           opts.forEach(function (bw) {
             var o = document.createElement("option");
@@ -1559,22 +1741,97 @@
 
         function rebuildSFSelect(preserve) {
           var cfg = getRadioCfg();
-          var prev = preserve ? parseInt(inputSF.value, 10) : null;
+          var mod = getModulation();
+          var prev = preserve ? inputSF.value : null;
           inputSF.innerHTML = "";
-          for (var sf = cfg.sfMin; sf <= cfg.sfMax; sf++) {
-            var o = document.createElement("option");
-            o.value = sf;
-            o.textContent = "SF" + sf;
-            inputSF.appendChild(o);
-          }
-          if (prev !== null) {
-            var clamped = Math.max(cfg.sfMin, Math.min(cfg.sfMax, prev));
-            inputSF.value = clamped;
+          if (mod === "gfsk") {
+            sfLabelEl.textContent = "Bit rate";
+            if (cfg.gfskRates) {
+              // SX1280 GFSK: BR+BW paired — bit rates depend on selected BW
+              var selectedBw = toNumber(inputBW.value);
+              var chipRates = cfg.gfskRates;
+              var matchingRates = chipRates.filter(function(r) { return r.bw === selectedBw; });
+              if (!matchingRates.length) matchingRates = chipRates;
+              matchingRates.forEach(function (r) {
+                var o = document.createElement("option");
+                o.value = r.br;
+                o.textContent = r.br + " kbps";
+                inputSF.appendChild(o);
+              });
+              if (prev !== null && matchingRates.length) {
+                var prevNum = parseFloat(prev) || matchingRates[0].br;
+                inputSF.value = closestBW(matchingRates.map(function(r){return r.br;}), prevNum);
+              }
+            } else {
+              var rates = cfg.gfskBitRates || [];
+              rates.forEach(function (br) {
+                var o = document.createElement("option");
+                o.value = br;
+                o.textContent = br + " kbps";
+                inputSF.appendChild(o);
+              });
+              if (prev !== null && rates.length) {
+                inputSF.value = closestBW(rates, parseFloat(prev) || rates[0]);
+              }
+            }
+          } else if (mod === "flrc") {
+            sfLabelEl.textContent = "Bit rate";
+            var selectedBw = toNumber(inputBW.value);
+            var chipRates = cfg.flrcRates || [];
+            // Filter to rates matching selected BW (usually 1; LR2021 1333 kHz has two)
+            var matchingRates = chipRates.filter(function(r) { return r.bw === selectedBw; });
+            if (!matchingRates.length) matchingRates = chipRates; // fallback
+            matchingRates.forEach(function (r) {
+              var o = document.createElement("option");
+              o.value = r.br;
+              o.textContent = r.br + " kbps";
+              inputSF.appendChild(o);
+            });
+            if (prev !== null && matchingRates.length) {
+              var prevNum = parseFloat(prev) || matchingRates[0].br;
+              inputSF.value = closestBW(matchingRates.map(function(r){return r.br;}), prevNum);
+            }
+          } else {
+            sfLabelEl.textContent = "Spreading factor";
+            for (var sf = cfg.sfMin; sf <= cfg.sfMax; sf++) {
+              var o = document.createElement("option");
+              o.value = sf;
+              o.textContent = "SF" + sf;
+              inputSF.appendChild(o);
+            }
+            if (prev !== null) {
+              var prevInt = parseInt(prev, 10);
+              var clamped = Math.max(cfg.sfMin, Math.min(cfg.sfMax, prevInt));
+              inputSF.value = clamped;
+            }
           }
         }
 
         function rebuildCRSelect(preserve) {
           var cfg = getRadioCfg();
+          var mod = getModulation();
+          if (mod === "gfsk") {
+            fieldCR.hidden = true;
+            return;
+          }
+          fieldCR.hidden = false;
+          if (mod === "flrc") {
+            crLabelEl.textContent = "FEC coding rate";
+            var prev = preserve ? inputCR.value : null;
+            inputCR.innerHTML = "";
+            var crOpts = cfg.flrcCROpts || FLRC_CR_SX1280;
+            crOpts.forEach(function (opt) {
+              var o = document.createElement("option");
+              o.value = opt.v;
+              o.textContent = opt.t;
+              inputCR.appendChild(o);
+            });
+            if (prev && inputCR.querySelector('option[value="' + prev + '"]')) {
+              inputCR.value = prev;
+            }
+            return;
+          }
+          crLabelEl.textContent = "Coding rate";
           var prev = preserve ? parseInt(inputCR.value, 10) : null;
           inputCR.innerHTML = "";
           cfg.crOpts.forEach(function (cr) {
@@ -1622,6 +1879,9 @@
 
         // ----- Band-based preamble default -----
         function bandDefaultPreamble() {
+          var mod = getModulation();
+          // GFSK/FLRC: preamble in bytes; LoRa: preamble in symbols
+          if (mod === "gfsk" || mod === "flrc") return 4;
           return isWide() ? 12 : 16;
         }
 
@@ -1630,23 +1890,96 @@
           if (key === "all") return "";
           var cfg = RADIO_CONFIGS[key];
           if (!cfg) return "";
+          var mod = getModulation();
           var parts = [];
           if (cfg.band === "sub")   parts.push("Sub-GHz only");
           else if (cfg.band === "wide") parts.push("2.4 GHz only");
           else if (cfg.band === null && cfg.bwSub.length && cfg.bwWide.length) parts.push("Dual-band");
-          parts.push("SF" + cfg.sfMin + "–" + cfg.sfMax);
-          var bwList = isWide() ? cfg.bwWide : cfg.bwSub;
-          if (bwList.length > 0) {
-            if (bwList.length <= 5) {
-              parts.push(bwList.join(", ") + " kHz");
-            } else {
+          if (mod === "lora") {
+            parts.push("SF" + cfg.sfMin + "–" + cfg.sfMax);
+            var bwList = isWide() ? cfg.bwWide : cfg.bwSub;
+            if (bwList.length > 0) {
               parts.push(bwList[0] + "–" + bwList[bwList.length - 1] + " kHz");
             }
-          }
-          if (cfg.crOpts.length < 4) {
-            parts.push("CR 4/" + cfg.crOpts.join(", 4/"));
+          } else if (mod === "gfsk") {
+            if (cfg.gfskRates) {
+              var brs = cfg.gfskRates.map(function(r){return r.br;});
+              brs.sort(function(a,b){return a-b;});
+              parts.push(brs[0] + "–" + brs[brs.length-1] + " kbps");
+            } else {
+              var rates = cfg.gfskBitRates || [];
+              if (rates.length) parts.push(rates[0] + "–" + rates[rates.length-1] + " kbps");
+            }
+          } else if (mod === "flrc") {
+            var fRates = cfg.flrcRates || [];
+            if (fRates.length) {
+              parts.push(fRates[fRates.length-1].br + "–" + fRates[0].br + " kbps");
+            }
           }
           return parts.join(" · ");
+        }
+
+        function onModulationChange() {
+          var mod = getModulation();
+          var isLora = mod === "lora";
+          var isFlrc = mod === "flrc";
+          var isGfsk = mod === "gfsk";
+
+          // Show/hide LDRO vs syncword
+          fieldLDRO.hidden     = !isLora;
+          fieldSyncword.hidden = isLora;
+          resultRowLDRO.hidden = !isLora;
+
+          // Header mode: LoRa and GFSK show it; FLRC is always fixed-length so hide it
+          fieldHeaderMode.hidden = isFlrc;
+          if (!isFlrc) {
+            headerModeLabelEl.textContent = isLora ? "LoRa header" : "Variable length";
+          }
+
+          // CRC: LoRa/GFSK use checkbox; FLRC uses a byte-count select
+          fieldCrcCheckbox.hidden = isFlrc;
+          fieldFlrcCrc.hidden     = !isFlrc;
+
+          // Syncword options differ by modulation
+          if (inputSyncword) {
+            var swOpts = isFlrc
+              ? [{v:"0",t:"None (0 bytes)"},{v:"2",t:"2 bytes (16 bits)"},{v:"4",t:"4 bytes (32 bits)"}]
+              : [{v:"0",t:"None (0 bytes)"},{v:"4",t:"4 bytes (32 bits)"},{v:"8",t:"8 bytes (64 bits)"}];
+            var prev = inputSyncword.value;
+            inputSyncword.innerHTML = "";
+            swOpts.forEach(function(o) {
+              var el = document.createElement("option");
+              el.value = o.v; el.textContent = o.t;
+              inputSyncword.appendChild(el);
+            });
+            // Restore if still valid, otherwise default to 4 bytes
+            inputSyncword.value = inputSyncword.querySelector('option[value="' + prev + '"]') ? prev : "4";
+          }
+
+          // Preamble unit hint
+          preambleUnitHint.textContent = isLora ? "(symbols)" : "(bytes)";
+
+          // Preset select: LoRa-only feature
+          inputPreset.disabled = !isLora;
+          if (!isLora) inputPreset.value = "custom";
+
+          // Modulation hint
+          if (modulationHint) {
+            if (isGfsk) modulationHint.textContent = "GFSK/FSK — no spreading factor, preamble in bytes";
+            else if (isFlrc) modulationHint.textContent = "FLRC — FEC-coded, fixed-length payload, 21-bit timing preamble always included";
+            else modulationHint.textContent = "";
+          }
+
+          // Reset preamble default if not user-modified
+          if (!preambleTouched) {
+            inputPreamble.value = bandDefaultPreamble();
+          }
+
+          radioTypeHint.textContent = buildRadioHint(inputRadioType.value);
+          rebuildBWSelect(true);
+          rebuildSFSelect(true);
+          rebuildCRSelect(true);
+          calculate();
         }
 
         function onRadioTypeChange() {
@@ -1663,12 +1996,17 @@
             bandToggleInput.disabled = false;
             bandDisabledNote.hidden  = true;
           }
-          radioTypeHint.textContent = buildRadioHint(inputRadioType.value);
+          // Enable/disable modulation options based on chip support
+          var supported = cfg.modulations || ["lora"];
+          for (var i = 0; i < inputModulation.options.length; i++) {
+            var opt = inputModulation.options[i];
+            opt.disabled = supported.indexOf(opt.value) === -1;
+          }
+          if (supported.indexOf(inputModulation.value) === -1) {
+            inputModulation.value = "lora";
+          }
           updateBandLabels();
-          rebuildBWSelect(true);
-          rebuildSFSelect(true);
-          rebuildCRSelect(true);
-          calculate();
+          onModulationChange();
         }
 
         function onBandToggle() {
@@ -1677,8 +2015,8 @@
           if (!preambleTouched) {
             inputPreamble.value = bandDefaultPreamble();
           }
-          // Re-seat preset BW when a named preset is active
-          if (inputPreset.value !== "custom") {
+          // Re-seat preset BW when a named preset is active (LoRa only)
+          if (getModulation() === "lora" && inputPreset.value !== "custom") {
             var preset = findPreset(inputPreset.value);
             if (preset) {
               var bwTarget = isWide() ? preset.bwWide : preset.bw;
@@ -1689,6 +2027,7 @@
         }
 
         function onPresetChange() {
+          if (getModulation() !== "lora") { calculate(); return; }
           var key = inputPreset.value;
           if (key === "custom") { calculate(); return; }
           var preset = findPreset(key);
@@ -1705,6 +2044,13 @@
 
         function setCustomIfChanged() {
           if (suppressReset) return;
+          if (getModulation() !== "lora") {
+            // For FLRC, BW drives available bit rates — rebuild SF select when BW changes
+            var mod2 = getModulation();
+            if (mod2 === "flrc" || (mod2 === "gfsk" && getRadioCfg().gfskRates)) rebuildSFSelect(true);
+            calculate();
+            return;
+          }
           if (inputPreset.value === "custom") { calculate(); return; }
           var preset = findPreset(inputPreset.value);
           if (!preset) { inputPreset.value = "custom"; calculate(); return; }
@@ -1718,8 +2064,108 @@
           calculate();
         }
 
+        function calculateGFSK() {
+          var bitRateKbps = parseFloat(inputSF.value);
+          var pre     = toNumber(inputPreamble.value);   // bytes
+          var appPL   = toNumber(inputPayload.value);
+          var meshHdr = inputMeshHdr.checked ? 16 : 0;
+          var pl      = appPL + meshHdr;                 // total bytes
+          var crcOn   = inputCRC.checked;
+          var varLen  = inputHeaderMode.value === "explicit";
+          var swBytes = parseInt(inputSyncword.value || "4", 10);
+          if (bitRateKbps <= 0 || pl < 1) return null;
+
+          var totalBits = pre * 8
+                        + swBytes * 8
+                        + (varLen ? 16 : 0)   // length byte (16 bits incl framing)
+                        + pl * 8
+                        + (crcOn ? 16 : 0);
+          var toaMs = totalBits / bitRateKbps;
+          return {toaMs: toaMs, pl: pl, appPL: appPL, bitRateKbps: bitRateKbps};
+        }
+
+        function calculateFLRC() {
+          var bitRateKbps = parseFloat(inputSF.value);
+          var pre     = toNumber(inputPreamble.value);  // user-configurable preamble bytes (not FEC-coded)
+          var appPL   = toNumber(inputPayload.value);
+          var meshHdr = inputMeshHdr.checked ? 16 : 0;
+          var pl      = appPL + meshHdr;                // payload always fixed length in FLRC
+          var crcBytes = parseInt((inputFlrcCrc && inputFlrcCrc.value) || "2", 10);
+          var swBytes  = parseInt((inputSyncword && inputSyncword.value) || "4", 10);
+          var crVal    = inputCR.value;
+          var crRatio  = crVal === "flrc_1_2" ? 0.5
+                       : crVal === "flrc_2_3" ? (2/3)
+                       : crVal === "flrc_3_4" ? 0.75
+                       : 1.0; // flrc_1 = uncoded
+          var fecEnabled = crRatio < 1.0;
+          if (bitRateKbps <= 0 || pl < 1) return null;
+
+          // Packet structure (SX1280 datasheet §7.1):
+          //   [preamble bytes] + [21-bit timing preamble]  — NOT FEC-coded
+          //   [syncword] + [payload] + [CRC] + [6-bit tail if FEC]  — FEC-coded
+          var uncodedBits = pre * 8 + 21;
+          var infoBits    = swBytes * 8
+                          + pl * 8
+                          + crcBytes * 8
+                          + (fecEnabled ? 6 : 0);
+          var codedBits   = infoBits / crRatio;
+          var totalBits   = uncodedBits + codedBits;
+          var toaMs       = totalBits / bitRateKbps;
+          return {toaMs: toaMs, pl: pl, appPL: appPL, bitRateKbps: bitRateKbps};
+        }
+
         // ----- Main calculation -----
         function calculate() {
+          var mod = getModulation();
+          var dash = "—";
+          var allOutputs = [outSymTime, outLDRO, outPreambleSyms, outPreambleDur,
+                            outOverheadSyms, outOverheadDur,
+                            outPayloadSyms, outPayloadDur, outToa, outThroughput, outAppThroughput,
+                            outMax40, outMax25, outMax10, outMax5, outMax2p5];
+
+          if (mod === "gfsk" || mod === "flrc") {
+            var r = mod === "gfsk" ? calculateGFSK() : calculateFLRC();
+            if (!r) {
+              allOutputs.forEach(function (el) { el.textContent = dash; });
+              return;
+            }
+            var toa = r.toaMs;
+            function maxPkts(pct) { return toa > 0 ? Math.floor(3600000 * pct / toa) : 0; }
+            var nominalDR   = r.bitRateKbps * 1000;
+            var appThroughput = (r.appPL * 8) / (toa / 1000);
+            outSymTime.textContent       = "N/A";
+            outLDRO.textContent          = "N/A";
+            outPreambleSyms.textContent  = toNumber(inputPreamble.value) + " B";
+            outPreambleDur.textContent   = dash;
+            outOverheadSyms.textContent  = "N/A";
+            outOverheadDur.textContent   = dash;
+            outPayloadSyms.textContent   = r.pl + " B";
+            outPayloadDur.textContent    = dash;
+            outToa.textContent           = formatDuration(toa);
+            outThroughput.textContent    = formatThroughput(nominalDR);
+            outAppThroughput.textContent = formatThroughput(appThroughput);
+            outMax40.textContent         = maxPkts(0.40) + " pkts";
+            outMax25.textContent         = maxPkts(0.25) + " pkts";
+            outMax10.textContent         = maxPkts(0.10) + " pkts";
+            outMax5.textContent          = maxPkts(0.05) + " pkts";
+            outMax2p5.textContent        = maxPkts(0.025) + " pkts";
+            lastResult = {
+              radioType:     inputRadioType.options[inputRadioType.selectedIndex].text,
+              presetName:    "Custom",
+              modulation:    mod,
+              band:          isWide() ? "2.4 GHz" : "Sub-GHz",
+              bitRateKbps:   r.bitRateKbps,
+              appPayload:    r.appPL, payload: r.pl,
+              toa:           toa, throughput: nominalDR, appThroughput: appThroughput,
+              max40: maxPkts(0.40), max25: maxPkts(0.25), max10: maxPkts(0.10),
+              max5:  maxPkts(0.05), max2p5: maxPkts(0.025),
+            };
+            if (!exportContent.hidden) updateExport();
+            calculateLinkBudget();
+            return;
+          }
+
+          // ----- LoRa calculation -----
           var bwKHz  = toNumber(inputBW.value);
           var sf     = parseInt(inputSF.value, 10);
           var cr     = parseInt(inputCR.value, 10);
@@ -1731,13 +2177,7 @@
           var ldroMode = inputLDRO.value;
 
           if (bwKHz <= 0 || sf < 5 || sf > 12 || cr < 5 || cr > 8 || pl < 1) {
-            var dash = "—";
-            [outSymTime, outLDRO, outPreambleSyms, outPreambleDur,
-             outOverheadSyms, outOverheadDur,
-             outPayloadSyms, outPayloadDur, outToa, outThroughput, outAppThroughput,
-             outMax40, outMax25, outMax10, outMax5, outMax2p5].forEach(function (el) {
-              el.textContent = dash;
-            });
+            allOutputs.forEach(function (el) { el.textContent = dash; });
             return;
           }
 
@@ -1758,7 +2198,6 @@
           var tPayload   = nPayload * symTime_ms;
 
           var toa        = tPreamble + tPayload;
-          // Semtech nominal data rate: SF * (4/CR) * BW / 2^SF
           var nominalDR  = sf * (4 / cr) * (bwKHz * 1000) / Math.pow(2, sf);
           var appThroughput = (pl * 8) / (toa / 1000);
 
@@ -1780,16 +2219,17 @@
           outToa.textContent          = formatDuration(toa);
           outThroughput.textContent   = formatThroughput(nominalDR);
           outAppThroughput.textContent = formatThroughput(appThroughput);
-          outMax40.textContent        = maxPkts(0.40) + " pkts";
-          outMax25.textContent        = maxPkts(0.25) + " pkts";
-          outMax10.textContent        = maxPkts(0.10) + " pkts";
-          outMax5.textContent         = maxPkts(0.05) + " pkts";
-          outMax2p5.textContent       = maxPkts(0.025) + " pkts";
+          outMax40.textContent        = maxPkts(0.40) + " pkts";
+          outMax25.textContent        = maxPkts(0.25) + " pkts";
+          outMax10.textContent        = maxPkts(0.10) + " pkts";
+          outMax5.textContent         = maxPkts(0.05) + " pkts";
+          outMax2p5.textContent       = maxPkts(0.025) + " pkts";
 
           lastResult = {
             radioType:    inputRadioType.options[inputRadioType.selectedIndex].text,
             presetName:   inputPreset.options[inputPreset.selectedIndex].text,
-            band:         isWide() ? "2.4 GHz" : "Sub-GHz",
+            modulation:   "lora",
+            band:         isWide() ? "2.4 GHz" : "Sub-GHz",
             bw: bwKHz, sf: sf, cr: cr, preamble: pre,
             appPayload: appPL, payload: pl,
             meshHeader:   inputMeshHdr.checked,
@@ -2184,8 +2624,8 @@
           },
         };
 
-        // LR1110 uses LR1121 figures — same LR11xx family, no separate datasheet data
-        var CHIP_ALIAS = { "lr1110": "lr1121" };
+        // LR1110 uses LR1121 figures; LR2022 uses LR2021 figures (same silicon, different package)
+        var CHIP_ALIAS = { "lr1110": "lr1121", "lr2022": "lr2021" };
 
         // Chips where we use the formula with a chip-specific NF
         // (no BW×SF table, or datasheet coverage too sparse)
@@ -2290,11 +2730,34 @@
           var txGain    = toNumber(lbTxGain.value);
           var rxGain    = toNumber(lbRxGain.value);
           var nf        = toNumber(lbNF.value);
+          var mod       = getModulation();
+          var radioType = lbRxRadioType.value;
+          var dash = [lbOutSens, lbOutMaxRange, lbOutEirp, lbOutBudget];
+
+          if (mod === "gfsk" || mod === "flrc") {
+            // Thermal noise floor: N = kTB, sensitivity = N + NF + SNR_min
+            // GFSK: SNR_min ~10 dB; FLRC: SNR_min ~8 dB (FEC gain)
+            var bitRateKbps = parseFloat(inputSF.value);
+            if (freqMHz <= 0 || bitRateKbps <= 0) {
+              dash.forEach(function (el) { el.textContent = "—"; }); lbSensSource.textContent = ""; return;
+            }
+            var bwHz = bitRateKbps * 1000 * 1.5; // approx occupied BW = 1.5 × bit rate
+            var kTB  = -174 + 10 * Math.log10(bwHz); // dBm
+            var snrMin = mod === "flrc" ? 8 : 10;
+            var sens = kTB + nf + snrMin;
+            var eirp   = txPow + txGain;
+            var budget = eirp + rxGain - sens;
+            var maxRangeKm = Math.pow(10, (budget - 20 * Math.log10(freqMHz) - 32.45) / 20);
+            lbOutSens.textContent      = formatDbm(sens);
+            lbSensSource.textContent   = "(calculated)";
+            lbOutMaxRange.textContent  = formatRange(maxRangeKm);
+            lbOutEirp.textContent      = formatDbm(eirp);
+            lbOutBudget.textContent    = formatDb(budget);
+            return;
+          }
+
           var bwKHz     = toNumber(inputBW.value);
           var sf        = parseInt(inputSF.value, 10);
-          var radioType = lbRxRadioType.value;
-
-          var dash = [lbOutSens, lbOutMaxRange, lbOutEirp, lbOutBudget];
 
           if (freqMHz <= 0 || bwKHz <= 0 || sf < 5 || sf > 12) {
             dash.forEach(function (el) { el.textContent = "—"; });
@@ -2364,6 +2827,7 @@
 
         // ----- Wire up events -----
         inputRadioType.addEventListener("change", onRadioTypeChange);
+        inputModulation.addEventListener("change", onModulationChange);
         inputPreset.addEventListener("change", onPresetChange);
         bandToggleInput.addEventListener("change", onBandToggle);
         inputBW.addEventListener("change", setCustomIfChanged);
@@ -2376,6 +2840,8 @@
         inputHeaderMode.addEventListener("change", calculate);
         inputCRC.addEventListener("change", calculate);
         inputLDRO.addEventListener("change", calculate);
+        if (inputSyncword) inputSyncword.addEventListener("change", calculate);
+        if (inputFlrcCrc)  inputFlrcCrc.addEventListener("change", calculate);
 
         // ==================== INITIALISATION ====================
         applyThemeMode(getStoredThemeMode(), false);
@@ -2394,13 +2860,8 @@
         // Sync payload label with default checkbox state
         updatePayloadLabel();
 
-        radioTypeHint.textContent = buildRadioHint(inputRadioType.value);
         rebuildPresetSelect("LONG_FAST");
-        rebuildBWSelect(false);
-        rebuildSFSelect(false);
-        rebuildCRSelect(false);
-        updateBandLabels();
-        onPresetChange();
+        onRadioTypeChange();    // disables unavailable modulation options, sets band, rebuilds selects, calculates
 
       })();
     </script>
