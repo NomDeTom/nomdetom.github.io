@@ -103,6 +103,10 @@
         font-size: 0.88rem;
       }
 
+      [hidden] {
+        display: none !important;
+      }
+
       .attribution-block[hidden] {
         display: none !important;
       }
@@ -380,6 +384,44 @@
       .checkbox-field-label {
         font-weight: 600;
         cursor: pointer;
+      }
+
+
+      /* CRC selection chips */
+      .chip-row {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+        margin-top: 0.2rem;
+      }
+
+      .chip {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 0.3rem 0.7rem;
+        font: inherit;
+        font-size: 0.88rem;
+        cursor: pointer;
+        border-radius: 0;
+      }
+
+      .chip:hover:not([disabled]) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.selected {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+
+      .chip[disabled] {
+        color: var(--disabled);
+        border-color: var(--disabled);
+        cursor: default;
       }
 
       /* ============================================================
@@ -692,7 +734,7 @@
             </div>
           </div>
           <!-- Hint + button row -->
-          <div class="three-col-fields hint-button-row">
+          <div class="three-col-fields hint-button-row" style="margin-bottom: 0.3rem;">
             <span id="radio-type-hint" class="field-hint"></span>
             <span id="modulation-hint" class="field-hint"></span>
             <div style="text-align:right;">
@@ -703,27 +745,6 @@
                 aria-expanded="false"
               >
                 Edit presets
-              </button>
-            </div>
-          </div>
-
-          <!-- Preset editor — inline, hidden by default, full width -->
-          <div id="preset-editor-panel" hidden class="preset-editor-inline">
-            <p class="field-hint" style="margin: 0 0 0.6rem;">
-              Markdown table — columns: Key, Name, BW std (kHz), BW wide (kHz),
-              SF, CR. Invalid rows are highlighted on apply.
-            </p>
-            <textarea
-              id="preset-textarea"
-              aria-label="Preset editor table"
-            ></textarea>
-            <div id="preset-error" class="preset-error" role="alert"></div>
-            <div class="panel-actions">
-              <button id="apply-presets-btn" class="action-btn" type="button">
-                Apply presets
-              </button>
-              <button id="reset-presets-btn" class="action-btn" type="button">
-                Reset to defaults
               </button>
             </div>
           </div>
@@ -749,6 +770,27 @@
               hidden
               >Auto-set by radio type</span
             >
+          </div>
+
+          <!-- Preset editor — inline, hidden by default, full width -->
+          <div id="preset-editor-panel" hidden class="preset-editor-inline">
+            <p class="field-hint" style="margin: 0 0 0.6rem;">
+              Markdown table — columns: Key, Name, BW std (kHz), BW wide (kHz),
+              SF, CR. Invalid rows are highlighted on apply.
+            </p>
+            <textarea
+              id="preset-textarea"
+              aria-label="Preset editor table"
+            ></textarea>
+            <div id="preset-error" class="preset-error" role="alert"></div>
+            <div class="panel-actions">
+              <button id="apply-presets-btn" class="action-btn" type="button">
+                Apply presets
+              </button>
+              <button id="reset-presets-btn" class="action-btn" type="button">
+                Reset to defaults
+              </button>
+            </div>
           </div>
 
           <div class="three-col-fields">
@@ -780,73 +822,54 @@
             </div>
           </div>
 
-          <div class="two-col-fields">
-            <div class="field">
-              <label for="input-preamble"
-                ><span id="preamble-main-label">Preamble length</span>
-                <span class="optional" id="preamble-unit-hint">(symbols)</span>
-                <input
-                  id="input-preamble"
-                  type="number"
-                  inputmode="decimal"
-                  step="1"
-                  min="6"
-                  value="16"
-                />
-              </label>
-            </div>
-
-            <div class="field">
-              <label for="input-payload">
-                <span id="payload-label-text">Total LoRa payload</span>
-                <span class="optional" id="payload-hint-inline">(bytes, 1&ndash;255)</span>
-                <input
-                  id="input-payload"
-                  type="number"
-                  inputmode="decimal"
-                  step="1"
-                  min="1"
-                  max="255"
-                  value="40"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div class="two-col-fields">
-            <div id="field-crc-checkbox" class="checkbox-field">
-              <input type="checkbox" id="input-crc" checked />
-              <div class="checkbox-field-text">
-                <label class="checkbox-field-label" for="input-crc"
-                  >CRC enabled</label
-                >
-                <span class="field-hint">Adds 16 bits to effective payload.</span>
+          <div class="two-col-fields" style="align-items: start;">
+            <div>
+              <div class="field" style="margin-bottom: 0.5rem;">
+                <label for="input-preamble"
+                  ><span id="preamble-main-label">Preamble length</span>
+                  <span class="optional" id="preamble-unit-hint">(symbols)</span>
+                  <input
+                    id="input-preamble"
+                    type="number"
+                    inputmode="decimal"
+                    step="1"
+                    min="6"
+                    value="16"
+                  />
+                </label>
+              </div>
+              <div id="field-crc-chips" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0;">
+                <span style="font-weight: 600; white-space: nowrap;">CRC</span>
+                <div class="chip-row" id="crc-chip-row" style="margin-top: 0;"></div>
               </div>
             </div>
-            <div class="field" id="field-flrc-crc" hidden>
-              <label for="input-flrc-crc">CRC length
-                <select id="input-flrc-crc">
-                  <option value="0">None (0 bytes)</option>
-                  <option value="2" selected>2 bytes</option>
-                  <option value="3">3 bytes</option>
-                  <option value="4">4 bytes</option>
-                </select>
-              </label>
-            </div>
 
-            <div class="checkbox-field">
-              <input
-                type="checkbox"
-                id="input-meshtastic-header"
-                checked
-              />
-              <div class="checkbox-field-text">
-                <label class="checkbox-field-label" for="input-meshtastic-header"
-                  >Include Meshtastic 16-byte header</label
-                >
-                <span class="field-hint"
-                  >Adds 16 bytes for the Meshtastic protocol header.</span
-                >
+            <div>
+              <div class="field" style="margin-bottom: 0.5rem;">
+                <label for="input-payload">
+                  <span id="payload-label-text">Total LoRa payload</span>
+                  <span class="optional" id="payload-hint-inline">(bytes, 1&ndash;255)</span>
+                  <input
+                    id="input-payload"
+                    type="number"
+                    inputmode="decimal"
+                    step="1"
+                    min="1"
+                    max="255"
+                    value="40"
+                  />
+                </label>
+              </div>
+              <div class="checkbox-field" id="field-meshtastic-header" style="margin-bottom: 0;">
+                <input type="checkbox" id="input-meshtastic-header" checked />
+                <div class="checkbox-field-text">
+                  <label class="checkbox-field-label" for="input-meshtastic-header"
+                    >Include Meshtastic 16-byte header</label
+                  >
+                  <span class="field-hint"
+                    >Adds 16 bytes for the Meshtastic protocol header.</span
+                  >
+                </div>
               </div>
             </div>
           </div>
@@ -1011,35 +1034,27 @@
             radio to use datasheet sensitivity figures.
           </p>
 
-          <div class="two-col-fields">
-            <div class="field">
-              <label for="lb-rx-radio-type"
-                >Receiving radio
-                <select id="lb-rx-radio-type">
-                  <option value="all" selected>All / Generic</option>
-                  <option value="sx1276_sx1278">SX1276 / SX1278</option>
-                  <option value="sx1262">SX1262</option>
-                  <option value="sx1280">SX1280 (2.4 GHz)</option>
-                  <option value="llcc68">LLCC68</option>
-                  <option value="lr1110">LR1110</option>
-                  <option value="lr1121">LR1121</option>
-                  <option value="lr2021">LR2021 / LR2022</option>
-                </select>
-              </label>
-            </div>
-            <div class="field">
-              <label for="lb-nf"
-                >Noise figure <span class="optional">(dB, Generic only)</span>
-                <input
-                  id="lb-nf"
-                  type="number"
-                  inputmode="decimal"
-                  step="0.1"
-                  min="0"
-                  value="6"
-                />
-              </label>
-            </div>
+          <div class="two-col-fields" style="row-gap: 0.35rem;">
+            <label for="lb-rx-radio-type" style="display: block;">Receiving radio</label>
+            <label for="lb-nf" style="display: block;">Noise figure <span class="optional">(dB, Generic only)</span></label>
+            <select id="lb-rx-radio-type">
+              <option value="all" selected>All / Generic</option>
+              <option value="sx1276_sx1278">SX1276 / SX1278</option>
+              <option value="sx1262">SX1262</option>
+              <option value="sx1280">SX1280 (2.4 GHz)</option>
+              <option value="llcc68">LLCC68</option>
+              <option value="lr1110">LR1110</option>
+              <option value="lr1121">LR1121</option>
+              <option value="lr2021">LR2021 / LR2022</option>
+            </select>
+            <input
+              id="lb-nf"
+              type="number"
+              inputmode="decimal"
+              step="0.1"
+              min="0"
+              value="6"
+            />
           </div>
 
           <div class="two-col-fields">
@@ -1503,6 +1518,8 @@
             bwSub:  [125, 250, 500],
             bwWide: [],
             crOpts: [5, 6, 7, 8],
+            // SF11 requires BW ≥ 250 kHz on LLCC68
+            maxSfForBw: { 125: 10, 250: 11, 500: 11 },
           },
           "lr1110": {
             band: null,                      // sub-GHz + 2.4 GHz LoRa
@@ -1568,7 +1585,6 @@
         var inputPayload     = document.getElementById("input-payload");
         var inputMeshHdr     = document.getElementById("input-meshtastic-header");
         var inputHeaderMode  = document.getElementById("input-header-mode");
-        var inputCRC         = document.getElementById("input-crc");
         var inputLDRO        = document.getElementById("input-ldro");
         var payloadLabelText  = document.getElementById("payload-label-text");
         var payloadHintInline = document.getElementById("payload-hint-inline");
@@ -1617,9 +1633,68 @@
         var fieldSyncword     = document.getElementById("field-syncword");
         var resultRowLDRO     = document.getElementById("result-row-ldro");
         var fieldHeaderMode   = document.getElementById("field-header-mode");
-        var fieldCrcCheckbox  = document.getElementById("field-crc-checkbox");
-        var fieldFlrcCrc      = document.getElementById("field-flrc-crc");
-        var inputFlrcCrc      = document.getElementById("input-flrc-crc");
+        var crcChipRow        = document.getElementById("crc-chip-row");
+        var fieldCrcChips     = document.getElementById("field-crc-chips");
+
+        // ----- CRC chip helpers -----
+        // CRC byte options per modulation (LoRa: 0 or 2; GFSK: 0-2; FLRC: 0/2/3/4)
+        var CRC_OPTS = {
+          lora: [0, 2],
+          gfsk: [0, 1, 2],
+          flrc: [0, 2, 3, 4],
+        };
+
+        function getCrcBytes() {
+          var sel = crcChipRow.querySelector(".chip.selected");
+          return sel ? parseInt(sel.dataset.value, 10) : 2;
+        }
+
+        function buildCrcChips(mod, preserveVal) {
+          var opts = CRC_OPTS[mod] || CRC_OPTS.lora;
+          var current = (preserveVal !== undefined) ? preserveVal : getCrcBytes();
+          // Pick closest valid option, defaulting to 2 if current not in opts
+          var defaultVal = opts.indexOf(current) >= 0 ? current : (opts.indexOf(2) >= 0 ? 2 : opts[opts.length - 1]);
+          crcChipRow.innerHTML = "";
+          opts.forEach(function(v) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "chip" + (v === defaultVal ? " selected" : "");
+            btn.dataset.value = v;
+            btn.textContent = v === 0 ? "None" : v + " B";
+            btn.addEventListener("click", function() {
+              crcChipRow.querySelectorAll(".chip").forEach(function(c) { c.classList.remove("selected"); });
+              btn.classList.add("selected");
+              calculate();
+            });
+            crcChipRow.appendChild(btn);
+          });
+        }
+
+        // ----- Receiving radio filter -----
+        var LB_RX_MODULATIONS = {
+          "all":           ["lora", "gfsk", "flrc"],
+          "sx1276_sx1278": ["lora", "gfsk"],
+          "sx1262":        ["lora", "gfsk"],
+          "sx1280":        ["lora", "gfsk", "flrc"],
+          "llcc68":        ["lora"],
+          "lr1110":        ["lora", "gfsk"],
+          "lr1121":        ["lora", "gfsk"],
+          "lr2021":        ["lora", "gfsk", "flrc"],
+        };
+
+        function filterLbRxRadio() {
+          var mod = getModulation();
+          Array.from(lbRxRadioType.options).forEach(function(opt) {
+            var mods = LB_RX_MODULATIONS[opt.value] || ["lora"];
+            opt.hidden = mods.indexOf(mod) < 0;
+          });
+          if (lbRxRadioType.options[lbRxRadioType.selectedIndex].hidden) {
+            lbRxRadioType.value = "all";
+          }
+          // Trigger re-calc of link budget with new radio
+          calculateLinkBudget && calculateLinkBudget();
+        }
+
 
         // ----- State -----
         var preambleTouched    = false;
@@ -1793,7 +1868,10 @@
             }
           } else {
             sfLabelEl.textContent = "Spreading factor";
-            for (var sf = cfg.sfMin; sf <= cfg.sfMax; sf++) {
+            var bwKHz = toNumber(inputBW.value);
+            var sfLo = (cfg.minSfForBw && cfg.minSfForBw[bwKHz] !== undefined) ? cfg.minSfForBw[bwKHz] : cfg.sfMin;
+            var sfHi = (cfg.maxSfForBw && cfg.maxSfForBw[bwKHz] !== undefined) ? cfg.maxSfForBw[bwKHz] : cfg.sfMax;
+            for (var sf = sfLo; sf <= sfHi; sf++) {
               var o = document.createElement("option");
               o.value = sf;
               o.textContent = "SF" + sf;
@@ -1801,8 +1879,10 @@
             }
             if (prev !== null) {
               var prevInt = parseInt(prev, 10);
-              var clamped = Math.max(cfg.sfMin, Math.min(cfg.sfMax, prevInt));
-              inputSF.value = clamped;
+              if (!isNaN(prevInt)) {
+                var clamped = Math.max(sfLo, Math.min(sfHi, prevInt));
+                inputSF.value = clamped;
+              }
             }
           }
         }
@@ -1845,10 +1925,25 @@
           }
         }
 
+        function presetCompatible(p, cfg) {
+          var wide = isWide();
+          var bwList = wide ? cfg.bwWide : cfg.bwSub;
+          var bw    = wide ? p.bwWide   : p.bw;
+          if (bwList.length > 0 && bwList.indexOf(bw) === -1) return false;
+          if (p.sf < cfg.sfMin || p.sf > cfg.sfMax) return false;
+          if (cfg.maxSfForBw && cfg.maxSfForBw[bw] !== undefined && p.sf > cfg.maxSfForBw[bw]) return false;
+          if (cfg.minSfForBw && cfg.minSfForBw[bw] !== undefined && p.sf < cfg.minSfForBw[bw]) return false;
+          return true;
+        }
+
         function rebuildPresetSelect(targetKey) {
           var prev = targetKey !== undefined ? targetKey : inputPreset.value;
+          var cfg  = getRadioCfg();
           inputPreset.innerHTML = "";
+          var firstKey = null;
           activePresets.forEach(function (p) {
+            if (!presetCompatible(p, cfg)) return;
+            if (firstKey === null) firstKey = p.key;
             var o = document.createElement("option");
             o.value = p.key;
             o.textContent = p.name;
@@ -1861,7 +1956,7 @@
           if (prev && inputPreset.querySelector('option[value="' + prev + '"]')) {
             inputPreset.value = prev;
           } else {
-            inputPreset.value = activePresets.length ? activePresets[0].key : "custom";
+            inputPreset.value = firstKey || "custom";
           }
         }
 
@@ -1936,9 +2031,9 @@
             headerModeLabelEl.textContent = isLora ? "LoRa header" : "Variable length";
           }
 
-          // CRC: LoRa/GFSK use checkbox; FLRC uses a byte-count select
-          fieldCrcCheckbox.hidden = isFlrc;
-          fieldFlrcCrc.hidden     = !isFlrc;
+          // Rebuild CRC chips for current modulation
+          buildCrcChips(mod);
+          filterLbRxRadio();
 
           // Syncword options differ by modulation
           if (inputSyncword) {
@@ -2006,11 +2101,13 @@
             inputModulation.value = "lora";
           }
           updateBandLabels();
+          rebuildPresetSelect();
           onModulationChange();
         }
 
         function onBandToggle() {
           updateBandLabels();
+          rebuildPresetSelect();
           rebuildBWSelect(true);
           if (!preambleTouched) {
             inputPreamble.value = bandDefaultPreamble();
@@ -2051,6 +2148,9 @@
             calculate();
             return;
           }
+          // For chips with per-BW SF limits (e.g. LLCC68), re-evaluate SF options when BW changes
+          var cfg2 = getRadioCfg();
+          if (cfg2.maxSfForBw || cfg2.minSfForBw) rebuildSFSelect(true);
           if (inputPreset.value === "custom") { calculate(); return; }
           var preset = findPreset(inputPreset.value);
           if (!preset) { inputPreset.value = "custom"; calculate(); return; }
@@ -2070,7 +2170,7 @@
           var appPL   = toNumber(inputPayload.value);
           var meshHdr = inputMeshHdr.checked ? 16 : 0;
           var pl      = appPL + meshHdr;                 // total bytes
-          var crcOn   = inputCRC.checked;
+          var crcBytes = getCrcBytes();
           var varLen  = inputHeaderMode.value === "explicit";
           var swBytes = parseInt(inputSyncword.value || "4", 10);
           if (bitRateKbps <= 0 || pl < 1) return null;
@@ -2079,7 +2179,7 @@
                         + swBytes * 8
                         + (varLen ? 16 : 0)   // length byte (16 bits incl framing)
                         + pl * 8
-                        + (crcOn ? 16 : 0);
+                        + crcBytes * 8;
           var toaMs = totalBits / bitRateKbps;
           return {toaMs: toaMs, pl: pl, appPL: appPL, bitRateKbps: bitRateKbps};
         }
@@ -2090,7 +2190,7 @@
           var appPL   = toNumber(inputPayload.value);
           var meshHdr = inputMeshHdr.checked ? 16 : 0;
           var pl      = appPL + meshHdr;                // payload always fixed length in FLRC
-          var crcBytes = parseInt((inputFlrcCrc && inputFlrcCrc.value) || "2", 10);
+          var crcBytes = getCrcBytes();
           var swBytes  = parseInt((inputSyncword && inputSyncword.value) || "4", 10);
           var crVal    = inputCR.value;
           var crRatio  = crVal === "flrc_1_2" ? 0.5
@@ -2173,7 +2273,7 @@
           var appPL  = toNumber(inputPayload.value);
           var pl     = appPL + (inputMeshHdr.checked ? 16 : 0);
           var expHdr = inputHeaderMode.value === "explicit";
-          var crcOn  = inputCRC.checked;
+          var crcOn  = getCrcBytes() > 0;
           var ldroMode = inputLDRO.value;
 
           if (bwKHz <= 0 || sf < 5 || sf > 12 || cr < 5 || cr > 8 || pl < 1) {
@@ -2331,7 +2431,7 @@
             ? "Application payload"
             : "Total LoRa payload";
           inputHeaderMode.value = r.explicitHeader ? "explicit" : "implicit";
-          inputCRC.checked      = r.crcOn;
+          buildCrcChips("lora", r.crcOn ? 2 : 0);
           inputLDRO.value       = r.ldroMode;
           preambleTouched       = true;
           suppressReset         = false;
@@ -2838,10 +2938,8 @@
         inputPayload.addEventListener("input",  calculate);
         inputPayload.addEventListener("change", calculate);
         inputHeaderMode.addEventListener("change", calculate);
-        inputCRC.addEventListener("change", calculate);
         inputLDRO.addEventListener("change", calculate);
         if (inputSyncword) inputSyncword.addEventListener("change", calculate);
-        if (inputFlrcCrc)  inputFlrcCrc.addEventListener("change", calculate);
 
         // ==================== INITIALISATION ====================
         applyThemeMode(getStoredThemeMode(), false);
@@ -2862,6 +2960,7 @@
 
         rebuildPresetSelect("LONG_FAST");
         onRadioTypeChange();    // disables unavailable modulation options, sets band, rebuilds selects, calculates
+        onPresetChange();       // apply LONG_FAST default values (BW, SF, CR) now that selects are populated
 
       })();
     </script>
