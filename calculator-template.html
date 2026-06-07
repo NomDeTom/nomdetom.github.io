@@ -990,6 +990,50 @@
             </div>
           </div>
 
+          <!-- Two-column fields — label with wrapping hint text.
+               When one label includes hint text (e.g. "(dB, Generic only)") it can
+               wrap to two lines, making its row taller than the opposite column.
+               Fix: put both labels then both controls as direct grid children.
+               CSS Grid then shares row heights, keeping controls aligned.
+               Use row-gap: 0.35rem (label-to-control gap) instead of the default
+               row-gap: 0.9rem. Override label { display: grid } with display: block
+               so the label text doesn't create its own sub-grid. -->
+          <div class="two-col-fields" style="row-gap: 0.35rem;">
+            <label for="input-col-a" style="display: block;">Two column input A</label>
+            <label for="input-col-b" style="display: block;">
+              Two column input B <span class="optional">inline hint text</span>
+            </label>
+            <select id="input-col-a">
+              <option value="all" selected>All / Generic</option>
+              <option value="type-a">Type A</option>
+            </select>
+            <input id="input-col-b" type="number" inputmode="decimal" step="any" value="0" />
+          </div>
+
+          <!-- Two-column fields — prevent select stretching when opposite cell is taller.
+               When one column holds multiple stacked fields (e.g. a select + a checkbox)
+               the grid cell grows to match and the single select in the other column
+               stretches to fill. Add align-items: start so each cell is only as tall
+               as its own content. Only use this when both labels are short (no wrap risk). -->
+          <div class="two-col-fields" style="align-items: start;">
+            <div class="field" style="margin-bottom: 0;">
+              <label for="input-col-c">Two column input C
+                <input id="input-col-c" type="number" inputmode="decimal" step="any" value="0" />
+              </label>
+            </div>
+            <div>
+              <div class="field" style="margin-bottom: 0.5rem;">
+                <label for="input-col-d">Two column input D
+                  <input id="input-col-d" type="number" inputmode="decimal" step="any" value="0" />
+                </label>
+              </div>
+              <div class="checkbox-field">
+                <input type="checkbox" id="input-col-e" />
+                <label for="input-col-e">Checkbox E</label>
+              </div>
+            </div>
+          </div>
+
           <!-- Spinner: ▲/▼ inside the field, native spinners hidden -->
           <div class="field">
             <label for="input-spinner">Spinner input</label>
