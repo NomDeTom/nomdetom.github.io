@@ -1,0 +1,834 @@
+<!doctype html>
+<!-- LLMs: Claude Sonnet 4.6 -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Unicode Explorer</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+        --error-text: #ffb4b4;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 56rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header { margin-bottom: 1rem; }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.98rem; }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+      a.action-btn { display: inline-block; text-decoration: none; }
+
+      .hosted-note { margin: 0.55rem 0 0; color: var(--muted); font-size: 0.88rem; }
+      .attribution-block[hidden] { display: none !important; }
+      .attribution-link { color: inherit; text-decoration: underline; }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field { display: grid; gap: 0.35rem; margin-bottom: 0.9rem; }
+
+      label { font-weight: 600; display: grid; gap: 0.35rem; }
+
+      input, select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus, select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .field-hint { color: var(--muted); font-size: 0.82rem; font-weight: 400; }
+
+      .results { display: grid; gap: 0.75rem; }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child { border-top: 0; padding-top: 0; }
+      .result-label { color: var(--muted); }
+      .result-value { font-size: 1.2rem; font-weight: 700; text-align: right; font-family: monospace; }
+      .result-primary .result-value { font-size: 1.5rem; color: var(--accent); font-family: inherit; }
+
+      .status { margin-top: 0.5rem; color: var(--muted); font-size: 0.9rem; min-height: 1.25em; }
+      .status.error { color: var(--error-text); }
+      .status.ok    { color: var(--accent); }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .section-header h2 { margin: 0; }
+
+      .chip-group { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--chip-selected-text);
+      }
+
+      .chip.selected:hover { border-color: var(--accent); color: var(--chip-selected-text); }
+
+      /* Jog buttons */
+      .jog-wrap { display: flex; }
+
+      .jog-wrap input {
+        flex: 1;
+        border-left: 0;
+        border-right: 0;
+        text-align: center;
+        min-width: 0;
+        font-family: monospace;
+        font-size: 1.1rem;
+        letter-spacing: 0.05em;
+      }
+
+      .jog-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.75rem 0.85rem;
+        cursor: pointer;
+        font: inherit;
+        font-size: 1rem;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+
+      .jog-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+      /* Large character display */
+      .char-display-wrap {
+        display: flex;
+        justify-content: center;
+        margin: 1.25rem 0;
+      }
+
+      .char-display-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3rem;
+        background: var(--field-bg);
+        border: 1px solid var(--border);
+        padding: 1.5rem 2rem;
+        min-width: 12rem;
+      }
+
+      #char-main {
+        font-size: clamp(5rem, 20vw, 10rem);
+        line-height: 1;
+        color: var(--text);
+        min-height: 1em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2ch;
+      }
+
+      .char-size-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 1.25rem;
+        color: var(--muted);
+      }
+
+      .char-size-row span { line-height: 1; color: var(--text); }
+
+      #char-error {
+        color: var(--error-text);
+        font-size: 0.9rem;
+        text-align: center;
+        display: none;
+      }
+
+      /* Adjacent character gallery */
+      .gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .gallery-cell {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.5rem 0.35rem 0.4rem;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        min-width: 2.75rem;
+        font: inherit;
+      }
+
+      .gallery-cell:hover { border-color: var(--accent); color: var(--accent); }
+
+      .gallery-cell.current {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .gallery-char { font-size: 1.4rem; line-height: 1; }
+      .gallery-cp { font-family: monospace; font-size: 0.66rem; color: var(--muted); }
+      .gallery-cell.current .gallery-cp { color: var(--accent); }
+      .gallery-cell:hover .gallery-cp { color: inherit; }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 1rem;
+        row-gap: 0.9rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .two-col-fields .field { margin-bottom: 0; }
+
+      @media (max-width: 640px) {
+        main { padding: 1.25rem 0.9rem 2rem; }
+        .result { grid-template-columns: 1fr; }
+        .result-value { text-align: left; }
+        .two-col-fields { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Unicode Explorer</h1>
+        <p class="subtitle">Enter a code point to display, inspect, and navigate Unicode characters</p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">Hide attribution</button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">Did you know: this tool can be saved and used locally!</p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <!-- INPUT -->
+      <section>
+        <h2>Code Point</h2>
+
+        <div class="field">
+          <label for="codepoint-input">
+            Hex code point
+            <span class="field-hint">Enter a hex value (e.g. 2588 or U+2588). Use ↑/↓ arrow keys to step.</span>
+          </label>
+          <div class="jog-wrap">
+            <button type="button" class="jog-btn" id="jog-prev" aria-label="Decrement">−</button>
+            <input id="codepoint-input" type="text" value="2588" autocomplete="off" spellcheck="false" />
+            <button type="button" class="jog-btn" id="jog-next" aria-label="Increment">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Step size</label>
+          <div class="chip-group" id="step-chips" role="group" aria-label="Step size">
+            <button type="button" class="chip selected" data-step="1"    aria-pressed="true">×1</button>
+            <button type="button" class="chip"           data-step="16"   aria-pressed="false">×16</button>
+            <button type="button" class="chip"           data-step="256"  aria-pressed="false">×256</button>
+            <button type="button" class="chip"           data-step="4096" aria-pressed="false">×4096</button>
+          </div>
+        </div>
+
+        <!-- Large display -->
+        <div class="char-display-wrap">
+          <div class="char-display-box">
+            <div id="char-main" aria-live="polite" aria-label="Current character">&#x2588;</div>
+            <div class="char-size-row">
+              <span id="char-sm" style="font-size:0.85rem;" title="12 px">&#x2588;</span>
+              <span id="char-md" style="font-size:1.5rem;"  title="24 px">&#x2588;</span>
+              <span id="char-lg" style="font-size:2.5rem;"  title="40 px">&#x2588;</span>
+              <span id="char-xl" style="font-size:4rem;"    title="64 px">&#x2588;</span>
+            </div>
+            <div id="char-error">Invalid or unassigned code point</div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <output class="results" aria-live="polite" aria-atomic="false">
+          <div class="result result-primary">
+            <span class="result-label">Code point</span>
+            <span class="result-value" id="out-codepoint">U+2588</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Decimal</span>
+            <span class="result-value" id="out-decimal">9608</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Character</span>
+            <span class="result-value" id="out-char" style="font-size:1.5rem;">&#x2588;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">HTML entity (hex)</span>
+            <span class="result-value" id="out-html-hex">&amp;#x2588;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">HTML entity (decimal)</span>
+            <span class="result-value" id="out-html-dec">&amp;#9608;</span>
+          </div>
+          <div class="result">
+            <span class="result-label">UTF-8 bytes (hex)</span>
+            <span class="result-value" id="out-utf8">E2 96 88</span>
+          </div>
+          <div class="result">
+            <span class="result-label">CSS escape</span>
+            <span class="result-value" id="out-css">\2588</span>
+          </div>
+          <div class="result">
+            <span class="result-label">Unicode block</span>
+            <span class="result-value" id="out-block" style="font-family:inherit;font-size:1rem;font-weight:400;color:var(--muted);">Block Elements</span>
+          </div>
+        </output>
+
+        <div class="top-actions" style="margin-top: 1rem;">
+          <button id="copy-char-btn" class="action-btn" type="button">Copy character</button>
+          <button id="copy-cp-btn"   class="action-btn" type="button">Copy U+XXXX</button>
+        </div>
+        <div class="status" id="copy-status"></div>
+      </section>
+
+      <!-- ADJACENT GALLERY -->
+      <section>
+        <div class="section-header">
+          <h2>Adjacent Characters</h2>
+        </div>
+        <div class="gallery" id="gallery"></div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton       = document.getElementById("toggle-theme-btn");
+        var attributionBlock        = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") return stored;
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute("aria-label", "Theme mode " + mode + ". Activate to switch mode.");
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = (mode === "light" || mode === "dark" || mode === "auto") ? mode : "auto";
+          document.documentElement.setAttribute("data-theme", getResolvedTheme(themeMode));
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+          if (shouldPersist) localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== UNICODE BLOCKS (compact range table) ====================
+        // Format: [start, end, name]
+        var BLOCKS = [
+          [0x0000,0x007F,"Basic Latin"],[0x0080,0x00FF,"Latin-1 Supplement"],
+          [0x0100,0x017F,"Latin Extended-A"],[0x0180,0x024F,"Latin Extended-B"],
+          [0x0250,0x02AF,"IPA Extensions"],[0x02B0,0x02FF,"Spacing Modifier Letters"],
+          [0x0300,0x036F,"Combining Diacritical Marks"],[0x0370,0x03FF,"Greek and Coptic"],
+          [0x0400,0x04FF,"Cyrillic"],[0x0500,0x052F,"Cyrillic Supplement"],
+          [0x0530,0x058F,"Armenian"],[0x0590,0x05FF,"Hebrew"],
+          [0x0600,0x06FF,"Arabic"],[0x0700,0x074F,"Syriac"],
+          [0x0900,0x097F,"Devanagari"],[0x0980,0x09FF,"Bengali"],
+          [0x0A00,0x0A7F,"Gurmukhi"],[0x0A80,0x0AFF,"Gujarati"],
+          [0x0B00,0x0B7F,"Oriya"],[0x0B80,0x0BFF,"Tamil"],
+          [0x0C00,0x0C7F,"Telugu"],[0x0C80,0x0CFF,"Kannada"],
+          [0x0D00,0x0D7F,"Malayalam"],[0x0E00,0x0E7F,"Thai"],
+          [0x0E80,0x0EFF,"Lao"],[0x0F00,0x0FFF,"Tibetan"],
+          [0x1000,0x109F,"Myanmar"],[0x10A0,0x10FF,"Georgian"],
+          [0x1100,0x11FF,"Hangul Jamo"],[0x1200,0x137F,"Ethiopic"],
+          [0x13A0,0x13FF,"Cherokee"],[0x1400,0x167F,"Unified Canadian Aboriginal Syllabics"],
+          [0x1680,0x169F,"Ogham"],[0x16A0,0x16FF,"Runic"],
+          [0x1700,0x171F,"Tagalog"],[0x1720,0x173F,"Hanunoo"],
+          [0x1740,0x175F,"Buhid"],[0x1760,0x177F,"Tagbanwa"],
+          [0x1780,0x17FF,"Khmer"],[0x1800,0x18AF,"Mongolian"],
+          [0x1D00,0x1D7F,"Phonetic Extensions"],[0x1E00,0x1EFF,"Latin Extended Additional"],
+          [0x1F00,0x1FFF,"Greek Extended"],[0x2000,0x206F,"General Punctuation"],
+          [0x2070,0x209F,"Superscripts and Subscripts"],[0x20A0,0x20CF,"Currency Symbols"],
+          [0x20D0,0x20FF,"Combining Diacritical Marks for Symbols"],
+          [0x2100,0x214F,"Letterlike Symbols"],[0x2150,0x218F,"Number Forms"],
+          [0x2190,0x21FF,"Arrows"],[0x2200,0x22FF,"Mathematical Operators"],
+          [0x2300,0x23FF,"Miscellaneous Technical"],[0x2400,0x243F,"Control Pictures"],
+          [0x2440,0x245F,"Optical Character Recognition"],
+          [0x2460,0x24FF,"Enclosed Alphanumerics"],[0x2500,0x257F,"Box Drawing"],
+          [0x2580,0x259F,"Block Elements"],[0x25A0,0x25FF,"Geometric Shapes"],
+          [0x2600,0x26FF,"Miscellaneous Symbols"],[0x2700,0x27BF,"Dingbats"],
+          [0x27C0,0x27EF,"Miscellaneous Mathematical Symbols-A"],
+          [0x27F0,0x27FF,"Supplemental Arrows-A"],[0x2800,0x28FF,"Braille Patterns"],
+          [0x2900,0x297F,"Supplemental Arrows-B"],
+          [0x2980,0x29FF,"Miscellaneous Mathematical Symbols-B"],
+          [0x2A00,0x2AFF,"Supplemental Mathematical Operators"],
+          [0x2B00,0x2BFF,"Miscellaneous Symbols and Arrows"],
+          [0x2C00,0x2C5F,"Glagolitic"],[0x2C60,0x2C7F,"Latin Extended-C"],
+          [0x2C80,0x2CFF,"Coptic"],[0x2E80,0x2EFF,"CJK Radicals Supplement"],
+          [0x2F00,0x2FDF,"Kangxi Radicals"],[0x2FF0,0x2FFF,"Ideographic Description Characters"],
+          [0x3000,0x303F,"CJK Symbols and Punctuation"],[0x3040,0x309F,"Hiragana"],
+          [0x30A0,0x30FF,"Katakana"],[0x3100,0x312F,"Bopomofo"],
+          [0x3130,0x318F,"Hangul Compatibility Jamo"],[0x3190,0x319F,"Kanbun"],
+          [0x31A0,0x31BF,"Bopomofo Extended"],[0x31F0,0x31FF,"Katakana Phonetic Extensions"],
+          [0x3200,0x32FF,"Enclosed CJK Letters and Months"],
+          [0x3300,0x33FF,"CJK Compatibility"],[0x3400,0x4DBF,"CJK Unified Ideographs Extension A"],
+          [0x4DC0,0x4DFF,"Yijing Hexagram Symbols"],[0x4E00,0x9FFF,"CJK Unified Ideographs"],
+          [0xA000,0xA48F,"Yi Syllables"],[0xA490,0xA4CF,"Yi Radicals"],
+          [0xA720,0xA7FF,"Latin Extended-D"],[0xA800,0xA82F,"Syloti Nagri"],
+          [0xAC00,0xD7AF,"Hangul Syllables"],[0xD800,0xDB7F,"High Surrogates"],
+          [0xDB80,0xDBFF,"High Private Use Surrogates"],[0xDC00,0xDFFF,"Low Surrogates"],
+          [0xE000,0xF8FF,"Private Use Area"],[0xF900,0xFAFF,"CJK Compatibility Ideographs"],
+          [0xFB00,0xFB4F,"Alphabetic Presentation Forms"],[0xFB50,0xFDFF,"Arabic Presentation Forms-A"],
+          [0xFE10,0xFE1F,"Vertical Forms"],[0xFE20,0xFE2F,"Combining Half Marks"],
+          [0xFE30,0xFE4F,"CJK Compatibility Forms"],[0xFE50,0xFE6F,"Small Form Variants"],
+          [0xFE70,0xFEFF,"Arabic Presentation Forms-B"],[0xFF00,0xFFEF,"Halfwidth and Fullwidth Forms"],
+          [0xFFF0,0xFFFF,"Specials"],
+          [0x10000,0x1007F,"Linear B Syllabary"],[0x10080,0x100FF,"Linear B Ideograms"],
+          [0x10100,0x1013F,"Aegean Numbers"],[0x10140,0x1018F,"Ancient Greek Numbers"],
+          [0x10300,0x1032F,"Old Italic"],[0x10330,0x1034F,"Gothic"],
+          [0x10380,0x1039F,"Ugaritic"],[0x103A0,0x103DF,"Old Persian"],
+          [0x10400,0x1044F,"Deseret"],[0x10450,0x1047F,"Shavian"],
+          [0x10480,0x104AF,"Osmanya"],[0x10800,0x1083F,"Cypriot Syllabary"],
+          [0x10900,0x1091F,"Phoenician"],[0x10920,0x1093F,"Lydian"],
+          [0x10A00,0x10A5F,"Kharoshthi"],[0x12000,0x123FF,"Cuneiform"],
+          [0x1D000,0x1D0FF,"Byzantine Musical Symbols"],[0x1D100,0x1D1FF,"Musical Symbols"],
+          [0x1D200,0x1D24F,"Ancient Greek Musical Notation"],
+          [0x1D300,0x1D35F,"Tai Xuan Jing Symbols"],
+          [0x1D360,0x1D37F,"Counting Rod Numerals"],
+          [0x1D400,0x1D7FF,"Mathematical Alphanumeric Symbols"],
+          [0x1F000,0x1F02F,"Mahjong Tiles"],[0x1F030,0x1F09F,"Domino Tiles"],
+          [0x1F0A0,0x1F0FF,"Playing Cards"],[0x1F100,0x1F1FF,"Enclosed Alphanumeric Supplement"],
+          [0x1F200,0x1F2FF,"Enclosed Ideographic Supplement"],
+          [0x1F300,0x1F5FF,"Miscellaneous Symbols and Pictographs"],
+          [0x1F600,0x1F64F,"Emoticons"],[0x1F650,0x1F67F,"Ornamental Dingbats"],
+          [0x1F680,0x1F6FF,"Transport and Map Symbols"],[0x1F700,0x1F77F,"Alchemical Symbols"],
+          [0x1F780,0x1F7FF,"Geometric Shapes Extended"],[0x1F800,0x1F8FF,"Supplemental Arrows-C"],
+          [0x1F900,0x1F9FF,"Supplemental Symbols and Pictographs"],
+          [0x1FA00,0x1FA6F,"Chess Symbols"],[0x1FA70,0x1FAFF,"Symbols and Pictographs Extended-A"],
+          [0x20000,0x2A6DF,"CJK Unified Ideographs Extension B"],
+          [0x2A700,0x2B73F,"CJK Unified Ideographs Extension C"],
+          [0x2B740,0x2B81F,"CJK Unified Ideographs Extension D"],
+          [0x2B820,0x2CEAF,"CJK Unified Ideographs Extension E"],
+          [0x2CEB0,0x2EBEF,"CJK Unified Ideographs Extension F"],
+          [0x2F800,0x2FA1F,"CJK Compatibility Ideographs Supplement"],
+          [0xE0000,0xE007F,"Tags"],[0xE0100,0xE01EF,"Variation Selectors Supplement"],
+          [0xF0000,0xFFFFF,"Supplementary Private Use Area-A"],
+          [0x100000,0x10FFFF,"Supplementary Private Use Area-B"]
+        ];
+
+        function getBlock(cp) {
+          for (var i = 0; i < BLOCKS.length; i++) {
+            if (cp >= BLOCKS[i][0] && cp <= BLOCKS[i][1]) return BLOCKS[i][2];
+          }
+          return "Unknown";
+        }
+
+        // ==================== UTF-8 ENCODING ====================
+        function toUtf8Bytes(cp) {
+          if (cp <= 0x7F) return [cp];
+          if (cp <= 0x7FF) return [0xC0 | (cp >> 6), 0x80 | (cp & 0x3F)];
+          if (cp <= 0xFFFF) return [0xE0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F)];
+          return [0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F)];
+        }
+
+        function byteHex(b) { return b.toString(16).toUpperCase().padStart(2, "0"); }
+
+        // ==================== STATE ====================
+        var currentCp = 0x2588;
+        var stepSize  = 1;
+
+        var GALLERY_RADIUS = 5;
+
+        // ==================== DOM REFS ====================
+        var cpInput      = document.getElementById("codepoint-input");
+        var charMain     = document.getElementById("char-main");
+        var charSm       = document.getElementById("char-sm");
+        var charMd       = document.getElementById("char-md");
+        var charLg       = document.getElementById("char-lg");
+        var charXl       = document.getElementById("char-xl");
+        var charError    = document.getElementById("char-error");
+        var outCp        = document.getElementById("out-codepoint");
+        var outDec       = document.getElementById("out-decimal");
+        var outChar      = document.getElementById("out-char");
+        var outHtmlHex   = document.getElementById("out-html-hex");
+        var outHtmlDec   = document.getElementById("out-html-dec");
+        var outUtf8      = document.getElementById("out-utf8");
+        var outCss       = document.getElementById("out-css");
+        var outBlock     = document.getElementById("out-block");
+        var copyStatus   = document.getElementById("copy-status");
+        var galleryEl    = document.getElementById("gallery");
+        var stepChipsEl  = document.getElementById("step-chips");
+
+        // ==================== PARSING ====================
+        function parseInput(raw) {
+          var s = raw.trim().toUpperCase().replace(/^U\+/, "").replace(/^0X/, "");
+          if (!/^[0-9A-F]+$/.test(s)) return NaN;
+          return parseInt(s, 16);
+        }
+
+        function isSurrogate(cp) { return cp >= 0xD800 && cp <= 0xDFFF; }
+
+        function isValid(cp) {
+          return Number.isFinite(cp) && cp >= 0 && cp <= 0x10FFFF && !isSurrogate(cp);
+        }
+
+        function cpToString(cp) {
+          if (cp > 0xFFFF) {
+            var hi = Math.floor((cp - 0x10000) / 0x400) + 0xD800;
+            var lo = ((cp - 0x10000) % 0x400) + 0xDC00;
+            return String.fromCharCode(hi, lo);
+          }
+          return String.fromCharCode(cp);
+        }
+
+        function formatCp(cp) {
+          var hex = cp.toString(16).toUpperCase();
+          return "U+" + (hex.length < 4 ? hex.padStart(4, "0") : hex);
+        }
+
+        // ==================== DISPLAY UPDATE ====================
+        function update(cp) {
+          if (!isValid(cp)) {
+            charError.style.display = "block";
+            charMain.textContent = "?";
+            charSm.textContent = charMd.textContent = charLg.textContent = charXl.textContent = "?";
+            return;
+          }
+
+          currentCp = cp;
+          charError.style.display = "none";
+
+          var ch = cpToString(cp);
+          charMain.textContent = ch;
+          charSm.textContent   = ch;
+          charMd.textContent   = ch;
+          charLg.textContent   = ch;
+          charXl.textContent   = ch;
+
+          var cpStr  = formatCp(cp);
+          var hexPad = cp.toString(16).toUpperCase().padStart(4, "0");
+
+          outCp.textContent      = cpStr;
+          outDec.textContent     = String(cp);
+          outChar.textContent    = ch;
+          outHtmlHex.textContent = "&#x" + hexPad + ";";
+          outHtmlDec.textContent = "&#" + cp + ";";
+          outUtf8.textContent    = toUtf8Bytes(cp).map(byteHex).join(" ");
+          outCss.textContent     = "\\" + hexPad;
+          outBlock.textContent   = getBlock(cp);
+
+          cpInput.value = hexPad;
+
+          renderGallery();
+
+          copyStatus.textContent = "";
+          copyStatus.className   = "status";
+        }
+
+        // ==================== ADJACENT GALLERY ====================
+        function nextValidCp(cp, dir) {
+          var n = cp + dir;
+          if (n >= 0xD800 && n <= 0xDFFF) n = dir > 0 ? 0xE000 : 0xD7FF;
+          if (n < 0 || n > 0x10FFFF) return null;
+          return n;
+        }
+
+        function renderGallery() {
+          galleryEl.innerHTML = "";
+
+          var before = [], c = currentCp;
+          for (var i = 0; i < GALLERY_RADIUS; i++) {
+            c = nextValidCp(c, -1);
+            if (c === null) break;
+            before.unshift(c);
+          }
+
+          var after = [], c2 = currentCp;
+          for (var j = 0; j < GALLERY_RADIUS; j++) {
+            c2 = nextValidCp(c2, 1);
+            if (c2 === null) break;
+            after.push(c2);
+          }
+
+          before.concat([currentCp], after).forEach(function (cellCp) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "gallery-cell" + (cellCp === currentCp ? " current" : "");
+            btn.setAttribute("title", formatCp(cellCp));
+            btn.setAttribute("aria-label", formatCp(cellCp));
+
+            var charSpan = document.createElement("span");
+            charSpan.className = "gallery-char";
+            charSpan.textContent = cpToString(cellCp);
+
+            var cpSpan = document.createElement("span");
+            cpSpan.className = "gallery-cp";
+            cpSpan.textContent = formatCp(cellCp);
+
+            btn.appendChild(charSpan);
+            btn.appendChild(cpSpan);
+
+            btn.addEventListener("click", function () { update(cellCp); });
+
+            galleryEl.appendChild(btn);
+          });
+        }
+
+        // ==================== JOG BUTTONS ====================
+        function step(delta) {
+          var next = currentCp + delta * stepSize;
+          if (next < 0) next = 0;
+          if (next > 0x10FFFF) next = 0x10FFFF;
+          // skip surrogates
+          if (delta > 0 && isSurrogate(next)) next = 0xE000;
+          if (delta < 0 && isSurrogate(next)) next = 0xD7FF;
+          update(next);
+        }
+
+        document.getElementById("jog-prev").addEventListener("click", function () { step(-1); });
+        document.getElementById("jog-next").addEventListener("click", function () { step(1); });
+
+        // ==================== INPUT FIELD ====================
+        cpInput.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowUp")   { e.preventDefault(); step(1); }
+          if (e.key === "ArrowDown") { e.preventDefault(); step(-1); }
+        });
+
+        cpInput.addEventListener("input", function () {
+          var cp = parseInput(cpInput.value);
+          if (isValid(cp)) update(cp);
+        });
+
+        cpInput.addEventListener("blur", function () {
+          // normalise display on blur
+          cpInput.value = currentCp.toString(16).toUpperCase().padStart(4, "0");
+        });
+
+        // ==================== STEP CHIPS ====================
+        var stepChips = Array.from(stepChipsEl.querySelectorAll(".chip"));
+
+        function setStep(size) {
+          stepSize = size;
+          stepChips.forEach(function (chip) {
+            var active = parseInt(chip.dataset.step, 10) === size;
+            chip.classList.toggle("selected", active);
+            chip.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+        }
+
+        stepChips.forEach(function (chip) {
+          chip.addEventListener("click", function () { setStep(parseInt(chip.dataset.step, 10)); });
+        });
+
+        // ==================== COPY BUTTONS ====================
+        function copyText(text, label) {
+          navigator.clipboard.writeText(text).then(function () {
+            copyStatus.textContent = label + " copied.";
+            copyStatus.className   = "status ok";
+          }).catch(function () {
+            copyStatus.textContent = "Clipboard unavailable.";
+            copyStatus.className   = "status error";
+          });
+        }
+
+        document.getElementById("copy-char-btn").addEventListener("click", function () {
+          copyText(cpToString(currentCp), "Character");
+        });
+
+        document.getElementById("copy-cp-btn").addEventListener("click", function () {
+          copyText(formatCp(currentCp), "Code point");
+        });
+
+        // ==================== INIT ====================
+        applyThemeMode(getStoredThemeMode(), false);
+
+        var loc = window.location;
+        var isLocal = loc.protocol === "file:" || loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" || loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) hostedNote.hidden = true;
+        }
+
+        // Check for ?cp= in URL
+        var urlParams = new URLSearchParams(window.location.search);
+        var urlCp = urlParams.get("cp");
+        var initCp = urlCp ? parseInput(urlCp) : 0x2588;
+        if (!isValid(initCp)) initCp = 0x2588;
+
+        update(initCp);
+      })();
+    </script>
+  </body>
+</html>
