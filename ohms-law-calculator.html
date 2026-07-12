@@ -1021,14 +1021,13 @@
               var key = button.getAttribute("data-key");
               var input = card.querySelector(".input-" + key);
               if (!input) return;
-              var lastUsedKeys = card._lastUsedKeys || [];
               setManual(card, key, false);
               setSuppressed(card, key, true);
               input.value = "";
 
               ["v", "i", "r", "p"].forEach(function (otherKey) {
                 if (otherKey === key) return;
-                if (lastUsedKeys.indexOf(otherKey) !== -1) return;
+                if (isManual(card, otherKey)) return;
                 var otherInput = card.querySelector(".input-" + otherKey);
                 if (!otherInput) return;
                 setManual(card, otherKey, false);
