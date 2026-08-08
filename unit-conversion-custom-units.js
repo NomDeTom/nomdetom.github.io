@@ -30,6 +30,17 @@ window.GENERIC_UNITS_CATALOG_MARKDOWN = `
 | Square foot       |          0.09290304 | ft^2  |
 | Square inch       |          0.00064516 | in^2  |
 
+## Mass
+
+| Name     | Factor to base unit | Units |
+| -------- | ------------------: | ----- |
+| Kilogram |                   1 | kg    |
+| Gram     |               0.001 | g     |
+| Tonne    |                1000 | t     |
+| Stone    |          6.35029318 | st    |
+| Pound    |          0.45359237 | lb    |
+| Ounce    |      0.028349523125 | oz    |
+
 ## Angle
 
 | Name      | Factor to base unit | Units  |

@@ -127,7 +127,7 @@
       /* Common block: shared layout, control, and card styles */
       .calculator-picker {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.55rem;
       }
 
@@ -542,6 +542,44 @@
         min-width: 2rem;
       }
 
+      /* Mixed Units: same three-column shape as .generic-inputs, plus a
+         leading checkbox column choosing which units join the breakdown. */
+      .mixed-inputs {
+        display: grid;
+        grid-template-columns: auto 1fr 1fr auto;
+        column-gap: 0.5rem;
+        row-gap: 0.75rem;
+        align-items: center;
+      }
+
+      .mixed-unit-row {
+        display: contents;
+      }
+
+      .mixed-toggle {
+        justify-self: center;
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--accent);
+      }
+
+      .mixed-inputs .input-row {
+        display: flex;
+      }
+
+      .mixed-inputs .input-row .input-generic {
+        width: 100%;
+      }
+
+      .mixed-unit-row.is-disabled .generic-unit-name,
+      .mixed-unit-row.is-disabled .generic-unit-units {
+        opacity: 0.45;
+      }
+
+      .mixed-combined {
+        font-weight: 600;
+      }
+
       .input-formula.is-computed {
         background: var(--accent-soft);
         color: var(--muted);
@@ -576,6 +614,22 @@
           grid-template-columns: 1fr;
           gap: 0.35rem;
           margin-bottom: 0.75rem;
+        }
+
+        .mixed-inputs {
+          display: block;
+        }
+
+        .mixed-unit-row {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          gap: 0.35rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .mixed-unit-row .input-row,
+        .mixed-unit-row .generic-unit-units {
+          grid-column: 2;
         }
       }
     </style>
@@ -645,6 +699,14 @@
             aria-pressed="false"
           >
             Unit Conversion
+          </button>
+          <button
+            id="pick-mixed-calculator"
+            class="action-btn calculator-picker-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Mixed Units
           </button>
           <button
             id="pick-formulas-calculator"
@@ -730,6 +792,9 @@
         // Common block: shared DOM bootstrap and theme wiring
         var pickGenericConverterButton = document.getElementById(
           "pick-generic-converter",
+        );
+        var pickMixedCalculatorButton = document.getElementById(
+          "pick-mixed-calculator",
         );
         var pickFormulasCalculatorButton = document.getElementById(
           "pick-formulas-calculator",
@@ -879,6 +944,8 @@
         var CONVERSION_REFERENCES = {
           generic:
             "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. Use import/export below to work with the active table.</span>",
+          mixed:
+            "<span><strong>Mixed Units:</strong> Splits one quantity across several units of the same family, largest first, so 9.5 st reads as 9 st 7 lb 0 oz. Unit groups come from the same <code>unit-conversion-custom-units.js</code> catalog as Unit Conversion. Tick the units to include; every unit except the smallest takes a whole number and the smallest absorbs the remainder. Typing is left alone until you leave a field, so you can enter 133 in the lb box and it settles into stone and pounds on blur.</span>",
           formulas:
             '<span><strong>Formula Calculator:</strong> Formula groups are defined in <code>unit-conversion-formulas.js</code> where each <code>##</code> heading is a group. The 5-column table maps each variable to its name, formula, units, and Output only mode. Set Output only to <code>yes</code> to make a row computed-only, or <code>hidden</code> to compute it without showing an input row. The solver can back-solve equations when exactly one variable in a row is unknown, so dependent values can propagate from a single driving input. Output-only rows can use <code>if ... then ... else ...</code> formulas with numeric or string outputs. String branches can be direct literals (for example <code>"OK"</code>) or references to string variables defined in the same group. Formulas may reference any other variable by its Variable column value, and may use standard math functions (sqrt, pow, sin, cos, PI, E, etc.).</span>',
         };
@@ -1762,6 +1829,429 @@
           });
         }
 
+        // Splits one quantity across several units of the same family, largest
+        // first: 9.5 st over st/lb/oz becomes 9 st 7 lb 0 oz. Every unit but the
+        // smallest takes a whole number; the smallest absorbs the remainder.
+        function decomposeBaseValue(baseValue, orderedRows) {
+          var quantities = [];
+          var remaining = baseValue;
+
+          for (var i = 0; i < orderedRows.length; i++) {
+            var factor = orderedRows[i].factor;
+            if (!(factor > 0)) {
+              quantities.push(0);
+              continue;
+            }
+
+            if (i === orderedRows.length - 1) {
+              quantities.push(remaining / factor);
+              break;
+            }
+
+            // toPrecision trims float noise so 6.999999999999998 floors to 7,
+            // not 6 with a full unit stranded in the remainder.
+            var whole = Math.floor(Number((remaining / factor).toPrecision(12)));
+            if (!(whole > 0)) whole = 0;
+            quantities.push(whole);
+            remaining -= whole * factor;
+            if (remaining < 0) remaining = 0;
+          }
+
+          return quantities;
+        }
+
+        function buildMixedCalculator() {
+          loadGenericCatalogFromMarkdownFile();
+
+          var card = document.createElement("article");
+          card.className = "converter-card";
+          card.innerHTML =
+            '<div class="card-header"><p class="converter-label">Mixed Units</p></div>' +
+            "<section>" +
+            '<div class="section-header"><h2>Mixed Breakdown</h2><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
+            '<div class="field"><label>Preset family<select class="generic-preset"></select></label></div>' +
+            '<div class="mixed-inputs"></div>' +
+            '<div class="field"><label>Combined<input class="input-generic mixed-combined" type="text" readonly placeholder="Enter a value in any ticked unit" /></label></div>' +
+            '<div class="status">Choose a preset, then tick the units to split the value across.</div>' +
+            "</section>";
+
+          var groupingChip = card.querySelector(".grouping-chip");
+          var decimalChip = card.querySelector(".decimal-chip");
+          var resetChip = card.querySelector(".reset-chip");
+          var presetSelect = card.querySelector(".generic-preset");
+          var inputsWrap = card.querySelector(".mixed-inputs");
+          var combinedField = card.querySelector(".mixed-combined");
+          var status = card.querySelector(".status");
+          var GROUPING_MODES = ["off", "spaces", "commas", "apostrophes"];
+          var GROUPING_LABELS = {
+            off: "Off",
+            spaces: "Spaces",
+            apostrophes: "Apostrophes",
+          };
+          var DECIMAL_SEPARATORS = [".", ","];
+          var groupingMode = "off";
+          var decimalSeparator = ".";
+          // Largest factor first, so the breakdown reads big-to-small.
+          var rows = [];
+          // Unit name -> whether it takes part in the breakdown.
+          var enabled = {};
+
+          function updateGroupingChipLabel() {
+            var modeLabel =
+              groupingMode === "commas"
+                ? decimalSeparator === ","
+                  ? "Points"
+                  : "Commas"
+                : GROUPING_LABELS[groupingMode];
+            groupingChip.textContent = "Grouping: " + modeLabel;
+          }
+
+          function updateDecimalChipLabel() {
+            decimalChip.textContent = "Decimal: " + decimalSeparator;
+          }
+
+          function getNextGroupingMode(mode) {
+            var index = GROUPING_MODES.indexOf(mode);
+            return GROUPING_MODES[(index + 1) % GROUPING_MODES.length];
+          }
+
+          function getNextDecimalSeparator(separator) {
+            var index = DECIMAL_SEPARATORS.indexOf(separator);
+            return DECIMAL_SEPARATORS[
+              (index + 1) % DECIMAL_SEPARATORS.length
+            ];
+          }
+
+          function renderPresetOptions(selectedKey) {
+            var options = [];
+            for (var i = 0; i < genericCatalog.order.length; i++) {
+              var key = genericCatalog.order[i];
+              var label = genericCatalog.map[key]
+                ? genericCatalog.map[key].label
+                : key;
+              options.push(
+                '<option value="' + key + '">' + label + "</option>",
+              );
+            }
+            presetSelect.innerHTML = options.join("");
+
+            var targetKey = selectedKey;
+            if (!targetKey || !genericCatalog.map[targetKey]) {
+              targetKey = genericCatalog.order.length
+                ? genericCatalog.order[0]
+                : "";
+            }
+            presetSelect.value = targetKey;
+          }
+
+          function getSelectedRows() {
+            var selected = [];
+            for (var i = 0; i < rows.length; i++) {
+              if (enabled[rows[i].name]) selected.push(rows[i]);
+            }
+            return selected;
+          }
+
+          // Unit names come from a user-editable catalog, so they are matched by
+          // attribute value rather than interpolated into a selector.
+          function getRowInput(name) {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              if (inputs[i].getAttribute("data-unit-name") === name) {
+                return inputs[i];
+              }
+            }
+            return null;
+          }
+
+          // Total of every ticked box, in base units. Null when all are blank.
+          function readTotalBase() {
+            var selected = getSelectedRows();
+            var total = 0;
+            var sawValue = false;
+
+            for (var i = 0; i < selected.length; i++) {
+              var input = getRowInput(selected[i].name);
+              if (!input) continue;
+              var parsed = parseLocalizedNullableNonNegativeNumber(
+                input.value,
+                decimalSeparator,
+              );
+              if (parsed == null) continue;
+              sawValue = true;
+              total += parsed * selected[i].factor;
+            }
+
+            return sawValue ? total : null;
+          }
+
+          function updateCombinedField() {
+            var selected = getSelectedRows();
+            var parts = [];
+            var sawValue = false;
+
+            for (var i = 0; i < selected.length; i++) {
+              var input = getRowInput(selected[i].name);
+              if (!input) continue;
+              var parsed = parseLocalizedNullableNonNegativeNumber(
+                input.value,
+                decimalSeparator,
+              );
+              if (parsed == null) continue;
+              sawValue = true;
+              if (parsed === 0) continue;
+              parts.push(
+                formatNumberWithGrouping(
+                  parsed,
+                  groupingMode,
+                  decimalSeparator,
+                ) +
+                  (selected[i].units ? " " + selected[i].units : ""),
+              );
+            }
+
+            if (!sawValue) {
+              combinedField.value = "";
+              return;
+            }
+
+            // An all-zero entry still deserves a reading, in the finest unit.
+            if (!parts.length && selected.length) {
+              var smallest = selected[selected.length - 1];
+              parts.push("0" + (smallest.units ? " " + smallest.units : ""));
+            }
+
+            combinedField.value = parts.join(" ");
+          }
+
+          function writeDecomposition(baseValue) {
+            var selected = getSelectedRows();
+            if (!selected.length) {
+              updateCombinedField();
+              return;
+            }
+
+            var quantities = decomposeBaseValue(baseValue, selected);
+            for (var i = 0; i < selected.length; i++) {
+              var input = getRowInput(selected[i].name);
+              if (!input) continue;
+              input.value = formatNumberWithGrouping(
+                quantities[i],
+                groupingMode,
+                decimalSeparator,
+              );
+            }
+
+            updateCombinedField();
+          }
+
+          function clearInputs() {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              inputs[i].value = "";
+            }
+            combinedField.value = "";
+          }
+
+          function describeSelection() {
+            var selected = getSelectedRows();
+            if (!selected.length) {
+              return "Tick at least one unit to build a breakdown.";
+            }
+            if (selected.length === 1) {
+              return "Only one unit ticked, so nothing is carried. Tick another for a mixed reading.";
+            }
+            return (
+              "Splitting across " +
+              selected
+                .map(function (row) {
+                  return row.units || row.name;
+                })
+                .join(" / ") +
+              ". Values settle into whole units when you leave a field."
+            );
+          }
+
+          // Re-splitting on every keystroke would fight the typist, so this only
+          // runs on blur, on toggles, and on formatting changes.
+          function normalizeFromInputs() {
+            var total = readTotalBase();
+            if (total == null) {
+              clearInputs();
+              status.textContent = describeSelection();
+              return;
+            }
+            writeDecomposition(total);
+            status.textContent = describeSelection();
+          }
+
+          function applyEnabledState() {
+            var rowEls = inputsWrap.querySelectorAll(".mixed-unit-row");
+            for (var i = 0; i < rowEls.length; i++) {
+              var name = rowEls[i].getAttribute("data-unit-name");
+              var isOn = !!enabled[name];
+              var input = rowEls[i].querySelector(".input-generic");
+              var toggle = rowEls[i].querySelector(".mixed-toggle");
+              if (toggle) toggle.checked = isOn;
+              rowEls[i].classList.toggle("is-disabled", !isOn);
+              if (input) {
+                input.disabled = !isOn;
+                if (!isOn) input.value = "";
+              }
+            }
+          }
+
+          function bindRowListeners() {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            for (var i = 0; i < inputs.length; i++) {
+              inputs[i].addEventListener("input", function () {
+                updateCombinedField();
+              });
+              inputs[i].addEventListener("blur", function () {
+                normalizeFromInputs();
+              });
+            }
+
+            var toggles = inputsWrap.querySelectorAll(".mixed-toggle");
+            for (var j = 0; j < toggles.length; j++) {
+              toggles[j].addEventListener(
+                "change",
+                (function (toggle) {
+                  return function () {
+                    // Read the total before the selection changes, so an
+                    // unticked unit's amount flows into the units left behind.
+                    var total = readTotalBase();
+                    enabled[toggle.getAttribute("data-unit-name")] =
+                      toggle.checked;
+                    applyEnabledState();
+                    if (total == null) {
+                      clearInputs();
+                      status.textContent = describeSelection();
+                      return;
+                    }
+                    writeDecomposition(total);
+                    status.textContent = describeSelection();
+                  };
+                })(toggles[j]),
+              );
+            }
+          }
+
+          function renderRows() {
+            inputsWrap.innerHTML = "";
+
+            if (!rows.length) {
+              combinedField.value = "";
+              status.textContent =
+                genericCatalogLoadError ||
+                "No unit groups loaded yet from " +
+                  GENERIC_UNITS_CATALOG_FILE +
+                  ".";
+              return;
+            }
+
+            for (var i = 0; i < rows.length; i++) {
+              var name = rows[i].name;
+              var field = document.createElement("div");
+              field.className = "mixed-unit-row";
+              field.setAttribute("data-unit-name", name);
+              field.innerHTML =
+                '<input class="mixed-toggle" type="checkbox" checked data-unit-name="' +
+                escapeHTML(name) +
+                '" aria-label="Include ' +
+                escapeHTML(name) +
+                '" />' +
+                '<span class="generic-unit-name">' +
+                escapeHTML(name) +
+                "</span>" +
+                '<span class="input-row"><input class="input-generic" data-unit-name="' +
+                escapeHTML(name) +
+                '" type="text" inputmode="decimal" placeholder="0" /></span>' +
+                '<span class="generic-unit-units">' +
+                escapeHTML(rows[i].units || "") +
+                "</span>";
+              inputsWrap.appendChild(field);
+            }
+
+            bindRowListeners();
+            applyEnabledState();
+            clearInputs();
+            status.textContent = describeSelection();
+          }
+
+          function loadPresetFromSelection() {
+            var selected = presetSelect.value;
+            if (!genericCatalog.map[selected]) {
+              rows = [];
+              renderRows();
+              return;
+            }
+
+            rows = cloneGenericPresetRows(selected).slice().sort(function (a, b) {
+              return b.factor - a.factor;
+            });
+            enabled = {};
+            for (var i = 0; i < rows.length; i++) {
+              enabled[rows[i].name] = true;
+            }
+            renderRows();
+          }
+
+          function refreshCatalogOptions() {
+            renderPresetOptions(presetSelect.value);
+            loadPresetFromSelection();
+          }
+
+          groupingChip.addEventListener("click", function () {
+            var total = readTotalBase();
+            groupingMode = getNextGroupingMode(groupingMode);
+            updateGroupingChipLabel();
+            if (total != null) writeDecomposition(total);
+          });
+
+          decimalChip.addEventListener("click", function () {
+            var total = readTotalBase();
+            decimalSeparator = getNextDecimalSeparator(decimalSeparator);
+            updateDecimalChipLabel();
+            updateGroupingChipLabel();
+            if (total != null) writeDecomposition(total);
+          });
+
+          resetChip.addEventListener("click", function () {
+            clearInputs();
+            status.textContent = describeSelection();
+          });
+
+          presetSelect.addEventListener("change", loadPresetFromSelection);
+
+          updateGroupingChipLabel();
+          updateDecimalChipLabel();
+          renderPresetOptions(null);
+          loadPresetFromSelection();
+
+          mountSingleConverterCard(card);
+
+          setActiveGenericContext({
+            refreshCatalog: refreshCatalogOptions,
+            exportToMarkdownText: function () {
+              return rows.length ? genericRowsToMarkdown(rows) : "";
+            },
+            importFromMarkdownText: function (markdownText) {
+              var parsedRows = markdownToGenericRows(markdownText);
+              if (!parsedRows.length) return false;
+              rows = parsedRows.slice().sort(function (a, b) {
+                return b.factor - a.factor;
+              });
+              enabled = {};
+              for (var i = 0; i < rows.length; i++) {
+                enabled[rows[i].name] = true;
+              }
+              renderRows();
+              return true;
+            },
+          });
+        }
+
         function buildFormulasCalculator() {
           var card = document.createElement("article");
           card.className = "converter-card";
@@ -2551,6 +3041,12 @@
           setActivePickerButton(pickGenericConverterButton);
           buildGenericConverter();
           updateConversionReferences("generic");
+        });
+
+        pickMixedCalculatorButton.addEventListener("click", function () {
+          setActivePickerButton(pickMixedCalculatorButton);
+          buildMixedCalculator();
+          updateConversionReferences("mixed");
         });
 
         pickFormulasCalculatorButton.addEventListener("click", function () {

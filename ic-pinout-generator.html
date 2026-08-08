@@ -584,38 +584,38 @@
             <div class="row-2">
               <div>
                 <label class="help-label">Counts
-                  <span class="help-tip" tabindex="0" data-tip="two-sided uses left,right. four-sided uses top,right,bottom,left.">?</span>
+                  <span class="help-tip" tabindex="0" data-tip="two-sided uses left,right. four-sided uses top,right,bottom,left. Maximum 100 pins per side.">?</span>
                 </label>
                 <!-- 4-sided jog boxes: Left | Top+Bottom centre column | Right -->
                 <div id="counts-four" class="count-jog-group count-plus-grid">
                   <div class="count-jog-box">
                     <label class="count-jog-label" for="count-left">Left</label>
-                    <input class="count-jog-input" id="count-left" type="number" min="0" value="4" />
+                    <input class="count-jog-input" id="count-left" type="number" min="0" max="100" value="4" />
                   </div>
                   <div class="count-plus-center">
                     <div class="count-jog-box">
                       <label class="count-jog-label" for="count-top">Top</label>
-                      <input class="count-jog-input" id="count-top" type="number" min="0" value="4" />
+                      <input class="count-jog-input" id="count-top" type="number" min="0" max="100" value="4" />
                     </div>
                     <div class="count-jog-box">
                       <label class="count-jog-label" for="count-bottom">Bottom</label>
-                      <input class="count-jog-input" id="count-bottom" type="number" min="0" value="4" />
+                      <input class="count-jog-input" id="count-bottom" type="number" min="0" max="100" value="4" />
                     </div>
                   </div>
                   <div class="count-jog-box">
                     <label class="count-jog-label" for="count-right">Right</label>
-                    <input class="count-jog-input" id="count-right" type="number" min="0" value="4" />
+                    <input class="count-jog-input" id="count-right" type="number" min="0" max="100" value="4" />
                   </div>
                 </div>
                 <!-- 2-sided jog boxes: left, right -->
                 <div id="counts-two" class="count-jog-group" hidden>
                   <div class="count-jog-box">
                     <label class="count-jog-label" for="count-left-2">Left</label>
-                    <input class="count-jog-input" id="count-left-2" type="number" min="0" value="4" />
+                    <input class="count-jog-input" id="count-left-2" type="number" min="0" max="100" value="4" />
                   </div>
                   <div class="count-jog-box">
                     <label class="count-jog-label" for="count-right-2">Right</label>
-                    <input class="count-jog-input" id="count-right-2" type="number" min="0" value="4" />
+                    <input class="count-jog-input" id="count-right-2" type="number" min="0" max="100" value="4" />
                   </div>
                 </div>
                 <!-- Hidden backing input consumed by existing JS -->
@@ -749,6 +749,8 @@
       const TWO_CW_STARTS = new Set(["right-top", "left-bottom"]);
       const FOUR_CCW_STARTS = new Set(["left-top", "bottom-left", "right-bottom", "top-right"]);
       const FOUR_CW_STARTS = new Set(["top-left", "right-top", "bottom-right", "left-bottom"]);
+
+      const MAX_PINS_PER_SIDE = 100;
 
       const el = {
         exampleSelect: document.getElementById("example-select"),
@@ -1035,6 +1037,9 @@
           }
           if (value < 0) {
             throw new Error(argName + " values must be >= 0.");
+          }
+          if (value > MAX_PINS_PER_SIDE) {
+            throw new Error(argName + " values must be <= " + MAX_PINS_PER_SIDE + " (max pins per side).");
           }
           return value;
         });
@@ -2524,10 +2529,19 @@
         syncJoggersFromValue(val);
       }
 
+      // Clamp on commit rather than on every keystroke, so typing "100" is not
+      // rewritten mid-entry. Over-limit values still raise a status error live.
+      function clampJogInput(inp) {
+        const value = Number.parseInt(inp.value, 10);
+        if (Number.isInteger(value) && value > MAX_PINS_PER_SIDE) {
+          inp.value = String(MAX_PINS_PER_SIDE);
+        }
+      }
+
       // Typing directly into a jog input also syncs and reformats labels/numbers
       [...jogInputs.four, ...jogInputs.two].forEach((inp) => {
         inp.addEventListener("input", () => { syncValueFromJoggers(); reformatLabelsBox(); reformatNumbersBox(); refreshPreview(); });
-        inp.addEventListener("change", () => { syncValueFromJoggers(); reformatLabelsBox(); reformatNumbersBox(); refreshPreview(); markCustomExample(); });
+        inp.addEventListener("change", () => { clampJogInput(inp); syncValueFromJoggers(); reformatLabelsBox(); reformatNumbersBox(); refreshPreview(); markCustomExample(); });
       });
 
       // ---- end jog boxes ----
