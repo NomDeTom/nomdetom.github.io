@@ -1,0 +1,26 @@
+# GitHub Pages build configuration.
+#
+# Files listed here stay in the repository but are not copied into the
+# published site. Everything else at the repo root is published as-is.
+#
+# Note: setting `exclude` replaces Jekyll's built-in default list rather than
+# adding to it, so the defaults are repeated below. Drop them only if you are
+# sure none of those paths will ever exist here.
+
+exclude:
+  # Development reference for calculator markup and CSS patterns, not a tool.
+  - calculator-template.html
+  # Local agent configuration; never part of the site.
+  - .claude
+
+  # Jekyll defaults, restated so they keep applying.
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
