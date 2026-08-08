@@ -1895,6 +1895,10 @@
           var rows = [];
           // Unit name -> whether it takes part in the breakdown.
           var enabled = {};
+          // The authoritative total, in base units, at full precision. Fields
+          // display rounded values, so re-reading them on every toggle would
+          // shed a little accuracy each time; this keeps the quantity exact.
+          var currentBase = null;
 
           function updateGroupingChipLabel() {
             var modeLabel =
@@ -2051,6 +2055,7 @@
               inputs[i].value = "";
             }
             combinedField.value = "";
+            currentBase = null;
           }
 
           function describeSelection() {
@@ -2075,14 +2080,26 @@
           // Re-splitting on every keystroke would fight the typist, so this only
           // runs on blur, on toggles, and on formatting changes.
           function normalizeFromInputs() {
-            var total = readTotalBase();
-            if (total == null) {
+            // The user has just typed, so the fields are the source of truth.
+            currentBase = readTotalBase();
+            if (currentBase == null) {
               clearInputs();
               status.textContent = describeSelection();
               return;
             }
-            writeDecomposition(total);
+            writeDecomposition(currentBase);
             status.textContent = describeSelection();
+          }
+
+          // Re-splits the stored exact total, for changes that are not typing:
+          // ticking a unit on or off, or switching grouping and decimal marks.
+          function reapplyCurrentBase() {
+            if (currentBase == null) currentBase = readTotalBase();
+            if (currentBase == null) {
+              clearInputs();
+              return;
+            }
+            writeDecomposition(currentBase);
           }
 
           function applyEnabledState() {
@@ -2118,18 +2135,13 @@
                 "change",
                 (function (toggle) {
                   return function () {
-                    // Read the total before the selection changes, so an
+                    // Settle the exact total before the selection changes, so an
                     // unticked unit's amount flows into the units left behind.
-                    var total = readTotalBase();
+                    if (currentBase == null) currentBase = readTotalBase();
                     enabled[toggle.getAttribute("data-unit-name")] =
                       toggle.checked;
                     applyEnabledState();
-                    if (total == null) {
-                      clearInputs();
-                      status.textContent = describeSelection();
-                      return;
-                    }
-                    writeDecomposition(total);
+                    reapplyCurrentBase();
                     status.textContent = describeSelection();
                   };
                 })(toggles[j]),
@@ -2203,18 +2215,19 @@
           }
 
           groupingChip.addEventListener("click", function () {
-            var total = readTotalBase();
+            if (currentBase == null) currentBase = readTotalBase();
             groupingMode = getNextGroupingMode(groupingMode);
             updateGroupingChipLabel();
-            if (total != null) writeDecomposition(total);
+            if (currentBase != null) writeDecomposition(currentBase);
           });
 
           decimalChip.addEventListener("click", function () {
-            var total = readTotalBase();
+            // Read before the separator changes, or the old text parses wrongly.
+            if (currentBase == null) currentBase = readTotalBase();
             decimalSeparator = getNextDecimalSeparator(decimalSeparator);
             updateDecimalChipLabel();
             updateGroupingChipLabel();
-            if (total != null) writeDecomposition(total);
+            if (currentBase != null) writeDecomposition(currentBase);
           });
 
           resetChip.addEventListener("click", function () {
