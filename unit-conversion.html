@@ -542,40 +542,8 @@
         min-width: 2rem;
       }
 
-      /* Mixed Units: same three-column shape as .generic-inputs, plus a
-         leading checkbox column choosing which units join the breakdown. */
-      .mixed-inputs {
-        display: grid;
-        grid-template-columns: auto 1fr 1fr auto;
-        column-gap: 0.5rem;
-        row-gap: 0.75rem;
-        align-items: center;
-      }
-
-      .mixed-unit-row {
-        display: contents;
-      }
-
-      .mixed-toggle {
-        justify-self: center;
-        width: 1rem;
-        height: 1rem;
-        accent-color: var(--accent);
-      }
-
-      .mixed-inputs .input-row {
-        display: flex;
-      }
-
-      .mixed-inputs .input-row .input-generic {
-        width: 100%;
-      }
-
-      .mixed-unit-row.is-disabled .generic-unit-name,
-      .mixed-unit-row.is-disabled .generic-unit-units {
-        opacity: 0.45;
-      }
-
+      /* Mixed Units reuses the .generic-inputs grid; the scale picker decides
+         which units appear, so there is nothing extra to lay out. */
       .mixed-combined {
         font-weight: 600;
       }
@@ -616,21 +584,6 @@
           margin-bottom: 0.75rem;
         }
 
-        .mixed-inputs {
-          display: block;
-        }
-
-        .mixed-unit-row {
-          display: grid;
-          grid-template-columns: auto 1fr;
-          gap: 0.35rem;
-          margin-bottom: 0.75rem;
-        }
-
-        .mixed-unit-row .input-row,
-        .mixed-unit-row .generic-unit-units {
-          grid-column: 2;
-        }
       }
     </style>
     <script src="unit-conversion-custom-units.js"></script>
@@ -945,7 +898,7 @@
           generic:
             "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. Use import/export below to work with the active table.</span>",
           mixed:
-            "<span><strong>Mixed Units:</strong> Splits one quantity across several units of the same family, largest first, so 9.5 st reads as 9 st 7 lb 0 oz. Unit groups come from the same <code>unit-conversion-custom-units.js</code> catalog as Unit Conversion. Tick the units to include; every unit except the smallest takes a whole number and the smallest absorbs the remainder. Typing is left alone until you leave a field, so you can enter 133 in the lb box and it settles into stone and pounds on blur.</span>",
+            "<span><strong>Mixed Units:</strong> Carries one measure across the units of a scale, so 9.5 st reads as 9 st 7 lb 0 oz. A scale is a set of units that chain by remainder — stone, pounds and ounces are one weight at 14 lb to the stone and 16 oz to the pound, not three interchangeable units. Scales are defined in <code>MIXED_SCALES_CATALOG_MARKDOWN</code> in <code>unit-conversion-custom-units.js</code>, where each <code>##</code> heading names a unit type from the conversion catalog and each row lists the units it chains, largest first. Decimal systems have no scales, because 3.7 t is written 3.7 t and never 3 t 700 kg; use Unit Conversion for those. Every unit except the smallest takes a whole number and the smallest absorbs the remainder. Typing is left alone until you leave a field, so you can enter 133 in the lb box and it settles into stone and pounds on blur. <code>Zeros</code> switches the combined reading between <code>9 st 7 lb</code> and <code>9 st 7 lb 0 oz</code>; the individual fields always show every place.</span>",
           formulas:
             '<span><strong>Formula Calculator:</strong> Formula groups are defined in <code>unit-conversion-formulas.js</code> where each <code>##</code> heading is a group. The 5-column table maps each variable to its name, formula, units, and Output only mode. Set Output only to <code>yes</code> to make a row computed-only, or <code>hidden</code> to compute it without showing an input row. The solver can back-solve equations when exactly one variable in a row is unknown, so dependent values can propagate from a single driving input. Output-only rows can use <code>if ... then ... else ...</code> formulas with numeric or string outputs. String branches can be direct literals (for example <code>"OK"</code>) or references to string variables defined in the same group. Formulas may reference any other variable by its Variable column value, and may use standard math functions (sqrt, pow, sin, cos, PI, E, etc.).</span>',
         };
@@ -1040,6 +993,90 @@
             });
           }
           return clone;
+        }
+
+        // Mixed scales say which units chain together in a single reading.
+        // Each ## heading names a unit type from the units catalog; each row is
+        // one scale, listing its units by symbol, largest first.
+        var mixedScalesCatalog = { order: [], map: {} };
+        var mixedScalesLoadError = null;
+
+        function parseMixedScalesCatalogMarkdown(markdownText) {
+          var lines = String(markdownText || "").split(/\r?\n/);
+          var order = [];
+          var map = {};
+          var currentTitle = null;
+          var currentScales = [];
+
+          function flushCurrentSection() {
+            if (!currentTitle || !currentScales.length) return;
+            var key = slugifyHeading(currentTitle);
+            if (map[key]) return;
+            order.push(key);
+            map[key] = { label: currentTitle, scales: currentScales };
+          }
+
+          for (var i = 0; i < lines.length; i++) {
+            var headingMatch = lines[i].match(/^##\s+(.+)$/);
+            if (headingMatch) {
+              flushCurrentSection();
+              currentTitle = headingMatch[1].trim();
+              currentScales = [];
+              continue;
+            }
+            if (!currentTitle) continue;
+
+            var line = lines[i].trim();
+            if (line.indexOf("|") !== 0) continue;
+
+            var cells = line
+              .replace(/^\|/, "")
+              .replace(/\|$/, "")
+              .split("|")
+              .map(function (cell) {
+                return cell.trim();
+              });
+            if (cells.length < 2) continue;
+
+            var name = cells[0];
+            // Skip the header row and the |---| separator beneath it.
+            if (!name || /^-+:?$/.test(name) || /^name$/i.test(name)) continue;
+
+            var symbols = cells[1]
+              .split(",")
+              .map(function (symbol) {
+                return symbol.trim();
+              })
+              .filter(function (symbol) {
+                return symbol.length > 0;
+              });
+            if (symbols.length < 2) continue;
+
+            currentScales.push({ name: name, symbols: symbols });
+          }
+
+          flushCurrentSection();
+          return { order: order, map: map };
+        }
+
+        function loadMixedScalesCatalog() {
+          if (!window.MIXED_SCALES_CATALOG_MARKDOWN) {
+            mixedScalesLoadError =
+              "No mixed scales found in " + GENERIC_UNITS_CATALOG_FILE + ".";
+            return;
+          }
+          var parsed = parseMixedScalesCatalogMarkdown(
+            window.MIXED_SCALES_CATALOG_MARKDOWN,
+          );
+          if (!parsed.order.length) {
+            mixedScalesLoadError =
+              "No valid mixed scale tables found in " +
+              GENERIC_UNITS_CATALOG_FILE +
+              ".";
+            return;
+          }
+          mixedScalesLoadError = null;
+          mixedScalesCatalog = parsed;
         }
 
         function parseGenericCatalogMarkdown(markdownText) {
@@ -1862,23 +1899,25 @@
 
         function buildMixedCalculator() {
           loadGenericCatalogFromMarkdownFile();
+          loadMixedScalesCatalog();
 
           var card = document.createElement("article");
           card.className = "converter-card";
           card.innerHTML =
             '<div class="card-header"><p class="converter-label">Mixed Units</p></div>' +
             "<section>" +
-            '<div class="section-header"><h2>Mixed Breakdown</h2><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
-            '<div class="field"><label>Preset family<select class="generic-preset"></select></label></div>' +
-            '<div class="mixed-inputs"></div>' +
-            '<div class="field"><label>Combined<input class="input-generic mixed-combined" type="text" readonly placeholder="Enter a value in any ticked unit" /></label></div>' +
-            '<div class="status">Choose a preset, then tick the units to split the value across.</div>' +
+            '<div class="section-header"><h2>Mixed Breakdown</h2><button type="button" class="chip zeros-chip">Zeros: Hide</button><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
+            '<div class="field"><label>Scale<select class="mixed-scale"></select></label></div>' +
+            '<div class="generic-inputs mixed-inputs"></div>' +
+            '<div class="field"><label>Combined<input class="input-generic mixed-combined" type="text" readonly placeholder="Enter a value in any field" /></label></div>' +
+            '<div class="status">Choose a scale to begin.</div>' +
             "</section>";
 
+          var zerosChip = card.querySelector(".zeros-chip");
           var groupingChip = card.querySelector(".grouping-chip");
           var decimalChip = card.querySelector(".decimal-chip");
           var resetChip = card.querySelector(".reset-chip");
-          var presetSelect = card.querySelector(".generic-preset");
+          var scaleSelect = card.querySelector(".mixed-scale");
           var inputsWrap = card.querySelector(".mixed-inputs");
           var combinedField = card.querySelector(".mixed-combined");
           var status = card.querySelector(".status");
@@ -1891,12 +1930,13 @@
           var DECIMAL_SEPARATORS = [".", ","];
           var groupingMode = "off";
           var decimalSeparator = ".";
-          // Largest factor first, so the breakdown reads big-to-small.
+          // Whether the combined reading keeps empty places: "9 st 7 lb 0 oz"
+          // rather than "9 st 7 lb". The fields always show them either way.
+          var showZeros = false;
+          // The chained units of the selected scale, largest factor first.
           var rows = [];
-          // Unit name -> whether it takes part in the breakdown.
-          var enabled = {};
           // The authoritative total, in base units, at full precision. Fields
-          // display rounded values, so re-reading them on every toggle would
+          // display rounded values, so re-reading them after every edit would
           // shed a little accuracy each time; this keeps the quantity exact.
           var currentBase = null;
 
@@ -1914,6 +1954,11 @@
             decimalChip.textContent = "Decimal: " + decimalSeparator;
           }
 
+          function updateZerosChipLabel() {
+            zerosChip.textContent = "Zeros: " + (showZeros ? "Show" : "Hide");
+            zerosChip.setAttribute("aria-pressed", showZeros ? "true" : "false");
+          }
+
           function getNextGroupingMode(mode) {
             var index = GROUPING_MODES.indexOf(mode);
             return GROUPING_MODES[(index + 1) % GROUPING_MODES.length];
@@ -1921,61 +1966,112 @@
 
           function getNextDecimalSeparator(separator) {
             var index = DECIMAL_SEPARATORS.indexOf(separator);
-            return DECIMAL_SEPARATORS[
-              (index + 1) % DECIMAL_SEPARATORS.length
-            ];
+            return DECIMAL_SEPARATORS[(index + 1) % DECIMAL_SEPARATORS.length];
           }
 
-          function renderPresetOptions(selectedKey) {
-            var options = [];
-            for (var i = 0; i < genericCatalog.order.length; i++) {
-              var key = genericCatalog.order[i];
-              var label = genericCatalog.map[key]
-                ? genericCatalog.map[key].label
-                : key;
-              options.push(
-                '<option value="' + key + '">' + label + "</option>",
+          // Scales are grouped under their unit type, so the list reads
+          // "Mass > Stone, pounds and ounces".
+          function renderScaleOptions(selectedValue) {
+            var groups = [];
+            for (var i = 0; i < mixedScalesCatalog.order.length; i++) {
+              var typeKey = mixedScalesCatalog.order[i];
+              var group = mixedScalesCatalog.map[typeKey];
+              if (!genericCatalog.map[typeKey]) continue;
+
+              var options = [];
+              for (var j = 0; j < group.scales.length; j++) {
+                options.push(
+                  '<option value="' +
+                    typeKey +
+                    "::" +
+                    j +
+                    '">' +
+                    escapeHTML(group.scales[j].name) +
+                    "</option>",
+                );
+              }
+              if (!options.length) continue;
+
+              groups.push(
+                '<optgroup label="' +
+                  escapeHTML(group.label) +
+                  '">' +
+                  options.join("") +
+                  "</optgroup>",
               );
             }
-            presetSelect.innerHTML = options.join("");
 
-            var targetKey = selectedKey;
-            if (!targetKey || !genericCatalog.map[targetKey]) {
-              targetKey = genericCatalog.order.length
-                ? genericCatalog.order[0]
-                : "";
+            scaleSelect.innerHTML = groups.join("");
+
+            if (selectedValue) {
+              scaleSelect.value = selectedValue;
+              if (scaleSelect.value === selectedValue) return;
             }
-            presetSelect.value = targetKey;
+            if (scaleSelect.options.length) {
+              scaleSelect.value = scaleSelect.options[0].value;
+            }
           }
 
-          function getSelectedRows() {
-            var selected = [];
-            for (var i = 0; i < rows.length; i++) {
-              if (enabled[rows[i].name]) selected.push(rows[i]);
+          // Resolves a scale's unit symbols against its type's factor table.
+          function resolveScaleRows(value) {
+            var parts = String(value || "").split("::");
+            var typeKey = parts[0];
+            var scaleIndex = parseInt(parts[1], 10);
+            var group = mixedScalesCatalog.map[typeKey];
+            var unitRows = genericCatalog.map[typeKey]
+              ? genericCatalog.map[typeKey].rows
+              : null;
+            if (!group || !unitRows || !group.scales[scaleIndex]) {
+              return { rows: [], missing: [] };
             }
-            return selected;
-          }
 
-          // Unit names come from a user-editable catalog, so they are matched by
-          // attribute value rather than interpolated into a selector.
-          function getRowInput(name) {
-            var inputs = inputsWrap.querySelectorAll(".input-generic");
-            for (var i = 0; i < inputs.length; i++) {
-              if (inputs[i].getAttribute("data-unit-name") === name) {
-                return inputs[i];
+            var symbols = group.scales[scaleIndex].symbols;
+            var resolved = [];
+            var missing = [];
+
+            for (var i = 0; i < symbols.length; i++) {
+              var match = null;
+              for (var j = 0; j < unitRows.length; j++) {
+                if (
+                  String(unitRows[j].units).toLowerCase() ===
+                  symbols[i].toLowerCase()
+                ) {
+                  match = unitRows[j];
+                  break;
+                }
               }
+              if (!match || !(match.factor > 0)) {
+                missing.push(symbols[i]);
+                continue;
+              }
+              resolved.push({
+                name: match.name,
+                factor: match.factor,
+                units: match.units,
+              });
             }
-            return null;
+
+            // Decomposition needs strict largest-to-smallest order, so the
+            // catalog's listed order is a hint, not a promise.
+            resolved.sort(function (a, b) {
+              return b.factor - a.factor;
+            });
+
+            return { rows: resolved, missing: missing };
           }
 
-          // Total of every ticked box, in base units. Null when all are blank.
+          function getRowInput(index) {
+            var inputs = inputsWrap.querySelectorAll(".input-generic");
+            return inputs[index] || null;
+          }
+
+          // Total of every field, in base units. Null when all are blank.
           function readTotalBase() {
-            var selected = getSelectedRows();
             var total = 0;
             var sawValue = false;
 
-            for (var i = 0; i < selected.length; i++) {
-              var input = getRowInput(selected[i].name);
+            for (var i = 0; i < rows.length; i++) {
+              var input = getRowInput(i);
               if (!input) continue;
               var parsed = parseLocalizedNullableNonNegativeNumber(
                 input.value,
@@ -1983,19 +2079,18 @@
               );
               if (parsed == null) continue;
               sawValue = true;
-              total += parsed * selected[i].factor;
+              total += parsed * rows[i].factor;
             }
 
             return sawValue ? total : null;
           }
 
           function updateCombinedField() {
-            var selected = getSelectedRows();
             var parts = [];
             var sawValue = false;
 
-            for (var i = 0; i < selected.length; i++) {
-              var input = getRowInput(selected[i].name);
+            for (var i = 0; i < rows.length; i++) {
+              var input = getRowInput(i);
               if (!input) continue;
               var parsed = parseLocalizedNullableNonNegativeNumber(
                 input.value,
@@ -2003,14 +2098,13 @@
               );
               if (parsed == null) continue;
               sawValue = true;
-              if (parsed === 0) continue;
+              if (parsed === 0 && !showZeros) continue;
               parts.push(
                 formatNumberWithGrouping(
                   parsed,
                   groupingMode,
                   decimalSeparator,
-                ) +
-                  (selected[i].units ? " " + selected[i].units : ""),
+                ) + (rows[i].units ? " " + rows[i].units : ""),
               );
             }
 
@@ -2020,8 +2114,8 @@
             }
 
             // An all-zero entry still deserves a reading, in the finest unit.
-            if (!parts.length && selected.length) {
-              var smallest = selected[selected.length - 1];
+            if (!parts.length && rows.length) {
+              var smallest = rows[rows.length - 1];
               parts.push("0" + (smallest.units ? " " + smallest.units : ""));
             }
 
@@ -2029,15 +2123,14 @@
           }
 
           function writeDecomposition(baseValue) {
-            var selected = getSelectedRows();
-            if (!selected.length) {
+            if (!rows.length) {
               updateCombinedField();
               return;
             }
 
-            var quantities = decomposeBaseValue(baseValue, selected);
-            for (var i = 0; i < selected.length; i++) {
-              var input = getRowInput(selected[i].name);
+            var quantities = decomposeBaseValue(baseValue, rows);
+            for (var i = 0; i < rows.length; i++) {
+              var input = getRowInput(i);
               if (!input) continue;
               input.value = formatNumberWithGrouping(
                 quantities[i],
@@ -2058,64 +2151,35 @@
             currentBase = null;
           }
 
-          function describeSelection() {
-            var selected = getSelectedRows();
-            if (!selected.length) {
-              return "Tick at least one unit to build a breakdown.";
+          function describeScale() {
+            if (!rows.length) return "No units resolved for this scale.";
+            var carries = [];
+            for (var i = 0; i < rows.length - 1; i++) {
+              var per = rows[i].factor / rows[i + 1].factor;
+              carries.push(
+                formatNumber(per) +
+                  " " +
+                  (rows[i + 1].units || rows[i + 1].name) +
+                  " to the " +
+                  (rows[i].units || rows[i].name),
+              );
             }
-            if (selected.length === 1) {
-              return "Only one unit ticked, so nothing is carried. Tick another for a mixed reading.";
-            }
-            return (
-              "Splitting across " +
-              selected
-                .map(function (row) {
-                  return row.units || row.name;
-                })
-                .join(" / ") +
-              ". Values settle into whole units when you leave a field."
-            );
+            return carries.length
+              ? "Carrying at " + carries.join(", ") + "."
+              : "Single unit scale.";
           }
 
           // Re-splitting on every keystroke would fight the typist, so this only
-          // runs on blur, on toggles, and on formatting changes.
+          // runs on blur and on formatting changes.
           function normalizeFromInputs() {
-            // The user has just typed, so the fields are the source of truth.
             currentBase = readTotalBase();
             if (currentBase == null) {
               clearInputs();
-              status.textContent = describeSelection();
+              status.textContent = describeScale();
               return;
             }
             writeDecomposition(currentBase);
-            status.textContent = describeSelection();
-          }
-
-          // Re-splits the stored exact total, for changes that are not typing:
-          // ticking a unit on or off, or switching grouping and decimal marks.
-          function reapplyCurrentBase() {
-            if (currentBase == null) currentBase = readTotalBase();
-            if (currentBase == null) {
-              clearInputs();
-              return;
-            }
-            writeDecomposition(currentBase);
-          }
-
-          function applyEnabledState() {
-            var rowEls = inputsWrap.querySelectorAll(".mixed-unit-row");
-            for (var i = 0; i < rowEls.length; i++) {
-              var name = rowEls[i].getAttribute("data-unit-name");
-              var isOn = !!enabled[name];
-              var input = rowEls[i].querySelector(".input-generic");
-              var toggle = rowEls[i].querySelector(".mixed-toggle");
-              if (toggle) toggle.checked = isOn;
-              rowEls[i].classList.toggle("is-disabled", !isOn);
-              if (input) {
-                input.disabled = !isOn;
-                if (!isOn) input.value = "";
-              }
-            }
+            status.textContent = describeScale();
           }
 
           function bindRowListeners() {
@@ -2128,57 +2192,29 @@
                 normalizeFromInputs();
               });
             }
-
-            var toggles = inputsWrap.querySelectorAll(".mixed-toggle");
-            for (var j = 0; j < toggles.length; j++) {
-              toggles[j].addEventListener(
-                "change",
-                (function (toggle) {
-                  return function () {
-                    // Settle the exact total before the selection changes, so an
-                    // unticked unit's amount flows into the units left behind.
-                    if (currentBase == null) currentBase = readTotalBase();
-                    enabled[toggle.getAttribute("data-unit-name")] =
-                      toggle.checked;
-                    applyEnabledState();
-                    reapplyCurrentBase();
-                    status.textContent = describeSelection();
-                  };
-                })(toggles[j]),
-              );
-            }
           }
 
-          function renderRows() {
+          function renderRows(missingSymbols) {
             inputsWrap.innerHTML = "";
 
             if (!rows.length) {
               combinedField.value = "";
+              currentBase = null;
               status.textContent =
+                mixedScalesLoadError ||
                 genericCatalogLoadError ||
-                "No unit groups loaded yet from " +
-                  GENERIC_UNITS_CATALOG_FILE +
-                  ".";
+                "No units resolved for this scale.";
               return;
             }
 
             for (var i = 0; i < rows.length; i++) {
-              var name = rows[i].name;
               var field = document.createElement("div");
-              field.className = "mixed-unit-row";
-              field.setAttribute("data-unit-name", name);
+              field.className = "generic-unit-row";
               field.innerHTML =
-                '<input class="mixed-toggle" type="checkbox" checked data-unit-name="' +
-                escapeHTML(name) +
-                '" aria-label="Include ' +
-                escapeHTML(name) +
-                '" />' +
                 '<span class="generic-unit-name">' +
-                escapeHTML(name) +
+                escapeHTML(rows[i].name) +
                 "</span>" +
-                '<span class="input-row"><input class="input-generic" data-unit-name="' +
-                escapeHTML(name) +
-                '" type="text" inputmode="decimal" placeholder="0" /></span>' +
+                '<span class="input-row"><input class="input-generic" type="text" inputmode="decimal" placeholder="0" /></span>' +
                 '<span class="generic-unit-units">' +
                 escapeHTML(rows[i].units || "") +
                 "</span>";
@@ -2186,33 +2222,32 @@
             }
 
             bindRowListeners();
-            applyEnabledState();
             clearInputs();
-            status.textContent = describeSelection();
+            status.textContent =
+              describeScale() +
+              (missingSymbols && missingSymbols.length
+                ? " Skipped unknown units: " + missingSymbols.join(", ") + "."
+                : "");
           }
 
-          function loadPresetFromSelection() {
-            var selected = presetSelect.value;
-            if (!genericCatalog.map[selected]) {
-              rows = [];
-              renderRows();
-              return;
-            }
-
-            rows = cloneGenericPresetRows(selected).slice().sort(function (a, b) {
-              return b.factor - a.factor;
-            });
-            enabled = {};
-            for (var i = 0; i < rows.length; i++) {
-              enabled[rows[i].name] = true;
-            }
-            renderRows();
+          function loadScaleFromSelection() {
+            var resolved = resolveScaleRows(scaleSelect.value);
+            rows = resolved.rows;
+            renderRows(resolved.missing);
           }
 
           function refreshCatalogOptions() {
-            renderPresetOptions(presetSelect.value);
-            loadPresetFromSelection();
+            loadMixedScalesCatalog();
+            renderScaleOptions(scaleSelect.value);
+            loadScaleFromSelection();
           }
+
+          zerosChip.addEventListener("click", function () {
+            showZeros = !showZeros;
+            updateZerosChipLabel();
+            // Only the reading changes, so the fields need no re-splitting.
+            updateCombinedField();
+          });
 
           groupingChip.addEventListener("click", function () {
             if (currentBase == null) currentBase = readTotalBase();
@@ -2232,15 +2267,16 @@
 
           resetChip.addEventListener("click", function () {
             clearInputs();
-            status.textContent = describeSelection();
+            status.textContent = describeScale();
           });
 
-          presetSelect.addEventListener("change", loadPresetFromSelection);
+          scaleSelect.addEventListener("change", loadScaleFromSelection);
 
+          updateZerosChipLabel();
           updateGroupingChipLabel();
           updateDecimalChipLabel();
-          renderPresetOptions(null);
-          loadPresetFromSelection();
+          renderScaleOptions(null);
+          loadScaleFromSelection();
 
           mountSingleConverterCard(card);
 
@@ -2249,18 +2285,8 @@
             exportToMarkdownText: function () {
               return rows.length ? genericRowsToMarkdown(rows) : "";
             },
-            importFromMarkdownText: function (markdownText) {
-              var parsedRows = markdownToGenericRows(markdownText);
-              if (!parsedRows.length) return false;
-              rows = parsedRows.slice().sort(function (a, b) {
-                return b.factor - a.factor;
-              });
-              enabled = {};
-              for (var i = 0; i < rows.length; i++) {
-                enabled[rows[i].name] = true;
-              }
-              renderRows();
-              return true;
+            importFromMarkdownText: function () {
+              return false;
             },
           });
         }

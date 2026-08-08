@@ -2,6 +2,10 @@
 // Edit the markdown text below to add, remove, or change unit types and factors.
 // Each ## heading defines one unit type; the table beneath it maps names and units to a base unit factor.
 // This file is loaded as a <script> tag so it works when the page is opened as a local file:// URL.
+//
+// Two catalogs live here:
+//   GENERIC_UNITS_CATALOG_MARKDOWN - every unit and its factor, for straight conversion.
+//   MIXED_SCALES_CATALOG_MARKDOWN  - which units chain together in a mixed reading (see below).
 
 window.GENERIC_UNITS_CATALOG_MARKDOWN = `
 ## Length
@@ -62,4 +66,46 @@ window.GENERIC_UNITS_CATALOG_MARKDOWN = `
 | Day    |                1440 | d     |
 | Year   |              525960 | y     |
 | Decade |             5259600 | dec   |
+`;
+
+// Mixed scales for the Mixed Units calculator.
+// A scale is one measure carried in remainders across several units of the same
+// system: stone, pounds and ounces are not three interchangeable units, they are
+// one weight written as 14 lb to the stone and 16 oz to the pound. Decimal
+// systems have no scales here, because 3.7 t is written 3.7 t, never 3 t 700 kg.
+//
+// Each ## heading names a unit type from the catalog above. Each row is one
+// scale: a display name and the units it chains, largest first, given as the
+// Units symbols from that type's table.
+
+window.MIXED_SCALES_CATALOG_MARKDOWN = `
+## Mass
+
+| Name                     | Units      |
+| ------------------------ | ---------- |
+| Stone, pounds and ounces | st, lb, oz |
+| Stone and pounds         | st, lb     |
+| Pounds and ounces        | lb, oz     |
+
+## Length
+
+| Name                    | Units      |
+| ----------------------- | ---------- |
+| Feet and inches         | ft, in     |
+| Yards, feet and inches  | yd, ft, in |
+| Miles and yards         | mi, yd     |
+
+## Time
+
+| Name                      | Units       |
+| ------------------------- | ----------- |
+| Hours, minutes and seconds | h, min, s  |
+| Days, hours and minutes   | d, h, min   |
+| Days, hours, minutes, secs | d, h, min, s |
+
+## Angle
+
+| Name                          | Units                |
+| ----------------------------- | -------------------- |
+| Degrees, arcminutes, arcsecs  | deg, arcmin, arcsec  |
 `;
