@@ -2251,6 +2251,7 @@
             outMax2p5.textContent        = maxPkts(0.025) + " pkts";
             lastResult = {
               radioType:     inputRadioType.options[inputRadioType.selectedIndex].text,
+              radioTypeKey:  inputRadioType.value,
               presetName:    "Custom",
               modulation:    mod,
               band:          isWide() ? "2.4 GHz" : "Sub-GHz",
@@ -2327,6 +2328,7 @@
 
           lastResult = {
             radioType:    inputRadioType.options[inputRadioType.selectedIndex].text,
+            radioTypeKey: inputRadioType.value,
             presetName:   inputPreset.options[inputPreset.selectedIndex].text,
             modulation:   "lora",
             band:         isWide() ? "2.4 GHz" : "Sub-GHz",
@@ -2486,6 +2488,8 @@
                     cardCell("LDRO",         r.ldroActive ? "Yes" : "No") +
                     cardCell("Preamble dur", formatDuration(r.tPreamble)) +
                     cardCell("Payload syms", String(r.nPayload)) +
+                    cardCell("Link budget", formatDb(cardLinkBudget(r)),
+                      "22 dBm Tx, 1 dBi antenna at each end, same radio both ends") +
                     '<div class="metrics-pkts-row">' +
                       cardCell("@25%/hr",  r.max25 + " pkts") +
                       cardCell("@10%/hr",  r.max10 + " pkts") +
@@ -2509,9 +2513,10 @@
           );
         }
 
-        function cardCell(label, value) {
+        function cardCell(label, value, title) {
           return (
-            '<div class="comparison-card-cell">' +
+            '<div class="comparison-card-cell"' +
+              (title ? ' title="' + escHtml(title) + '"' : '') + '>' +
               '<span class="comparison-card-cell-label">' + escHtml(label) + '</span>' +
               '<span class="comparison-card-cell-value">' + escHtml(value) + '</span>' +
             '</div>'
@@ -2568,6 +2573,7 @@
             "Preset", "Band", "BW kHz", "SF", "CR",
             "Preamble", "Payload B", "Header", "CRC", "LDRO",
             "Symbol time", "Time on Air", "Throughput",
+            "Link budget @22dBm/1dBi",
             "@40%", "@25%", "@10%", "@5%", "@2.5%",
           ];
           var source = savedCards.length > 0
@@ -2585,6 +2591,7 @@
               formatDuration(r.symTime_ms),
               formatDuration(r.toa),
               formatThroughput(r.throughput),
+              formatDb(cardLinkBudget(r)),
               r.max40, r.max25, r.max10, r.max5, r.max2p5,
             ];
           });
@@ -2783,6 +2790,28 @@
           // BW correction: noise bandwidth scales as 10·log10(BW)
           var bwCorr = 10 * Math.log10(bwKHz / nearestBW);
           return { sens: sensAtAnchor + bwCorr, source: "ds" };
+        }
+
+        // ----- Reference link budget shown on the comparison cards -----
+        // Fixed symmetric link so cards stay comparable regardless of what is
+        // currently typed into the Link Budget panel: 22 dBm Tx, 1 dBi antenna
+        // at each end, same radio at both ends.
+        var CARD_LB_TX_POWER = 22; // dBm
+        var CARD_LB_ANT_GAIN = 1;  // dBi, sender and receiver
+        var CARD_LB_NF       = 6;  // dB, only used for generic/unknown radios
+
+        function cardLinkBudget(r) {
+          var sens;
+          if (r.modulation === "gfsk" || r.modulation === "flrc") {
+            if (!(r.bitRateKbps > 0)) return NaN;
+            var bwHz = r.bitRateKbps * 1000 * 1.5; // approx occupied BW
+            sens = -174 + 10 * Math.log10(bwHz) + CARD_LB_NF +
+                   (r.modulation === "flrc" ? 8 : 10);
+          } else {
+            if (!(r.bw > 0) || !(r.sf >= 5 && r.sf <= 12)) return NaN;
+            sens = lookupSensitivity(r.radioTypeKey || "all", r.bw, r.sf, CARD_LB_NF).sens;
+          }
+          return CARD_LB_TX_POWER + 2 * CARD_LB_ANT_GAIN - sens;
         }
 
         var lbContent       = document.getElementById("lb-content");
