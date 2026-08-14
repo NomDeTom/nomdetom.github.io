@@ -1404,6 +1404,11 @@
           { key: "LITE_SLOW",     name: "Lite Slow",           bw: 125,  bwWide: 125,    sf: 10, cr: 5 },
           { key: "NARROW_FAST",   name: "Narrow Fast",         bw: 62.5, bwWide: 62.5,   sf: 7,  cr: 6 },
           { key: "NARROW_SLOW",     name: "Narrow Slow",             bw: 62.5, bwWide: 62.5,   sf: 8,  cr: 6 },
+          // Tiny presets: 2 m amateur bands (ITU*_2M), 20 kHz channel limit.
+          // Firmware uses 15.6 kHz — nearest supported BW under that cap.
+          // SX127x/SX126x only; the bwWide value keeps them off the 2.4 GHz band list.
+          { key: "TINY_FAST",     name: "Tiny Fast",           bw: 15.6, bwWide: 15.6,   sf: 7,  cr: 5 },
+          { key: "TINY_SLOW",     name: "Tiny Slow",           bw: 15.6, bwWide: 15.6,   sf: 8,  cr: 6 },
           { key: "MESHCORE_DEFAULT", name: "MeshCore Default (EU)", bw: 62.5, bwWide: 62.5,   sf: 8,  cr: 8 },
         ];
 
