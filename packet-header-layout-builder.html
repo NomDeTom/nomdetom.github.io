@@ -1,0 +1,2912 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Packet Header Layout Builder</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --danger: #b42318;
+
+        /* Capacity bar. Categorical slots 1-3 of the validated reference palette,
+           stepped for the light panel surface (#ffffff). Hue carries the family
+           (header / payload / overhead); the exact scope rides in the tooltip. */
+        --viz-header: #2a78d6;
+        --viz-payload: #eb6834;
+        --viz-overhead: #1baf7a;
+        --viz-free: #eceee7;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --danger: #ff8d8d;
+
+        /* Same three hues re-stepped for the dark panel surface (#1a241d) —
+           a selected dark palette, not an automatic flip. */
+        --viz-header: #3987e5;
+        --viz-payload: #d95926;
+        --viz-overhead: #199e70;
+        --viz-free: #22302a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .layout-grid {
+        display: grid;
+        grid-template-columns: 1.35fr 0.65fr;
+        gap: 1rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+      }
+
+      .field-row.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field-row.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      /* ---------- Explanation strip ---------- */
+
+      .strip {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+      }
+
+      .strip h2 {
+        margin: 0;
+      }
+
+      .explanation-content {
+        max-width: 74ch;
+        margin-top: 0.9rem;
+      }
+
+      .explanation-content[hidden] {
+        display: none;
+      }
+
+      .explanation-content p {
+        margin: 0 0 0.7rem;
+      }
+
+      .explanation-content p:last-child {
+        margin-bottom: 0;
+      }
+
+      .explanation-content code {
+        font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+        font-size: 0.88em;
+        padding: 0.05rem 0.25rem;
+        background: var(--field-bg);
+        border: 1px solid var(--border);
+      }
+
+      .field-hint {
+        margin: 0;
+        align-self: end;
+        padding-bottom: 0.9rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      /* ---------- Capacity bar ---------- */
+
+      .capacity-viz {
+        position: relative;
+        margin-bottom: 1rem;
+      }
+
+      .capacity-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .capacity-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .capacity-head-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .capacity-readout {
+        color: var(--muted);
+        font-size: 0.85rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* State reads from the check glyph and the fill together, never fill alone. */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--panel-bg);
+        color: var(--muted);
+        padding: 0.15rem 0.6rem;
+        font: inherit;
+        font-size: 0.78rem;
+        line-height: 1.4;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .chip[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip .chip-mark {
+        font-size: 0.7rem;
+        visibility: hidden;
+      }
+
+      .chip[aria-pressed="true"] .chip-mark {
+        visibility: visible;
+      }
+
+      .capacity-readout.warn {
+        color: var(--danger);
+        font-weight: 600;
+      }
+
+      /* The track's own background shows through the 2px flex gaps — that
+         surface gap is what separates touching segments, not a border. */
+      .capacity-track {
+        position: relative;
+        display: flex;
+        gap: 2px;
+        height: 22px;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .capacity-seg {
+        position: relative;
+        flex-basis: 0;
+        min-width: 2px;
+        border: 0;
+        padding: 0;
+        background: var(--viz-free);
+      }
+
+      .capacity-seg[data-family="header"] {
+        background: var(--viz-header);
+      }
+
+      .capacity-seg[data-family="payload"] {
+        background: var(--viz-payload);
+      }
+
+      .capacity-seg[data-family="overhead"] {
+        background: var(--viz-overhead);
+      }
+
+
+      /* Hit area reaches past the paint into the surface gap, so 1-byte
+         segments are still hoverable at 255-byte scale. */
+      .capacity-seg[tabindex]::after {
+        content: "";
+        position: absolute;
+        inset: 0 -3px;
+      }
+
+      .capacity-seg[tabindex]:hover,
+      .capacity-seg[tabindex]:focus-visible {
+        filter: brightness(1.18);
+        outline: none;
+      }
+
+      .capacity-seg[tabindex]:focus-visible {
+        box-shadow: inset 0 0 0 2px var(--panel-bg);
+      }
+
+      .capacity-limit {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--danger);
+        pointer-events: none;
+      }
+
+      .capacity-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.9rem;
+        margin-top: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .capacity-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .capacity-legend i {
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 2px;
+        background: var(--viz-free);
+      }
+
+      .capacity-legend i.header {
+        background: var(--viz-header);
+      }
+
+      .capacity-legend i.payload {
+        background: var(--viz-payload);
+      }
+
+      .capacity-legend i.overhead {
+        background: var(--viz-overhead);
+      }
+
+      .capacity-legend i.free {
+        border: 1px solid var(--border);
+      }
+
+      .capacity-tooltip {
+        position: absolute;
+        z-index: 5;
+        top: calc(100% + 0.3rem);
+        left: 0;
+        max-width: 18rem;
+        padding: 0.45rem 0.6rem;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        font-size: 0.82rem;
+        line-height: 1.35;
+        pointer-events: none;
+      }
+
+      .capacity-tooltip[hidden] {
+        display: none;
+      }
+
+      .capacity-tooltip .tip-value {
+        font-weight: 700;
+        font-size: 0.95rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .capacity-tooltip .tip-name {
+        color: var(--text);
+      }
+
+      .capacity-tooltip .tip-meta {
+        color: var(--muted);
+      }
+
+      .block-list {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .block-row {
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        padding: 0.75rem;
+        border-left: 3px solid var(--border);
+      }
+
+      /* Same two hues as the capacity bar, as a ~10% wash plus a solid edge, so a
+         row's family matches its segment above. The Scope select still says it in
+         words — the tint supplements, it never carries the meaning alone. */
+      .block-row[data-family="header"] {
+        border-left-color: var(--viz-header);
+        background: color-mix(in srgb, var(--viz-header) 9%, var(--field-bg));
+      }
+
+      .block-row[data-family="payload"] {
+        border-left-color: var(--viz-payload);
+        background: color-mix(in srgb, var(--viz-payload) 9%, var(--field-bg));
+      }
+
+      .block-row.dragging {
+        opacity: 0.5;
+      }
+
+      .block-row.drag-over {
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 1px var(--accent);
+      }
+
+      .block-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        margin-bottom: 0.6rem;
+      }
+
+      .block-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--muted);
+        font-size: 0.86rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .drag-handle {
+        display: inline-block;
+        border: 1px dashed var(--border);
+        padding: 0.15rem 0.35rem;
+        cursor: grab;
+      }
+
+      .block-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .mini-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.25rem 0.55rem;
+        font: inherit;
+        font-size: 0.82rem;
+        cursor: pointer;
+      }
+
+      .mini-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .mini-btn.warn:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .inline-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        min-height: 2.8rem;
+      }
+
+      .inline-checkbox input {
+        width: auto;
+        margin: 0;
+      }
+
+      .field[hidden] {
+        display: none !important;
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .result-value.warn {
+        color: var(--danger);
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.3rem;
+      }
+
+      .export-panel textarea {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        min-height: 16rem;
+        resize: vertical;
+      }
+
+      .export-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .status {
+        margin: 0.7rem 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .subblock-list {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .subblock-row {
+        display: grid;
+        grid-template-columns: 1fr 6.5rem 1fr 1fr 1fr 1.2fr auto;
+        gap: 0.45rem;
+        align-items: end;
+      }
+
+      .subblock-row.subblock-single-bit {
+        grid-template-columns: 1fr 6.5rem 1fr 2fr auto;
+      }
+
+      .subblock-row label[hidden] {
+        display: none !important;
+      }
+
+      .subblock-total {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .subblock-total.warn {
+        color: var(--danger);
+      }
+
+      @media (max-width: 980px) {
+        .layout-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .field-row {
+          grid-template-columns: 1fr;
+        }
+
+        .field-row.two {
+          grid-template-columns: 1fr;
+        }
+
+        .subblock-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Packet Header Layout Builder</h1>
+        <p class="subtitle">
+          Assemble 8-32 bit packet blocks, reorder via drag-and-drop, and track
+          header/payload sizing with markdown import/export.
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">
+            Theme: Auto
+          </button>
+          <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <section id="explanation-panel">
+        <div class="strip">
+          <h2>Explanation</h2>
+          <button
+            id="toggle-explanation-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+            aria-controls="explanation-content"
+          >
+            Hide explanation
+          </button>
+        </div>
+
+        <div id="explanation-content" class="explanation-content">
+          <p>
+            The bytes at the front of every Meshtastic LoRa frame are
+            <strong>not protobuf</strong>. They are a plain C struct
+            (<code>PacketHeader</code>) copied onto the air byte for byte, so the
+            layout is entirely fixed: every field is present in every packet, at
+            a fixed offset, at a fixed width. Only what follows the header — the
+            payload — is protobuf, and it is normally encrypted, which is why the
+            header has to stay readable in the clear by every relay.
+          </p>
+          <p>
+            A fixed layout has no way to say <em>“this field is unused here”</em>.
+            <code>next_hop</code> and <code>relay_node</code> are a byte each and
+            carry <code>0</code> (<code>NO_NEXT_HOP_PREFERENCE</code> /
+            <code>NO_RELAY_NODE</code>) when there is nothing to say — the byte
+            still goes out, and still costs airtime, on every packet that has no
+            use for it.
+          </p>
+          <p>
+            The header already does a narrow version of the alternative. When
+            <code>hop_start</code> is <code>0</code> — a sender older than 2.3 —
+            the receiver treats <code>next_hop</code> and <code>relay_node</code>
+            as invalid rather than as the value <code>0</code>. Three bits
+            already in the flags byte qualify two whole bytes; the bytes are just
+            still sent either way.
+          </p>
+          <p>
+            This page is a sandbox for the other option: layouts where a field is
+            <strong>optional or variable</strong> rather than mandatory. Give a
+            field a presence bit in a flags byte and send the field only when the
+            bit is set, and the empty case costs one bit instead of eight. Set
+            those fields to <em>Header (optional)</em> or
+            <em>Header (variable)</em> and the Size Summary separates the fixed
+            floor — what every packet pays — from the part that only sometimes
+            appears.
+          </p>
+          <p>
+            Two things to keep honest while experimenting. The bits have to come
+            from somewhere: today’s flags byte is fully allocated (hop limit 3,
+            want-ack 1, via-MQTT 1, hop start 3 = 8 of 8). And any change here is
+            a wire-format break — both ends must agree — so this is for sizing the
+            trade, not for proposing one.
+          </p>
+        </div>
+      </section>
+
+      <div class="layout-grid">
+        <section>
+          <h2>Layout Editor</h2>
+
+          <div class="capacity-viz">
+            <div class="capacity-head">
+              <span class="capacity-title">Packet capacity</span>
+              <span class="capacity-head-right">
+                <span class="capacity-readout" id="capacity-readout"></span>
+                <button
+                  id="toggle-free-btn"
+                  class="chip"
+                  type="button"
+                  aria-pressed="true"
+                  title="On: bar spans the whole packet budget. Off: blocks stretch to fill the bar."
+                >
+                  <span class="chip-mark" aria-hidden="true">✓</span>Free bytes
+                </button>
+              </span>
+            </div>
+            <div
+              class="capacity-track"
+              id="capacity-track"
+              role="group"
+              aria-label="Packet capacity bar"
+            ></div>
+            <div class="capacity-legend" id="capacity-legend"></div>
+            <div
+              class="capacity-tooltip"
+              id="capacity-tooltip"
+              aria-hidden="true"
+              hidden
+            ></div>
+          </div>
+
+          <div class="field-row two">
+            <div class="field">
+              <label for="input-max-packet-bytes"
+                >Maximum packet size (bytes)
+                <input
+                  id="input-max-packet-bytes"
+                  type="number"
+                  inputmode="numeric"
+                  step="1"
+                  min="1"
+                  max="255"
+                  value="255"
+                />
+              </label>
+            </div>
+            <div class="field">
+              <label for="input-overhead-bytes"
+                >Extra fixed overhead (bytes)
+                <input
+                  id="input-overhead-bytes"
+                  type="number"
+                  inputmode="numeric"
+                  step="1"
+                  min="0"
+                  value="0"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="field-row two">
+            <div class="field">
+              <label for="input-payload-type"
+                >Payload type
+                <select id="input-payload-type"></select>
+              </label>
+            </div>
+            <p class="field-hint" id="payload-type-hint"></p>
+          </div>
+
+          <div class="top-actions" style="margin-top: 0; margin-bottom: 1rem">
+            <button id="add-block-btn" class="action-btn" type="button">Add block</button>
+            <button id="add-common-flags-btn" class="action-btn" type="button">Add common flag block</button>
+            <button
+              id="show-default-btn"
+              class="action-btn"
+              type="button"
+              title="Replace the layout with the current Meshtastic on-air header (16 bytes)"
+            >
+              Show current default
+            </button>
+          </div>
+
+          <div id="block-list" class="block-list" aria-live="polite"></div>
+        </section>
+
+        <section>
+          <h2>Size Summary</h2>
+          <output class="results" aria-live="polite" aria-atomic="true">
+            <div class="result">
+              <span class="result-label">Header size</span>
+              <span class="result-value" id="output-header-size">0 bytes</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Payload blocks size</span>
+              <span class="result-value" id="output-payload-size">0 bytes</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Extra fixed overhead</span>
+              <span class="result-value" id="output-overhead-size">0 bytes</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Current packet size</span>
+              <span class="result-value" id="output-current-size">0 bytes</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Maximum payload capacity</span>
+              <span class="result-value" id="output-max-payload">0 bytes</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Remaining payload capacity</span>
+              <span class="result-value" id="output-remaining-payload">0 bytes</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Total bits (header + payload blocks)</span>
+              <span class="result-value" id="output-total-bits">0 bits</span>
+            </div>
+          </output>
+
+          <p class="formula-note">
+            <span>Header bytes = fixed + variable + optional header bytes</span>
+            <span>Payload bytes = fixed + variable + optional payload bytes</span>
+            <span>Max payload bytes = max(0, max packet - fixed header - overhead)</span>
+            <span>Remaining payload = max payload - variable/optional header - payload bytes</span>
+          </p>
+        </section>
+      </div>
+
+      <section id="export-panel" class="export-panel">
+        <h2>Markdown Import / Export</h2>
+        <div class="export-actions">
+          <button id="export-markdown-btn" class="action-btn" type="button">Generate markdown table</button>
+          <button id="import-markdown-btn" class="action-btn" type="button">Import from markdown</button>
+          <button id="copy-markdown-btn" class="action-btn" type="button">Copy markdown</button>
+        </div>
+        <div class="field" style="margin-top: 0.8rem">
+          <label for="export-output"
+            >Monospace markdown field
+            <textarea
+              id="export-output"
+              spellcheck="false"
+              placeholder="Generate a markdown table here, or paste one and click Import from markdown"
+            ></textarea>
+          </label>
+        </div>
+        <p id="export-status" class="status"></p>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var toggleExplanationButton = document.getElementById(
+          "toggle-explanation-btn",
+        );
+        var explanationContent = document.getElementById("explanation-content");
+
+        var inputPayloadType = document.getElementById("input-payload-type");
+        var payloadTypeHint = document.getElementById("payload-type-hint");
+
+        var addBlockButton = document.getElementById("add-block-btn");
+        var addCommonFlagsButton = document.getElementById("add-common-flags-btn");
+        var showDefaultButton = document.getElementById("show-default-btn");
+        var blockList = document.getElementById("block-list");
+        var inputMaxPacketBytes = document.getElementById("input-max-packet-bytes");
+        var inputOverheadBytes = document.getElementById("input-overhead-bytes");
+
+        var capacityTrack = document.getElementById("capacity-track");
+        var capacityReadout = document.getElementById("capacity-readout");
+        var capacityLegend = document.getElementById("capacity-legend");
+        var capacityTooltip = document.getElementById("capacity-tooltip");
+        var toggleFreeButton = document.getElementById("toggle-free-btn");
+
+        var outputHeaderSize = document.getElementById("output-header-size");
+        var outputPayloadSize = document.getElementById("output-payload-size");
+        var outputOverheadSize = document.getElementById("output-overhead-size");
+        var outputCurrentSize = document.getElementById("output-current-size");
+        var outputMaxPayload = document.getElementById("output-max-payload");
+        var outputRemainingPayload = document.getElementById("output-remaining-payload");
+        var outputTotalBits = document.getElementById("output-total-bits");
+
+        var exportOutput = document.getElementById("export-output");
+        var exportStatus = document.getElementById("export-status");
+        var exportMarkdownButton = document.getElementById("export-markdown-btn");
+        var importMarkdownButton = document.getElementById("import-markdown-btn");
+        var copyMarkdownButton = document.getElementById("copy-markdown-btn");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        var dragState = { draggedId: null };
+        var MAX_PACKET_BYTES = 255;
+
+        // The current Meshtastic on-air header: 16 bytes, matching PacketHeader in
+        // firmware src/mesh/RadioInterface.h (MESHTASTIC_HEADER_LENGTH). There is no
+        // length field on the wire — the receiver derives the payload length from the
+        // radio frame length minus sizeof(PacketHeader).
+        var DEFAULT_BLOCKS = [
+          {
+            name: "Destination NodeID",
+            bits: 32,
+            kind: "unsigned-integer",
+            scope: "header-fixed",
+            minValue: "0",
+            maxValue: "4294967295",
+            validRange: "0 to 4294967295",
+            description: "0xFFFFFFFF for broadcast",
+            bitfield: "",
+          },
+          {
+            name: "Sender NodeID",
+            bits: 32,
+            kind: "unsigned-integer",
+            scope: "header-fixed",
+            minValue: "0",
+            maxValue: "4294967295",
+            validRange: "0 to 4294967295",
+            description: "Sending node ID",
+            bitfield: "",
+          },
+          {
+            name: "Packet ID",
+            bits: 32,
+            kind: "unsigned-integer",
+            scope: "header-fixed",
+            minValue: "0",
+            maxValue: "4294967295",
+            validRange: "0 to 4294967295",
+            description: "Per-sender packet ID",
+            bitfield: "",
+          },
+          {
+            name: "Flags",
+            bits: 8,
+            kind: "bitfield",
+            scope: "header-fixed",
+            description: "HopLimit/HopStart/Ack/MQTT",
+            bitfield: "0-2: HopLimit; 3: WantAck; 4: ViaMQTT; 5-7: HopStart",
+            subBlocks: [
+              { name: "HopLimit", bits: 3, description: "Current hop limit" },
+              { name: "WantAck", bits: 1, description: "Ack requested" },
+              { name: "ViaMQTT", bits: 1, description: "Packet came via MQTT" },
+              { name: "HopStart", bits: 3, description: "Original hop budget" },
+            ],
+          },
+          {
+            name: "Channel hash",
+            bits: 8,
+            kind: "bytes-fixed",
+            scope: "header-fixed",
+            minValue: "0x00",
+            maxValue: "0xFF",
+            validRange: "0x00 to 0xFF",
+            description: "Decrypt hint",
+            bitfield: "",
+          },
+          {
+            name: "Next-hop",
+            bits: 8,
+            kind: "bytes-fixed",
+            scope: "header-fixed",
+            minValue: "0x00",
+            maxValue: "0xFF",
+            validRange: "0x00 to 0xFF",
+            description: "Last byte of the next-hop NodeNum",
+            bitfield: "",
+          },
+          {
+            name: "Relay node",
+            bits: 8,
+            kind: "bytes-fixed",
+            scope: "header-fixed",
+            minValue: "0x00",
+            maxValue: "0xFF",
+            validRange: "0x00 to 0xFF",
+            description: "Last byte of the relaying NodeNum",
+            bitfield: "",
+          },
+        ];
+
+        // ---------- Payload type registry ----------
+        //
+        // Selecting a type replaces every payload-scoped block in the editor and
+        // leaves the header blocks alone, so you can swap payloads while holding a
+        // candidate header layout still.
+        //
+        // Entry shape — `blocks` takes the same fields as DEFAULT_BLOCKS entries:
+        //
+        //   {
+        //     key: "PORT_OR_STRUCT_NAME",       // stable, unique
+        //     name: "Human readable name",      // shown in the dropdown
+        //     hint: "One line under the select",
+        //     blocks: [
+        //       {
+        //         name: "Field name",
+        //         bits: 32,                     // multiple of 8; the editor works in bytes
+        //         kind: "unsigned-integer",     // unsigned-integer | signed-integer |
+        //                                       // bytes-fixed | bytes-variable |
+        //                                       // compressed-int | payload | bitfield | raw
+        //         scope: "payload-fixed",       // payload-fixed | payload-variable | payload-optional
+        //         minValue: "0", maxValue: "…", validRange: "…",  // omit to auto-derive
+        //         description: "…",
+        //         bitfield: "0-2: name; 3: name",                 // bitfield kinds only
+        //         subBlocks: [{ name: "…", bits: 3, description: "…" }],
+        //       },
+        //     ],
+        //   }
+        //
+        // `pbField` is shorthand for the common case: a fixed run of wire bytes
+        // (protobuf tag + value) in the payload. Anything it can't express — variable
+        // lengths, bitfields, sub-blocks — should be written out as a literal object.
+        //
+        // Sizes below come from worked examples generated against develop @ f57ee0bd7,
+        // so each type's blocks add up to a real frame rather than a worst case. The
+        // per-field cap, where it differs, is recorded in the block's Valid range.
+        // Envelope constants: MAX_LORA_PAYLOAD_LEN 255 − MESHTASTIC_HEADER_LENGTH 16
+        // = 239 payload bytes; MESHTASTIC_PKC_OVERHEAD 12; DATA_PAYLOAD_LEN 233 caps
+        // the inner Data.payload field only.
+        function pbField(name, bytes, validRange, description) {
+          return {
+            name: name,
+            bits: bytes * 8,
+            kind: "bytes-fixed",
+            scope: "payload-fixed",
+            validRange: validRange,
+            description: description,
+          };
+        }
+
+        var PAYLOAD_TYPES = [
+          {
+            key: "none",
+            name: "None / custom",
+            hint: "No payload blocks — the editor holds whatever you build by hand.",
+            blocks: [],
+          },
+          {
+            key: "ENCRYPTED_OPAQUE",
+            name: "Encrypted payload (opaque bytes)",
+            hint: "What a relay sees: one opaque run of bytes, 239 B max after the 16 B header.",
+            blocks: [
+              {
+                name: "Encrypted payload",
+                bits: 239 * 8,
+                kind: "bytes-variable",
+                scope: "payload-variable",
+                minValue: "8",
+                maxValue: String(239 * 8),
+                validRange: "Length: 8 to " + 239 * 8 + " bits",
+                description: "Ciphertext; opaque to every node without the key",
+              },
+            ],
+          },
+          {
+            key: "DATA_PROTOBUF",
+            name: "Data protobuf (channel-encrypted)",
+            hint: "The decrypted meshtastic.Data envelope, 6–239 B. Fields not yet broken out — see the registry TODO.",
+            blocks: [
+              {
+                name: "Data protobuf",
+                bits: 239 * 8,
+                kind: "bytes-variable",
+                scope: "payload-variable",
+                minValue: String(6 * 8),
+                maxValue: String(239 * 8),
+                validRange: "Length: " + 6 * 8 + " to " + 239 * 8 + " bits",
+                // DATA_PAYLOAD_LEN 233 caps the inner payload bytes field, not this
+                // envelope: mesh.proto says "ONLY the bytes sent inside of the Data
+                // protobuf (excluding protobuf overhead)". The envelope's real cap is
+                // 239 (255 − 16), or 227 under PKI, which adds 12 bytes after encryption.
+                description: "portnum + payload + flags, protobuf-encoded; 239 B on air",
+              },
+            ],
+          },
+          {
+            key: "TEXT_MESSAGE_APP",
+            name: "Text message (port 1)",
+            hint: "14 B payload, 30 B frame. The body is raw UTF-8 — no inner protobuf.",
+            blocks: [
+              pbField("Data.portnum", 2, "08 01", "Field 1 varint · TEXT_MESSAGE_APP"),
+              pbField("Data.payload tag", 2, "12 <len>", "Field 2 tag + length prefix (3 B once len ≥ 128)"),
+              pbField("Text (UTF-8)", 10, "1 to 233 B", "\"Hello mesh\" · raw bytes, capped by DATA_PAYLOAD_LEN"),
+            ],
+          },
+          {
+            key: "POSITION_APP",
+            name: "Position (port 3)",
+            hint: "24 B payload, 40 B frame. Zero-valued fields are omitted, so real ones vary.",
+            blocks: [
+              pbField("Data.portnum", 2, "08 03", "Field 1 varint · POSITION_APP"),
+              pbField("Data.payload tag", 2, "12 14", "Field 2 tag + length 20"),
+              pbField("latitude_i", 5, "sfixed32", "Field 1 · degrees × 1e7 (53.4808° = 534808000)"),
+              pbField("longitude_i", 5, "sfixed32", "Field 2 · degrees × 1e7"),
+              pbField("altitude", 2, "int32 varint", "Field 3 · metres; widens with magnitude"),
+              pbField("time", 5, "fixed32", "Field 4 · unix epoch seconds"),
+              pbField("precision_bits", 3, "uint32 varint", "Field 23 · 2-byte tag, field number > 15"),
+            ],
+          },
+          {
+            key: "NODEINFO_APP",
+            name: "NodeInfo / User (port 4)",
+            hint: "69 B payload, 85 B frame. The 32-byte public_key is half of it.",
+            blocks: [
+              pbField("Data.portnum", 2, "08 04", "Field 1 varint · NODEINFO_APP"),
+              pbField("Data.payload tag", 2, "12 41", "Field 2 tag + length 65"),
+              pbField("User.id", 11, "string, 2 B tag + body", "Field 1 · \"!a1b2c3d4\""),
+              pbField("User.long_name", 12, "string, 2 B tag + body", "Field 2 · \"Bench Node\""),
+              pbField("User.short_name", 6, "string, 2 B tag + body", "Field 3 · \"BNCH\""),
+              pbField("User.hw_model", 2, "28 58", "Field 5 enum · 88 = XIAO_NRF52_KIT"),
+              pbField("User.public_key", 34, "42 20 + 32 B", "Field 8 bytes · the single biggest driver of NodeInfo airtime"),
+            ],
+          },
+          {
+            key: "ROUTING_APP",
+            name: "Routing ACK (port 5)",
+            hint: "12 B payload, 28 B frame — the smallest routine frame. Route replies are far bigger.",
+            blocks: [
+              pbField("Data.portnum", 2, "08 05", "Field 1 varint · ROUTING_APP"),
+              pbField("Data.payload tag", 2, "12 02", "Field 2 tag + length 2"),
+              pbField("Routing.error_reason", 2, "18 00", "Field 3 · NONE; oneof members are emitted even when zero"),
+              pbField("Data.request_id", 6, "uint32 varint", "Field 6 · 0x12345678 encodes to 5 varint bytes"),
+            ],
+          },
+          {
+            key: "TELEMETRY_APP",
+            name: "Telemetry / DeviceMetrics (port 67)",
+            hint: "32 B payload, 48 B frame. EnvironmentMetrics variants run much larger.",
+            blocks: [
+              pbField("Data.portnum", 2, "08 43", "Field 1 varint · TELEMETRY_APP"),
+              pbField("Data.payload tag", 2, "12 1C", "Field 2 tag + length 28"),
+              pbField("Telemetry.time", 5, "fixed32", "Field 1 · unix epoch seconds"),
+              pbField("device_metrics tag", 2, "12 15", "Field 2 message tag + length 21"),
+              pbField("battery_level", 2, "08 57", "Field 1 uint32 · 87%"),
+              pbField("voltage", 5, "float", "Field 2 · 4.05 V"),
+              pbField("channel_utilization", 5, "float", "Field 3 · 12.5%"),
+              pbField("air_util_tx", 5, "float", "Field 4 · 3.25%"),
+              pbField("uptime_seconds", 4, "uint32 varint", "Field 5 · 86400 needs 3 varint bytes"),
+            ],
+          },
+          {
+            key: "TRACEROUTE_APP",
+            name: "Traceroute (port 70)",
+            hint: "20 B payload, 36 B frame at 2 hops. All four arrays cap at 8 entries.",
+            blocks: [
+              pbField("Data.portnum", 2, "08 46", "Field 1 varint · TRACEROUTE_APP"),
+              pbField("Data.payload tag", 2, "12 0E", "Field 2 tag + length 14"),
+              pbField("route", 10, "packed fixed32 × 8 max", "Field 1 · 2 B tag + 2 hops × 4 B"),
+              pbField("snr_towards", 4, "packed int32 × 8 max", "Field 2 · 2 B tag + 2 entries, SNR × 4"),
+              pbField("Data.want_response", 2, "18 01", "Field 3 bool · back out in the Data wrapper"),
+            ],
+          },
+          {
+            key: "PKI_DIRECT",
+            name: "PKI direct message (port 1, unicast)",
+            hint: "26 B payload, 42 B frame. Plaintext caps at 227 B; the channel byte is forced to 0x00.",
+            blocks: [
+              pbField("Ciphertext", 14, "1 to 227 B", "AES-CCM output; same length as the Data protobuf it encrypts"),
+              pbField("Auth tag", 8, "8 B fixed", "AES-CCM tag · part of MESHTASTIC_PKC_OVERHEAD"),
+              pbField("Extra nonce", 4, "4 B fixed", "Appended after encryption; written at nonce offset 4, not 12"),
+            ],
+          },
+        ];
+
+        function findPayloadType(key) {
+          var match = null;
+          PAYLOAD_TYPES.forEach(function (type) {
+            if (type.key === key) match = type;
+          });
+          return match;
+        }
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        function toNumber(value) {
+          var parsed = parseFloat(value);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function toInteger(value) {
+          return Math.trunc(toNumber(value));
+        }
+
+        function clamp(value, min, max) {
+          return Math.min(max, Math.max(min, value));
+        }
+
+        function makeId() {
+          return (
+            "b" +
+            Date.now().toString(36) +
+            Math.random().toString(36).slice(2, 6)
+          );
+        }
+
+        function normalizeBits(value) {
+          var clamped = clamp(toInteger(value), 8, MAX_PACKET_BYTES * 8);
+          return clamp(Math.ceil(clamped / 8) * 8, 8, MAX_PACKET_BYTES * 8);
+        }
+
+        function normalizeBlockBytes(value) {
+          return clamp(toInteger(value), 1, MAX_PACKET_BYTES);
+        }
+
+        function normalizePacketBytes(value) {
+          return clamp(toInteger(value), 1, MAX_PACKET_BYTES);
+        }
+
+        function normalizeSubBlockBits(value) {
+          return clamp(toInteger(value), 1, 32);
+        }
+
+        function normalizeByteLengthBits(value) {
+          var clamped = clamp(toInteger(value), 8, MAX_PACKET_BYTES * 8);
+          return Math.ceil(clamped / 8) * 8;
+        }
+
+        function normalizeScope(value) {
+          var allowed = [
+            "header-fixed",
+            "header-variable",
+            "header-optional",
+            "payload-fixed",
+            "payload-variable",
+            "payload-optional",
+          ];
+          return allowed.indexOf(value) !== -1 ? value : "header-fixed";
+        }
+
+        function padHex(value, digits) {
+          return value.toString(16).toUpperCase().padStart(digits, "0");
+        }
+
+        function getAutoRangeByKind(kind, bits) {
+          var widthBits = normalizeBits(bits);
+          var widthNibbles = Math.ceil(widthBits / 4);
+          var twoPowBits = 1n << BigInt(widthBits);
+
+          if (kind === "unsigned-integer") {
+            return {
+              min: "0",
+              max: (twoPowBits - 1n).toString(),
+              validRange: "0 to " + (twoPowBits - 1n).toString(),
+            };
+          }
+
+          if (kind === "signed-integer") {
+            var minSigned = -(1n << BigInt(widthBits - 1));
+            var maxSigned = (1n << BigInt(widthBits - 1)) - 1n;
+            return {
+              min: minSigned.toString(),
+              max: maxSigned.toString(),
+              validRange: minSigned.toString() + " to " + maxSigned.toString(),
+            };
+          }
+
+          if (kind === "bytes-fixed") {
+            return {
+              min: "0x" + padHex(0n, widthNibbles),
+              max: "0x" + padHex(twoPowBits - 1n, widthNibbles),
+              validRange:
+                "0x" +
+                padHex(0n, widthNibbles) +
+                " to 0x" +
+                padHex(twoPowBits - 1n, widthNibbles),
+            };
+          }
+
+          if (kind === "bytes-variable") {
+            var maxLengthBits = normalizeByteLengthBits(widthBits);
+            return {
+              min: "8",
+              max: String(maxLengthBits),
+              validRange: "Length: 8 to " + String(maxLengthBits) + " bits",
+            };
+          }
+
+          return {
+            min: "",
+            max: "",
+            validRange: "",
+          };
+        }
+
+        function getSubBlockAutoRange(bits) {
+          var widthBits = normalizeSubBlockBits(bits);
+          var max = (1n << BigInt(widthBits)) - 1n;
+          return {
+            min: "0",
+            max: max.toString(),
+            validRange: "0 to " + max.toString(),
+          };
+        }
+
+        function getEffectiveBlockBits(block) {
+          if (block.kind === "bytes-variable") {
+            return normalizeByteLengthBits(block.maxValue || block.bits);
+          }
+          return normalizeBits(block.bits);
+        }
+
+        function getBytesVariableMinMaxBits(block) {
+          var defaultBits = normalizeBits(block.bits);
+          var minBits = normalizeByteLengthBits(block.minValue || 8);
+          var maxBits = normalizeByteLengthBits(block.maxValue || defaultBits);
+          if (maxBits < minBits) {
+            maxBits = minBits;
+          }
+          return { minBits: minBits, maxBits: maxBits };
+        }
+
+        function createBlockData(preset) {
+          var subBlocks = preset && Array.isArray(preset.subBlocks)
+            ? preset.subBlocks
+                .map(function (item) {
+                  var subBits = normalizeSubBlockBits(item && item.bits ? item.bits : 1);
+                  var subAuto = getSubBlockAutoRange(subBits);
+                  return {
+                    name: item && item.name ? item.name : "Sub-block",
+                    bits: subBits,
+                    minValue:
+                      item && Object.prototype.hasOwnProperty.call(item, "minValue")
+                        ? String(item.minValue)
+                        : subAuto.min,
+                    maxValue:
+                      item && Object.prototype.hasOwnProperty.call(item, "maxValue")
+                        ? String(item.maxValue)
+                        : subAuto.max,
+                    validRange:
+                      item && Object.prototype.hasOwnProperty.call(item, "validRange")
+                        ? String(item.validRange)
+                        : subAuto.validRange,
+                    description: item && item.description ? item.description : "",
+                  };
+                })
+                .filter(function (item) {
+                  return item.bits > 0;
+                })
+            : [];
+
+          var data = {
+            id: makeId(),
+            name: preset && preset.name ? preset.name : "New block",
+            bits: normalizeBits(preset && preset.bits ? preset.bits : 8),
+            kind: preset && preset.kind ? preset.kind : "unsigned-integer",
+            scope: normalizeScope(preset && preset.scope ? preset.scope : "header-fixed"),
+            minValue:
+              preset && Object.prototype.hasOwnProperty.call(preset, "minValue")
+                ? String(preset.minValue)
+                : "",
+            maxValue:
+              preset && Object.prototype.hasOwnProperty.call(preset, "maxValue")
+                ? String(preset.maxValue)
+                : "",
+            validRange:
+              preset && Object.prototype.hasOwnProperty.call(preset, "validRange")
+                ? String(preset.validRange)
+                : "",
+            description: preset && preset.description ? preset.description : "",
+            bitfield: preset && preset.bitfield ? preset.bitfield : "",
+            subBlocks: subBlocks,
+          };
+
+          if (!data.minValue && !data.maxValue && !data.validRange) {
+            var auto = getAutoRangeByKind(data.kind, data.bits);
+            data.minValue = auto.min;
+            data.maxValue = auto.max;
+            data.validRange = auto.validRange;
+          }
+
+          return data;
+        }
+
+        function getBlockRows() {
+          return Array.prototype.slice.call(
+            blockList.querySelectorAll(".block-row"),
+          );
+        }
+
+        function getBlockDataFromRow(row) {
+          var bytesInput = row.querySelector(".input-bits");
+          var bytes = normalizeBlockBytes(bytesInput.value);
+          var bits = normalizeBits(bytes * 8);
+          bytesInput.value = String(bytes);
+
+          var subBlocks = Array.prototype.slice
+            .call(row.querySelectorAll(".subblock-row"))
+            .map(function (subRow) {
+              return {
+                name:
+                  subRow.querySelector(".input-subblock-name").value.trim() ||
+                  "Sub-block",
+                bits: normalizeSubBlockBits(
+                  subRow.querySelector(".input-subblock-bits").value,
+                ),
+                minValue: subRow.querySelector(".input-subblock-min").value.trim(),
+                maxValue: subRow.querySelector(".input-subblock-max").value.trim(),
+                validRange: subRow.querySelector(".input-subblock-valid").value.trim(),
+                description: subRow
+                  .querySelector(".input-subblock-description")
+                  .value.trim(),
+              };
+            })
+            .filter(function (item) {
+              return item.bits > 0;
+            });
+
+          Array.prototype.slice
+            .call(row.querySelectorAll(".input-subblock-bits"))
+            .forEach(function (el) {
+              el.value = String(normalizeSubBlockBits(el.value));
+            });
+
+          return {
+            id: row.dataset.blockId,
+            name: row.querySelector(".input-name").value.trim() || "Unnamed block",
+            bits: bits,
+            kind: row.querySelector(".input-kind").value,
+            scope: normalizeScope(row.querySelector(".input-scope").value),
+            minValue: row.querySelector(".input-min").value.trim(),
+            maxValue: row.querySelector(".input-max").value.trim(),
+            validRange: row.querySelector(".input-valid-range").value.trim(),
+            description: row.querySelector(".input-description").value.trim(),
+            bitfield: row.querySelector(".input-bitfield").value.trim(),
+            subBlocks: subBlocks,
+          };
+        }
+
+        function getAllBlocks() {
+          return getBlockRows().map(getBlockDataFromRow);
+        }
+
+        function scopeFamily(scope) {
+          return String(scope).indexOf("payload") === 0 ? "payload" : "header";
+        }
+
+        function applyRowFamily(row) {
+          row.dataset.family = scopeFamily(row.querySelector(".input-scope").value);
+        }
+
+        function updateConditionalFields(row) {
+          var kind = row.querySelector(".input-kind").value;
+          var numericField = row.querySelector(".numeric-field");
+          var bitfieldField = row.querySelector(".bitfield-field");
+          var minInput = row.querySelector(".input-min");
+          var maxInput = row.querySelector(".input-max");
+
+          if (
+            kind === "unsigned-integer" ||
+            kind === "signed-integer" ||
+            kind === "bytes-fixed" ||
+            kind === "bytes-variable"
+          ) {
+            numericField.removeAttribute("hidden");
+          } else {
+            numericField.setAttribute("hidden", "hidden");
+          }
+
+          if (kind === "bitfield" || kind === "compressed-int") {
+            bitfieldField.removeAttribute("hidden");
+          } else {
+            bitfieldField.setAttribute("hidden", "hidden");
+          }
+
+          row.querySelector(".label-min").textContent =
+            kind === "bytes-variable" ? "Min length (bits)" : "Min";
+          row.querySelector(".label-max").textContent =
+            kind === "bytes-variable" ? "Max length (bits)" : "Max";
+          row.querySelector(".label-valid-range").textContent = "Valid range";
+
+          if (kind === "bytes-variable") {
+            minInput.type = "number";
+            minInput.step = "8";
+            minInput.min = "8";
+            minInput.max = String(MAX_PACKET_BYTES * 8);
+            minInput.inputMode = "numeric";
+
+            maxInput.type = "number";
+            maxInput.step = "8";
+            maxInput.min = "8";
+            maxInput.max = String(MAX_PACKET_BYTES * 8);
+            maxInput.inputMode = "numeric";
+          } else {
+            minInput.type = "text";
+            minInput.removeAttribute("step");
+            minInput.removeAttribute("min");
+            minInput.removeAttribute("max");
+            minInput.inputMode = "numeric";
+
+            maxInput.type = "text";
+            maxInput.removeAttribute("step");
+            maxInput.removeAttribute("min");
+            maxInput.removeAttribute("max");
+            maxInput.inputMode = "numeric";
+          }
+        }
+
+        function syncRangeFields(row) {
+          var kind = row.querySelector(".input-kind").value;
+          var bytes = normalizeBlockBytes(row.querySelector(".input-bits").value);
+          var bits = bytes * 8;
+          var range = getAutoRangeByKind(kind, bits);
+          var minEl = row.querySelector(".input-min");
+          var maxEl = row.querySelector(".input-max");
+          var validEl = row.querySelector(".input-valid-range");
+
+          minEl.value = range.min;
+          maxEl.value = range.max;
+          validEl.value = range.validRange;
+
+          if (kind === "bytes-variable") {
+            var minBits = normalizeByteLengthBits(minEl.value || 8);
+            var maxBits = normalizeByteLengthBits(maxEl.value || bits);
+            if (maxBits < minBits) {
+              maxBits = minBits;
+            }
+            minEl.value = String(minBits);
+            maxEl.value = String(maxBits);
+            validEl.value = "Length: " + String(minBits) + " to " + String(maxBits) + " bits";
+          }
+        }
+
+        function updateSubBlockSummary(row) {
+          var blockBits = normalizeBits(
+            normalizeBlockBytes(row.querySelector(".input-bits").value) * 8,
+          );
+          var total = Array.prototype.slice
+            .call(row.querySelectorAll(".input-subblock-bits"))
+            .reduce(function (sum, input) {
+              return sum + normalizeSubBlockBits(input.value);
+            }, 0);
+          var summary = row.querySelector(".subblock-total");
+          if (!summary) return;
+
+          summary.textContent = "Sub-block total: " + total + " bits of " + blockBits + " bits";
+          var kind = row.querySelector(".input-kind").value;
+          var isInvalid =
+            kind === "compressed-int" || kind === "bitfield"
+              ? total > blockBits
+              : total !== blockBits;
+          summary.classList.toggle("warn", isInvalid);
+        }
+
+        function createSubBlockRow(subBlock, parentRow) {
+          var safeBits = normalizeSubBlockBits(subBlock && subBlock.bits ? subBlock.bits : 1);
+          var autoRange = getSubBlockAutoRange(safeBits);
+          var row = document.createElement("div");
+          row.className = "subblock-row";
+          row.innerHTML =
+            '<label>Sub-block<input class="input-subblock-name" type="text" /></label>' +
+            '<label>Bits<input class="input-subblock-bits" type="number" min="1" max="32" step="1" inputmode="numeric" /></label>' +
+            '<label>Min<input class="input-subblock-min" type="text" readonly /></label>' +
+            '<label>Max<input class="input-subblock-max" type="text" readonly /></label>' +
+            '<label>Valid range<input class="input-subblock-valid" type="text" readonly /></label>' +
+            '<label>Description<input class="input-subblock-description" type="text" /></label>' +
+            '<button class="mini-btn warn remove-subblock-btn" type="button">Remove</button>';
+
+          row.querySelector(".input-subblock-name").value =
+            subBlock && subBlock.name ? subBlock.name : "Sub-block";
+          row.querySelector(".input-subblock-bits").value = String(safeBits);
+          row.querySelector(".input-subblock-min").value =
+            subBlock && subBlock.minValue ? subBlock.minValue : autoRange.min;
+          row.querySelector(".input-subblock-max").value =
+            subBlock && subBlock.maxValue ? subBlock.maxValue : autoRange.max;
+          row.querySelector(".input-subblock-valid").value =
+            subBlock && subBlock.validRange ? subBlock.validRange : autoRange.validRange;
+          row.querySelector(".input-subblock-description").value =
+            subBlock && subBlock.description ? subBlock.description : "";
+
+          function syncSubBlockRange() {
+            var bits = normalizeSubBlockBits(
+              row.querySelector(".input-subblock-bits").value,
+            );
+            var minField = row.querySelector(".input-subblock-min").parentElement;
+            var maxField = row.querySelector(".input-subblock-max").parentElement;
+            row.querySelector(".input-subblock-bits").value = String(bits);
+            var range = getSubBlockAutoRange(bits);
+            row.querySelector(".input-subblock-min").value = range.min;
+            row.querySelector(".input-subblock-max").value = range.max;
+            row.querySelector(".input-subblock-valid").value = range.validRange;
+
+            if (bits === 1) {
+              minField.setAttribute("hidden", "hidden");
+              maxField.setAttribute("hidden", "hidden");
+              row.classList.add("subblock-single-bit");
+            } else {
+              minField.removeAttribute("hidden");
+              maxField.removeAttribute("hidden");
+              row.classList.remove("subblock-single-bit");
+            }
+          }
+
+          row.querySelector(".remove-subblock-btn").addEventListener("click", function () {
+            row.remove();
+            updateSubBlockSummary(parentRow);
+            calculate();
+          });
+
+          [
+            ".input-subblock-name",
+            ".input-subblock-bits",
+            ".input-subblock-description",
+          ].forEach(function (selector) {
+            var el = row.querySelector(selector);
+            el.addEventListener("input", function () {
+              if (selector === ".input-subblock-bits") {
+                syncSubBlockRange();
+              }
+              updateSubBlockSummary(parentRow);
+              calculate();
+            });
+            el.addEventListener("change", function () {
+              if (selector === ".input-subblock-bits") {
+                syncSubBlockRange();
+              }
+              updateSubBlockSummary(parentRow);
+              calculate();
+            });
+          });
+
+          syncSubBlockRange();
+
+          return row;
+        }
+
+        function getDropReferenceRow(targetRow, clientY) {
+          var rect = targetRow.getBoundingClientRect();
+          var midpoint = rect.top + rect.height / 2;
+          if (clientY < midpoint) {
+            return targetRow;
+          }
+          return targetRow.nextSibling;
+        }
+
+        function wireDragAndDrop(row) {
+          row.setAttribute("draggable", "true");
+
+          row.addEventListener("dragstart", function (event) {
+            dragState.draggedId = row.dataset.blockId;
+            row.classList.add("dragging");
+            if (event.dataTransfer) {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", row.dataset.blockId);
+            }
+          });
+
+          row.addEventListener("dragend", function () {
+            dragState.draggedId = null;
+            getBlockRows().forEach(function (other) {
+              other.classList.remove("drag-over");
+              other.classList.remove("dragging");
+            });
+            calculate();
+          });
+
+          row.addEventListener("dragover", function (event) {
+            event.preventDefault();
+            if (!dragState.draggedId || dragState.draggedId === row.dataset.blockId) {
+              return;
+            }
+            row.classList.add("drag-over");
+          });
+
+          row.addEventListener("dragleave", function () {
+            row.classList.remove("drag-over");
+          });
+
+          row.addEventListener("drop", function (event) {
+            event.preventDefault();
+            row.classList.remove("drag-over");
+            if (!dragState.draggedId || dragState.draggedId === row.dataset.blockId) {
+              return;
+            }
+
+            var draggedRow = blockList.querySelector(
+              '.block-row[data-block-id="' + dragState.draggedId + '"]',
+            );
+            if (!draggedRow) return;
+
+            var reference = getDropReferenceRow(row, event.clientY);
+            blockList.insertBefore(draggedRow, reference);
+            calculate();
+          });
+        }
+
+        function createBlockRow(block) {
+          var row = document.createElement("article");
+          row.className = "block-row";
+          row.dataset.blockId = block.id;
+
+          row.innerHTML =
+            '<div class="block-head">' +
+            '  <div class="block-title">' +
+            '    <span class="drag-handle" aria-hidden="true">drag</span>' +
+            '    <span>Block</span>' +
+            "  </div>" +
+            '  <div class="block-actions">' +
+            '    <button class="mini-btn add-below-btn" type="button">Add below</button>' +
+            '    <button class="mini-btn warn remove-btn" type="button">Remove</button>' +
+            "  </div>" +
+            "</div>" +
+            '<div class="field-row">' +
+            '  <label>Name<input class="input-name" type="text" /></label>' +
+            '  <label>Bytes (1-255)<input class="input-bits" type="number" min="1" max="255" step="1" inputmode="numeric" /></label>' +
+            '  <label>Type<select class="input-kind">' +
+            '    <option value="unsigned-integer">Unsigned integer</option>' +
+            '    <option value="signed-integer">Signed integer</option>' +
+            '    <option value="bytes-fixed">Bytes - fixed</option>' +
+            '    <option value="bytes-variable">Bytes - variable</option>' +
+            '    <option value="compressed-int">Compressed int</option>' +
+            '    <option value="payload">Payload</option>' +
+            '    <option value="bitfield">Bitfield</option>' +
+            '    <option value="raw">Raw bits</option>' +
+            "  </select></label>" +
+            "</div>" +
+            '<div class="field-row">' +
+            '  <label>Scope<select class="input-scope">' +
+            '    <option value="header-fixed">Header (fixed)</option>' +
+            '    <option value="header-variable">Header (variable)</option>' +
+            '    <option value="header-optional">Header (optional)</option>' +
+            '    <option value="payload-fixed">Payload (fixed)</option>' +
+            '    <option value="payload-variable">Payload (variable)</option>' +
+            '    <option value="payload-optional">Payload (optional)</option>' +
+            "  </select></label>" +
+            '  <label>Description<input class="input-description" type="text" /></label>' +
+            '  <span></span>' +
+            "</div>" +
+            '<div class="field-row three numeric-field" hidden>' +
+            '  <label><span class="label-min">Min</span><input class="input-min" type="text" inputmode="numeric" /></label>' +
+            '  <label><span class="label-max">Max</span><input class="input-max" type="text" inputmode="numeric" /></label>' +
+            '  <label><span class="label-valid-range">Valid range</span><input class="input-valid-range" type="text" /></label>' +
+            "</div>" +
+            '<div class="field bitfield-field" hidden>' +
+            '  <label>Bitfield map (optional, e.g. 0-2:HopLimit; 3:WantAck)<textarea class="input-bitfield" rows="2"></textarea></label>' +
+            '  <div class="subblock-list"></div>' +
+            '  <div class="block-actions"><button class="mini-btn add-subblock-btn" type="button">Add sub-block</button></div>' +
+            '  <p class="subblock-total">Sub-block total: 0 bits of 0 bits</p>' +
+            "</div>";
+
+          row.querySelector(".input-name").value = block.name;
+          row.querySelector(".input-bits").value = String(
+            normalizeBlockBytes(Math.ceil(block.bits / 8)),
+          );
+          row.querySelector(".input-kind").value = block.kind;
+          row.querySelector(".input-scope").value = block.scope;
+          row.querySelector(".input-min").value = block.minValue || "";
+          row.querySelector(".input-max").value = block.maxValue || "";
+          row.querySelector(".input-valid-range").value = block.validRange || "";
+          row.querySelector(".input-description").value = block.description;
+          row.querySelector(".input-bitfield").value = block.bitfield;
+
+          var subblockList = row.querySelector(".subblock-list");
+          var addSubblockButton = row.querySelector(".add-subblock-btn");
+          (block.subBlocks || []).forEach(function (subBlock) {
+            subblockList.appendChild(createSubBlockRow(subBlock, row));
+          });
+
+          addSubblockButton.addEventListener("click", function () {
+            subblockList.appendChild(createSubBlockRow(null, row));
+            updateSubBlockSummary(row);
+            calculate();
+          });
+
+          updateConditionalFields(row);
+          applyRowFamily(row);
+          if (!block.minValue && !block.maxValue && !block.validRange) {
+            syncRangeFields(row);
+          }
+          updateSubBlockSummary(row);
+
+          row.querySelector(".add-below-btn").addEventListener("click", function () {
+            var newBlock = createBlockData();
+            var newRow = createBlockRow(newBlock);
+            row.insertAdjacentElement("afterend", newRow);
+            calculate();
+          });
+
+          row.querySelector(".remove-btn").addEventListener("click", function () {
+            row.remove();
+            if (getBlockRows().length === 0) {
+              addBlock();
+            }
+            calculate();
+          });
+
+          row.querySelector(".input-kind").addEventListener("change", function () {
+            updateConditionalFields(row);
+            syncRangeFields(row);
+            calculate();
+          });
+
+          row.querySelector(".input-scope").addEventListener("change", function () {
+            updateConditionalFields(row);
+            applyRowFamily(row);
+            markPayloadTypeCustom();
+            calculate();
+          });
+
+          [
+            ".input-name",
+            ".input-bits",
+            ".input-description",
+            ".input-min",
+            ".input-max",
+            ".input-valid-range",
+            ".input-bitfield",
+          ].forEach(function (selector) {
+            var element = row.querySelector(selector);
+            var eventName = "input";
+            element.addEventListener(eventName, calculate);
+            if (eventName !== "change") {
+              element.addEventListener("change", calculate);
+            }
+          });
+
+          [".input-min", ".input-max"].forEach(function (selector) {
+            row.querySelector(selector).addEventListener("input", function () {
+              if (row.querySelector(".input-kind").value === "bytes-variable") {
+                row.querySelector(".input-valid-range").value =
+                  "Length: " +
+                  (row.querySelector(".input-min").value || "0") +
+                  " to " +
+                  (row.querySelector(".input-max").value || "0") +
+                  " bits";
+              }
+            });
+          });
+
+          row.querySelector(".input-bits").addEventListener("input", function () {
+            updateSubBlockSummary(row);
+            syncRangeFields(row);
+          });
+          row.querySelector(".input-bits").addEventListener("change", function () {
+            updateSubBlockSummary(row);
+            syncRangeFields(row);
+          });
+
+          wireDragAndDrop(row);
+          return row;
+        }
+
+        function setBlocks(blocks) {
+          blockList.innerHTML = "";
+          blocks.forEach(function (item) {
+            blockList.appendChild(createBlockRow(createBlockData(item)));
+          });
+          if (getBlockRows().length === 0) {
+            addBlock();
+          }
+          calculate();
+        }
+
+        function buildPayloadTypeSelect() {
+          inputPayloadType.textContent = "";
+          PAYLOAD_TYPES.forEach(function (type) {
+            var option = document.createElement("option");
+            option.value = type.key;
+            option.textContent = type.name;
+            inputPayloadType.appendChild(option);
+          });
+        }
+
+        function setPayloadTypeHint(key) {
+          var type = findPayloadType(key);
+          payloadTypeHint.textContent = type && type.hint ? type.hint : "";
+        }
+
+        // Hand edits can't be represented by a named type, so the select drops back
+        // to "None / custom" rather than keep claiming a structure that has moved.
+        function markPayloadTypeCustom() {
+          if (inputPayloadType.value === "none") return;
+          inputPayloadType.value = "none";
+          payloadTypeHint.textContent =
+            "Edited by hand — no longer matches a named payload type.";
+        }
+
+        function applyPayloadType(key) {
+          getBlockRows().forEach(function (row) {
+            if (scopeFamily(row.querySelector(".input-scope").value) === "payload") {
+              row.remove();
+            }
+          });
+
+          var type = findPayloadType(key);
+          if (type) {
+            type.blocks.forEach(function (preset) {
+              blockList.appendChild(createBlockRow(createBlockData(preset)));
+            });
+          }
+
+          if (getBlockRows().length === 0) {
+            addBlock();
+            return;
+          }
+          calculate();
+        }
+
+        function addBlock(preset) {
+          var block = createBlockData(preset);
+          blockList.appendChild(createBlockRow(block));
+          calculate();
+        }
+
+        function ceilDivBy8(bits) {
+          return Math.ceil(bits / 8);
+        }
+
+        function formatBytes(value) {
+          return value + (value === 1 ? " byte" : " bytes");
+        }
+
+        function formatBits(value) {
+          return value + (value === 1 ? " bit" : " bits");
+        }
+
+        // ---------- Capacity bar ----------
+        // One stacked bar over the packet budget. Hue carries the family
+        // (header / payload / overhead); the 2px surface gaps separate touching
+        // segments; the exact block name, type and byte range ride in the
+        // tooltip and in each segment's aria-label. Every number it shows is
+        // also in the Size Summary, so the hover layer enhances, never gates.
+
+        var showFreeBytes = true;
+
+        var FAMILY_LABELS = {
+          header: "Header",
+          payload: "Payload",
+          overhead: "Overhead",
+          free: "Free",
+        };
+
+        function formatByteRange(start, bytes) {
+          if (bytes === 1) return "byte " + start;
+          return "bytes " + start + "–" + (start + bytes - 1);
+        }
+
+        function describeScope(scope) {
+          var parts = String(scope).split("-");
+          if (parts.length !== 2) return scope;
+          return parts[0] + " (" + parts[1] + ")";
+        }
+
+        function hideCapacityTooltip() {
+          capacityTooltip.hidden = true;
+        }
+
+        function showCapacityTooltip(segment, info) {
+          capacityTooltip.textContent = "";
+
+          var value = document.createElement("div");
+          value.className = "tip-value";
+          value.textContent = formatBytes(info.bytes);
+          capacityTooltip.appendChild(value);
+
+          var name = document.createElement("div");
+          name.className = "tip-name";
+          name.textContent = info.name;
+          capacityTooltip.appendChild(name);
+
+          if (info.meta) {
+            var meta = document.createElement("div");
+            meta.className = "tip-meta";
+            meta.textContent = info.meta;
+            capacityTooltip.appendChild(meta);
+          }
+
+          capacityTooltip.hidden = false;
+
+          // Centre on the segment, then keep it inside the track.
+          var trackWidth = capacityTrack.offsetWidth;
+          var tipWidth = capacityTooltip.offsetWidth;
+          var centre = segment.offsetLeft + segment.offsetWidth / 2 - tipWidth / 2;
+          var maxLeft = Math.max(0, trackWidth - tipWidth);
+          capacityTooltip.style.left = clamp(centre, 0, maxLeft) + "px";
+        }
+
+        function renderCapacityBar(segments, usedBytes, maxPacketBytes) {
+          capacityTrack.textContent = "";
+          capacityLegend.textContent = "";
+          hideCapacityTooltip();
+
+          var freeBytes = Math.max(0, maxPacketBytes - usedBytes);
+          var overBytes = Math.max(0, usedBytes - maxPacketBytes);
+          // Over capacity, the track represents the whole packet so the overrun
+          // stays visible instead of silently rescaling the blocks to fit.
+          var denominator = Math.max(maxPacketBytes, usedBytes, 1);
+          var drawn = segments.slice();
+          if (freeBytes > 0 && showFreeBytes) {
+            drawn.push({ name: "Free", family: "free", bytes: freeBytes, meta: "" });
+          }
+
+          drawn.forEach(function (info) {
+            var segment = document.createElement("div");
+            segment.className = "capacity-seg";
+            segment.dataset.family = info.family;
+            segment.style.flexGrow = String(info.bytes);
+            segment.setAttribute("tabindex", "0");
+            segment.setAttribute(
+              "aria-label",
+              info.name + ", " + formatBytes(info.bytes) + (info.meta ? ", " + info.meta : ""),
+            );
+
+            segment.addEventListener("pointerenter", function () {
+              showCapacityTooltip(segment, info);
+            });
+            segment.addEventListener("focus", function () {
+              showCapacityTooltip(segment, info);
+            });
+            segment.addEventListener("pointerleave", hideCapacityTooltip);
+            segment.addEventListener("blur", hideCapacityTooltip);
+
+            capacityTrack.appendChild(segment);
+          });
+
+          if (overBytes > 0) {
+            var limit = document.createElement("div");
+            limit.className = "capacity-limit";
+            limit.style.left = (maxPacketBytes / denominator) * 100 + "%";
+            capacityTrack.appendChild(limit);
+          }
+
+          var summary = overBytes > 0
+            ? "⚠ Over capacity by " +
+              formatBytes(overBytes) +
+              " — " +
+              usedBytes +
+              " of " +
+              formatBytes(maxPacketBytes) +
+              " used"
+            : usedBytes +
+              " of " +
+              formatBytes(maxPacketBytes) +
+              " used · " +
+              freeBytes +
+              " free" +
+              // The bar fills the track when free bytes are hidden, so say what
+              // the width now represents rather than letting it read as "full".
+              (freeBytes > 0 && !showFreeBytes ? " · bar scaled to used" : "");
+          capacityReadout.textContent = summary;
+          capacityReadout.classList.toggle("warn", overBytes > 0);
+          capacityTrack.setAttribute("aria-label", "Packet capacity: " + summary);
+
+          var seen = {};
+          drawn.forEach(function (info) {
+            if (seen[info.family]) return;
+            seen[info.family] = true;
+            var item = document.createElement("span");
+            var swatch = document.createElement("i");
+            swatch.className = info.family;
+            item.appendChild(swatch);
+            item.appendChild(
+              document.createTextNode(FAMILY_LABELS[info.family] || info.family),
+            );
+            capacityLegend.appendChild(item);
+          });
+        }
+
+        function calculate() {
+          var blocks = getAllBlocks();
+          var fixedHeaderBits = 0;
+          var variableHeaderBits = 0;
+          var optionalHeaderBits = 0;
+          var fixedPayloadBits = 0;
+          var variablePayloadBits = 0;
+          var optionalPayloadBits = 0;
+          var capacitySegments = [];
+          var byteOffset = 0;
+
+          blocks.forEach(function (block) {
+            var bits = getEffectiveBlockBits(block);
+            var blockBytes = ceilDivBy8(bits);
+            capacitySegments.push({
+              name: block.name,
+              family: block.scope.indexOf("payload") === 0 ? "payload" : "header",
+              bytes: blockBytes,
+              meta:
+                block.kind +
+                " · " +
+                describeScope(block.scope) +
+                " · " +
+                formatByteRange(byteOffset, blockBytes),
+            });
+            byteOffset += blockBytes;
+            var bytesVariableLengths =
+              block.kind === "bytes-variable" ? getBytesVariableMinMaxBits(block) : null;
+            if (block.scope === "header-fixed") {
+              if (bytesVariableLengths) {
+                fixedHeaderBits += bytesVariableLengths.minBits;
+                variableHeaderBits +=
+                  bytesVariableLengths.maxBits - bytesVariableLengths.minBits;
+              } else {
+                fixedHeaderBits += bits;
+              }
+            } else if (block.scope === "header-variable") {
+              variableHeaderBits += bits;
+            } else if (block.scope === "header-optional") {
+              optionalHeaderBits += bits;
+            } else if (block.scope === "payload-fixed") {
+              if (bytesVariableLengths) {
+                fixedPayloadBits += bytesVariableLengths.minBits;
+                variablePayloadBits +=
+                  bytesVariableLengths.maxBits - bytesVariableLengths.minBits;
+              } else {
+                fixedPayloadBits += bits;
+              }
+            } else if (block.scope === "payload-variable") {
+              variablePayloadBits += bits;
+            } else if (block.scope === "payload-optional") {
+              optionalPayloadBits += bits;
+            }
+          });
+
+          var fixedHeaderBytes = ceilDivBy8(fixedHeaderBits);
+          var variableHeaderBytes = ceilDivBy8(variableHeaderBits);
+          var optionalHeaderBytes = ceilDivBy8(optionalHeaderBits);
+          var fixedPayloadBytes = ceilDivBy8(fixedPayloadBits);
+          var variablePayloadBytes = ceilDivBy8(variablePayloadBits);
+          var optionalPayloadBytes = ceilDivBy8(optionalPayloadBits);
+          var payloadBytes =
+            fixedPayloadBytes + variablePayloadBytes + optionalPayloadBytes;
+          var overheadBytes = Math.max(0, toInteger(inputOverheadBytes.value));
+          var maxPacketBytes = normalizePacketBytes(inputMaxPacketBytes.value);
+
+          inputOverheadBytes.value = String(overheadBytes);
+          inputMaxPacketBytes.value = String(maxPacketBytes);
+
+          var totalHeaderBytes =
+            fixedHeaderBytes + variableHeaderBytes + optionalHeaderBytes;
+          var currentPacketBytes = totalHeaderBytes + payloadBytes + overheadBytes;
+          var maxPayloadBytes = Math.max(0, maxPacketBytes - fixedHeaderBytes - overheadBytes);
+          var remainingPayloadBytes =
+            maxPayloadBytes - variableHeaderBytes - optionalHeaderBytes - payloadBytes;
+
+          outputHeaderSize.textContent =
+            formatBytes(fixedHeaderBytes) +
+            " fixed + " +
+            formatBytes(variableHeaderBytes) +
+            " variable + " +
+            formatBytes(optionalHeaderBytes) +
+            " optional";
+          outputPayloadSize.textContent =
+            formatBytes(fixedPayloadBytes) +
+            " fixed + " +
+            formatBytes(variablePayloadBytes) +
+            " variable + " +
+            formatBytes(optionalPayloadBytes) +
+            " optional";
+          outputOverheadSize.textContent = formatBytes(overheadBytes);
+          outputCurrentSize.textContent = formatBytes(currentPacketBytes);
+          outputMaxPayload.textContent = formatBytes(maxPayloadBytes);
+          outputRemainingPayload.textContent = formatBytes(remainingPayloadBytes);
+          outputTotalBits.textContent = formatBits(
+            fixedHeaderBits +
+              variableHeaderBits +
+              optionalHeaderBits +
+              fixedPayloadBits +
+              variablePayloadBits +
+              optionalPayloadBits,
+          );
+
+          outputCurrentSize.classList.toggle("warn", currentPacketBytes > maxPacketBytes);
+          outputRemainingPayload.classList.toggle("warn", remainingPayloadBytes < 0);
+
+          if (overheadBytes > 0) {
+            capacitySegments.push({
+              name: "Extra fixed overhead",
+              family: "overhead",
+              bytes: overheadBytes,
+              meta: formatByteRange(byteOffset, overheadBytes),
+            });
+          }
+          renderCapacityBar(capacitySegments, currentPacketBytes, maxPacketBytes);
+        }
+
+        function escapeMarkdownCell(value) {
+          return String(value || "").replace(/\|/g, "\\|");
+        }
+
+        function repeatChar(char, count) {
+          return new Array(count + 1).join(char);
+        }
+
+        function padCell(value, width, align) {
+          if (align === "right") {
+            return value.padStart(width, " ");
+          }
+          return value.padEnd(width, " ");
+        }
+
+        function buildDividerCell(width, align) {
+          var safeWidth = Math.max(3, width);
+          if (align === "right") {
+            return repeatChar("-", safeWidth - 1) + ":";
+          }
+          return repeatChar("-", safeWidth);
+        }
+
+        // Missing or non-string cells are treated as empty and every body row is emitted
+        // at full header width, so a short row degrades into blanks instead of throwing.
+        function cellText(value) {
+          return value === undefined || value === null ? "" : String(value);
+        }
+
+        function getAlignment(alignments, index) {
+          return alignments ? alignments[index] : undefined;
+        }
+
+        function buildMarkdownTableFromCells(headers, rows, alignments) {
+          if (!rows || rows.length === 0) return "";
+
+          var widths = headers.map(function (header, index) {
+            var dataWidth = rows.reduce(function (maxWidth, row) {
+              return Math.max(maxWidth, cellText(row[index]).length);
+            }, 0);
+            return Math.max(header.length, dataWidth);
+          });
+
+          var headerLine =
+            "| " +
+            headers
+              .map(function (header, index) {
+                return padCell(header, widths[index], getAlignment(alignments, index));
+              })
+              .join(" | ") +
+            " |";
+
+          var dividerLine =
+            "| " +
+            widths
+              .map(function (width, index) {
+                return buildDividerCell(width, getAlignment(alignments, index));
+              })
+              .join(" | ") +
+            " |";
+
+          var bodyLines = rows.map(function (row) {
+            return (
+              "| " +
+              headers
+                .map(function (header, index) {
+                  return padCell(
+                    cellText(row[index]),
+                    widths[index],
+                    getAlignment(alignments, index),
+                  );
+                })
+                .join(" | ") +
+              " |"
+            );
+          });
+
+          return [headerLine, dividerLine].concat(bodyLines).join("\n");
+        }
+
+        function buildMarkdownExport() {
+          var maxPacketBytes = normalizePacketBytes(inputMaxPacketBytes.value);
+          var overheadBytes = Math.max(0, toInteger(inputOverheadBytes.value));
+          var blocks = getAllBlocks();
+
+          var settingsTable = buildMarkdownTableFromCells(
+            ["Setting", "Value"],
+            [
+              ["Maximum packet size (bytes)", String(maxPacketBytes)],
+              ["Extra fixed overhead (bytes)", String(overheadBytes)],
+            ],
+            ["left", "right"],
+          );
+
+          var blockRows = blocks.map(function (block, index) {
+            var bits = getEffectiveBlockBits(block);
+            return [
+              String(index + 1),
+              escapeMarkdownCell(block.name),
+              String(bits),
+              String(ceilDivBy8(bits)),
+              escapeMarkdownCell(block.kind),
+              escapeMarkdownCell(block.scope),
+              escapeMarkdownCell(block.minValue || ""),
+              escapeMarkdownCell(block.maxValue || ""),
+              escapeMarkdownCell(block.validRange || ""),
+              escapeMarkdownCell(block.description),
+            ];
+          });
+
+          var blockTable = buildMarkdownTableFromCells(
+            [
+              "Order",
+              "Name",
+              "Bits",
+              "Bytes",
+              "Type",
+              "Scope",
+              "Min",
+              "Max",
+              "Valid range",
+              "Description",
+            ],
+            blockRows,
+            ["right", "left", "right", "right", "left", "left", "left", "left", "left", "left"],
+          );
+
+          var bitfieldRows = blocks
+            .filter(function (block) {
+              return (
+                (block.subBlocks && block.subBlocks.length > 0) ||
+                (block.bitfield && block.bitfield.trim().length > 0)
+              );
+            })
+            .reduce(function (rows, block) {
+              // The map belongs to the block, not to any one sub-block, so it rides on
+              // the block's first row; import reads it from whichever row carries it.
+              var mapText = escapeMarkdownCell(block.bitfield || "");
+              if (block.subBlocks && block.subBlocks.length > 0) {
+                block.subBlocks.forEach(function (subBlock, subIndex) {
+                  rows.push([
+                    escapeMarkdownCell(block.name),
+                    escapeMarkdownCell(subBlock.name),
+                    String(normalizeSubBlockBits(subBlock.bits)),
+                    escapeMarkdownCell(subBlock.minValue || ""),
+                    escapeMarkdownCell(subBlock.maxValue || ""),
+                    escapeMarkdownCell(subBlock.validRange || ""),
+                    escapeMarkdownCell(subBlock.description || ""),
+                    subIndex === 0 ? mapText : "",
+                  ]);
+                });
+              } else {
+                rows.push([
+                  escapeMarkdownCell(block.name),
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  mapText,
+                ]);
+              }
+              return rows;
+            }, []);
+
+          var bitfieldTable = "";
+          if (bitfieldRows.length > 0) {
+            bitfieldTable = buildMarkdownTableFromCells(
+              [
+                "Block",
+                "Sub-block",
+                "Bits",
+                "Min",
+                "Max",
+                "Valid range",
+                "Description",
+                "Bitfield Map",
+              ],
+              bitfieldRows,
+              ["left", "left", "right", "left", "left", "left", "left", "left"],
+            );
+          }
+
+          var result = [
+            "### Packet Layout Settings",
+            "",
+            settingsTable,
+            "",
+            "### Packet Blocks",
+            "",
+            blockTable,
+          ];
+
+          if (bitfieldTable) {
+            result.push("");
+            result.push("### Bitfield Definitions");
+            result.push("");
+            result.push(bitfieldTable);
+          }
+
+          return result.join("\n");
+        }
+
+        function parseMarkdownRow(line) {
+          if (!line || line.indexOf("|") === -1) return null;
+          var trimmed = line.trim();
+          if (trimmed.charAt(0) !== "|" || trimmed.charAt(trimmed.length - 1) !== "|") {
+            return null;
+          }
+
+          // Split on unescaped pipes only — escapeMarkdownCell writes cell pipes as "\|",
+          // and cells are always padded with spaces, so "\|" is never a real delimiter.
+          var inner = trimmed.slice(1, -1);
+          return inner.split(/(?<!\\)\|/).map(function (cell) {
+            return cell.trim().replace(/\\\|/g, "|");
+          });
+        }
+
+        function isDividerRow(cells) {
+          return cells.every(function (cell) {
+            return /^:?-{3,}:?$/.test(cell);
+          });
+        }
+
+        function parseMarkdownImport(text) {
+          var lines = text.split(/\r?\n/);
+          var tableRows = lines
+            .map(parseMarkdownRow)
+            .filter(function (row) {
+              return Array.isArray(row);
+            });
+
+          var blocks = [];
+          var bitfieldDataByBlock = {};
+          var maxPacketBytes = null;
+          var overheadBytes = null;
+
+          for (var i = 0; i < tableRows.length; i += 1) {
+            var header = tableRows[i];
+            var next = tableRows[i + 1];
+            if (!next || !isDividerRow(next)) {
+              continue;
+            }
+
+            if (header.length >= 2 && header[0] === "Setting" && header[1] === "Value") {
+              for (var s = i + 2; s < tableRows.length; s += 1) {
+                var row = tableRows[s];
+                if (row.length < 2 || isDividerRow(row)) {
+                  break;
+                }
+                var key = row[0].toLowerCase();
+                var value = toInteger(row[1]);
+                if (key.indexOf("maximum packet size") !== -1) {
+                  maxPacketBytes = normalizePacketBytes(value);
+                }
+                if (key.indexOf("extra fixed overhead") !== -1) {
+                  overheadBytes = Math.max(0, value);
+                }
+              }
+            }
+
+            if (
+              header.length >= 9 &&
+              header[1] === "Name" &&
+              header[2] === "Bits" &&
+              header[4] === "Type"
+            ) {
+              var scopeColumnIndex = header.indexOf("Scope");
+              var signedColumnIndex = header.indexOf("Signed");
+              var minColumnIndex = header.indexOf("Min");
+              var maxColumnIndex = header.indexOf("Max");
+              var validRangeColumnIndex = header.indexOf("Valid range");
+              var descriptionColumnIndex = header.indexOf("Description");
+              var fixedColumnIndex = header.indexOf("Fixed");
+
+              for (var b = i + 2; b < tableRows.length; b += 1) {
+                var blockRow = tableRows[b];
+                if (blockRow.length < 9 || isDividerRow(blockRow)) {
+                  break;
+                }
+
+                var bits = normalizeBits(blockRow[2]);
+                var typeValue = (blockRow[4] || "unsigned-integer").toLowerCase();
+                var rawScopeValue = (
+                  scopeColumnIndex >= 0 ? blockRow[scopeColumnIndex] : blockRow[5]
+                ) || "";
+                var scopeValue = rawScopeValue.toLowerCase();
+                if (typeValue === "integer") {
+                  var signedText =
+                    signedColumnIndex >= 0
+                      ? (blockRow[signedColumnIndex] || "").toLowerCase()
+                      : "";
+                  typeValue = signedText === "yes" ? "signed-integer" : "unsigned-integer";
+                }
+                if (typeValue === "bytes") {
+                  typeValue = "bytes-fixed";
+                }
+                if (
+                  [
+                    "unsigned-integer",
+                    "signed-integer",
+                    "bytes-fixed",
+                    "bytes-variable",
+                    "compressed-int",
+                    "payload",
+                    "bitfield",
+                    "raw",
+                  ].indexOf(typeValue) === -1
+                ) {
+                  typeValue = "unsigned-integer";
+                }
+
+                if (
+                  [
+                    "header-fixed",
+                    "header-variable",
+                    "header-optional",
+                    "payload-fixed",
+                    "payload-variable",
+                    "payload-optional",
+                  ].indexOf(scopeValue) === -1
+                ) {
+                  var fixedText =
+                    fixedColumnIndex >= 0 ? (blockRow[fixedColumnIndex] || "").toLowerCase() : "";
+                  if (scopeValue === "header") {
+                    scopeValue = fixedText === "variable" ? "header-variable" : "header-fixed";
+                  } else if (scopeValue === "payload") {
+                    scopeValue = "payload-variable";
+                  } else {
+                    scopeValue = "header-fixed";
+                  }
+                }
+
+                blocks.push({
+                  name: blockRow[1] || "Imported block",
+                  bits: bits,
+                  kind: typeValue,
+                  scope: scopeValue,
+                  minValue: minColumnIndex >= 0 ? blockRow[minColumnIndex] || "" : "",
+                  maxValue: maxColumnIndex >= 0 ? blockRow[maxColumnIndex] || "" : "",
+                  validRange:
+                    validRangeColumnIndex >= 0
+                      ? blockRow[validRangeColumnIndex] || ""
+                      : "",
+                  description:
+                    descriptionColumnIndex >= 0 ? blockRow[descriptionColumnIndex] || "" : "",
+                  bitfield: "",
+                  subBlocks: [],
+                });
+              }
+            }
+
+            if (
+              header.length >= 2 &&
+              header[0] === "Block" &&
+              (header[1] === "Sub-block" || header[1] === "Bitfield Map")
+            ) {
+              var subBlockColumnIndex = header.indexOf("Sub-block");
+              var subBitsColumnIndex = header.indexOf("Bits");
+              var subMinColumnIndex = header.indexOf("Min");
+              var subMaxColumnIndex = header.indexOf("Max");
+              var subValidRangeColumnIndex = header.indexOf("Valid range");
+              var subDescriptionColumnIndex = header.indexOf("Description");
+              var mapColumnIndex = header.indexOf("Bitfield Map");
+
+              for (var bf = i + 2; bf < tableRows.length; bf += 1) {
+                var bfRow = tableRows[bf];
+                if (bfRow.length < 2 || isDividerRow(bfRow)) {
+                  break;
+                }
+
+                var blockName = bfRow[0] || "";
+                if (!blockName) {
+                  continue;
+                }
+
+                if (!bitfieldDataByBlock[blockName]) {
+                  bitfieldDataByBlock[blockName] = { map: "", subBlocks: [] };
+                }
+
+                if (header[1] === "Bitfield Map") {
+                  bitfieldDataByBlock[blockName].map = bfRow[1] || "";
+                  continue;
+                }
+
+                var subName =
+                  subBlockColumnIndex >= 0 ? bfRow[subBlockColumnIndex] || "" : bfRow[1] || "";
+                var subBits =
+                  subBitsColumnIndex >= 0 ? bfRow[subBitsColumnIndex] || "" : bfRow[2] || "";
+                var subMin =
+                  subMinColumnIndex >= 0 ? bfRow[subMinColumnIndex] || "" : "";
+                var subMax =
+                  subMaxColumnIndex >= 0 ? bfRow[subMaxColumnIndex] || "" : "";
+                var subValidRange =
+                  subValidRangeColumnIndex >= 0
+                    ? bfRow[subValidRangeColumnIndex] || ""
+                    : "";
+                var subDescription =
+                  subDescriptionColumnIndex >= 0
+                    ? bfRow[subDescriptionColumnIndex] || ""
+                    : bfRow[3] || "";
+                var mapText =
+                  mapColumnIndex >= 0 ? bfRow[mapColumnIndex] || "" : bfRow[4] || "";
+
+                if (mapText) {
+                  bitfieldDataByBlock[blockName].map = mapText;
+                }
+
+                if (subName) {
+                  var normalizedSubBits = normalizeSubBlockBits(subBits);
+                  var autoSubRange = getSubBlockAutoRange(normalizedSubBits);
+                  bitfieldDataByBlock[blockName].subBlocks.push({
+                    name: subName,
+                    bits: normalizedSubBits,
+                    minValue: subMin || autoSubRange.min,
+                    maxValue: subMax || autoSubRange.max,
+                    validRange: subValidRange || autoSubRange.validRange,
+                    description: subDescription,
+                  });
+                }
+              }
+            }
+          }
+
+          blocks.forEach(function (block) {
+            var bitfieldData = bitfieldDataByBlock[block.name];
+            if (!bitfieldData) return;
+            block.bitfield = bitfieldData.map || block.bitfield;
+            block.subBlocks = bitfieldData.subBlocks || [];
+          });
+
+          return {
+            maxPacketBytes: maxPacketBytes,
+            overheadBytes: overheadBytes,
+            blocks: blocks,
+          };
+        }
+
+        function copyMarkdown() {
+          var text = exportOutput.value;
+          if (!text) {
+            exportStatus.textContent = "Nothing to copy yet.";
+            return;
+          }
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(function () {
+                exportStatus.textContent = "Markdown copied to clipboard.";
+              })
+              .catch(function () {
+                exportStatus.textContent =
+                  "Copy failed. You can still copy from the text box.";
+              });
+            return;
+          }
+
+          exportOutput.focus();
+          exportOutput.select();
+          exportStatus.textContent = "Clipboard API unavailable. Copy from the text box.";
+        }
+
+        function initializeDefaults() {
+          setBlocks(DEFAULT_BLOCKS);
+          inputMaxPacketBytes.value = String(MAX_PACKET_BYTES);
+          inputOverheadBytes.value = "0";
+          inputPayloadType.value = "none";
+          setPayloadTypeHint("none");
+          calculate();
+        }
+
+        inputPayloadType.addEventListener("change", function () {
+          setPayloadTypeHint(inputPayloadType.value);
+          applyPayloadType(inputPayloadType.value);
+        });
+
+        addBlockButton.addEventListener("click", function () {
+          addBlock();
+        });
+
+        addCommonFlagsButton.addEventListener("click", function () {
+          addBlock({
+            name: "Extended flags",
+            bits: 16,
+            kind: "bitfield",
+            scope: "header-fixed",
+            description: "Generic two-byte flag example (not the Meshtastic flags byte)",
+            bitfield: "0-7: HopStart; 8-15: HopLimit",
+            subBlocks: [
+              { name: "HopStart", bits: 8, description: "Original hop budget" },
+              { name: "HopLimit", bits: 8, description: "Current hop budget" },
+            ],
+          });
+        });
+
+        showDefaultButton.addEventListener("click", function () {
+          initializeDefaults();
+          exportStatus.textContent =
+            "Showing the current default: Meshtastic 16-byte on-air header.";
+        });
+
+        toggleFreeButton.addEventListener("click", function () {
+          showFreeBytes = !showFreeBytes;
+          toggleFreeButton.setAttribute(
+            "aria-pressed",
+            showFreeBytes ? "true" : "false",
+          );
+          calculate();
+        });
+
+        inputMaxPacketBytes.addEventListener("input", calculate);
+        inputMaxPacketBytes.addEventListener("change", calculate);
+        inputOverheadBytes.addEventListener("input", calculate);
+        inputOverheadBytes.addEventListener("change", calculate);
+
+        exportMarkdownButton.addEventListener("click", function () {
+          exportOutput.value = buildMarkdownExport();
+          exportStatus.textContent = "Markdown table generated.";
+        });
+
+        importMarkdownButton.addEventListener("click", function () {
+          var parsed = parseMarkdownImport(exportOutput.value || "");
+          if (parsed.maxPacketBytes !== null) {
+            inputMaxPacketBytes.value = String(parsed.maxPacketBytes);
+          }
+          if (parsed.overheadBytes !== null) {
+            inputOverheadBytes.value = String(parsed.overheadBytes);
+          }
+
+          if (parsed.blocks.length > 0) {
+            setBlocks(parsed.blocks);
+            // An imported layout is whatever the markdown said, not a named type.
+            inputPayloadType.value = "none";
+            setPayloadTypeHint("none");
+            exportStatus.textContent =
+              "Imported " + parsed.blocks.length + " blocks from markdown.";
+          } else {
+            exportStatus.textContent =
+              "No valid block table found. Paste a table generated by this page.";
+            calculate();
+          }
+        });
+
+        copyMarkdownButton.addEventListener("click", copyMarkdown);
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        toggleExplanationButton.addEventListener("click", function () {
+          var isHidden = explanationContent.hasAttribute("hidden");
+          if (isHidden) {
+            explanationContent.removeAttribute("hidden");
+          } else {
+            explanationContent.setAttribute("hidden", "hidden");
+          }
+          toggleExplanationButton.textContent = isHidden
+            ? "Hide explanation"
+            : "Show explanation";
+          toggleExplanationButton.setAttribute(
+            "aria-expanded",
+            isHidden ? "true" : "false",
+          );
+        });
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        applyThemeMode(getStoredThemeMode(), false);
+        buildPayloadTypeSelect();
+        initializeDefaults();
+      })();
+    </script>
+  </body>
+</html>
