@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Meshtastic Node ID Tool</title>
+    <style>
+      :root {
+        --page-bg: #f5f4ed;
+        --hero-bg-a: #edf6f0;
+        --hero-bg-b: #fdfcf8;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --border: #d9ddd4;
+        --accent: #17603b;
+        --accent-soft: #ecf5ef;
+        --error-bg: #fff1f1;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --hero-bg-a: #1b2b22;
+        --hero-bg-b: #141d17;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --border: #3a4d40;
+        --accent: #85dca2;
+        --accent-soft: #223529;
+        --error-bg: #402226;
+        --error-text: #ffb4b4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 580px at 8% -8%, var(--hero-bg-a), transparent),
+          linear-gradient(165deg, var(--hero-bg-b), var(--page-bg) 46%);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 72rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.8rem);
+        line-height: 1.08;
+      }
+
+      .subtitle {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        max-width: 62ch;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .layout {
+        margin-top: 1rem;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1.15fr 1fr;
+      }
+
+      @media (max-width: 920px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .field-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .byte-counter {
+        color: var(--muted);
+        font-size: 0.82rem;
+        white-space: nowrap;
+      }
+
+      .byte-counter.error {
+        color: var(--error-text);
+      }
+
+      label {
+        font-weight: 600;
+      }
+
+      textarea,
+      input {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+        border-radius: 0;
+      }
+
+      textarea {
+        min-height: 5.75rem;
+        resize: vertical;
+      }
+
+      textarea.mono,
+      input.mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+
+      textarea:focus,
+      input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+      }
+
+      .btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.55rem 0.8rem;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .btn.primary {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .status {
+        margin-top: 0.75rem;
+        min-height: 1.3rem;
+        color: var(--muted);
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      .results {
+        display: grid;
+        gap: 0.7rem;
+      }
+
+      .result {
+        border-top: 1px solid var(--border);
+        padding-top: 0.7rem;
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 0.28rem;
+      }
+
+      .result-value {
+        margin: 0;
+        word-break: break-all;
+        font-size: 1rem;
+      }
+
+      .result-value.hero {
+        font-size: clamp(1.4rem, 3.6vw, 2rem);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .help {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .warning-note {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Meshtastic Node ID Tool</h1>
+      <p class="subtitle">
+        Recreates the firmware identity chain in browser: private key to Curve25519 public key,
+        then CRC32(public key) to node number and !nodeId.
+      </p>
+
+      <div class="top-actions">
+        <a class="action-btn" href="index.html">Back to home</a>
+        <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+        <button id="toggle-attribution-btn" class="action-btn" type="button" aria-expanded="true">Hide attribution</button>
+      </div>
+
+      <div id="attribution-block" class="attribution-block">
+        <p class="hosted-note">
+          This tool implements Meshtastic firmware identity behavior (private key to Curve25519 public key to CRC32 node number).
+        </p>
+        <p class="hosted-note">
+          Derived from Meshtastic code/behavior and supplied under GPL v3 &bull;
+          <a class="attribution-link" href="https://github.com/meshtastic/firmware">Meshtastic Firmware</a>
+          &bull;
+          <a class="attribution-link" href="https://github.com/meshtastic/firmware/blob/master/LICENSE.txt">GPL v3 license</a>
+        </p>
+      </div>
+
+      <div class="layout">
+        <section>
+          <h2>Inputs</h2>
+          <div class="field">
+            <div class="field-head">
+              <label for="private-key">Private key (32 bytes, hex or base64)</label>
+              <span id="private-byte-counter" class="byte-counter">0 bytes</span>
+            </div>
+            <textarea id="private-key" class="mono" spellcheck="false" placeholder="Example hex: 77076d0a7318a57d... or base64: dwdtCnMYp32..." ></textarea>
+          </div>
+
+          <div class="field">
+            <div class="field-head">
+              <label for="public-key">Public key (32 bytes, hex or base64)</label>
+              <span id="public-byte-counter" class="byte-counter">0 bytes</span>
+            </div>
+            <textarea id="public-key" class="mono" spellcheck="false" placeholder="Paste a public key directly to calculate node ID" ></textarea>
+          </div>
+
+          <div class="button-row">
+            <button id="derive-all-btn" class="btn primary" type="button">Private to Public to Node ID</button>
+            <button id="from-public-btn" class="btn" type="button">Public to Node ID</button>
+            <button id="random-private-btn" class="btn" type="button">Generate random private key</button>
+            <button id="clear-btn" class="btn" type="button">Clear</button>
+          </div>
+          <p class="warning-note">Random private keys are generated locally using your browser/device internal random generator.</p>
+
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+          <p class="help">Input supports raw hex (with or without 0x) and base64/base64url. All key bytes are interpreted as little-endian where required by X25519.</p>
+        </section>
+
+        <section>
+          <h2>Results</h2>
+          <div class="results">
+            <div class="result">
+              <span class="result-label">Public key (hex)</span>
+              <p id="result-public-hex" class="result-value mono">-</p>
+            </div>
+            <div class="result">
+              <span class="result-label">Public key (base64)</span>
+              <p id="result-public-b64" class="result-value mono">-</p>
+            </div>
+            <div class="result">
+              <span class="result-label">Node number (uint32, hex)</span>
+              <p id="result-node-hex" class="result-value mono">-</p>
+            </div>
+            <div class="result">
+              <span class="result-label">Node ID string</span>
+              <p id="result-node-id" class="result-value hero mono">-</p>
+            </div>
+            <div class="result">
+              <span class="result-label">Node number (uint32, decimal)</span>
+              <p id="result-node-dec" class="result-value mono">-</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        var privateKeyInput = document.getElementById("private-key");
+        var publicKeyInput = document.getElementById("public-key");
+        var deriveAllButton = document.getElementById("derive-all-btn");
+        var fromPublicButton = document.getElementById("from-public-btn");
+        var randomPrivateButton = document.getElementById("random-private-btn");
+        var clearButton = document.getElementById("clear-btn");
+        var status = document.getElementById("status");
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+        var privateByteCounter = document.getElementById("private-byte-counter");
+        var publicByteCounter = document.getElementById("public-byte-counter");
+
+        var resultPublicHex = document.getElementById("result-public-hex");
+        var resultPublicBase64 = document.getElementById("result-public-b64");
+        var resultNodeHex = document.getElementById("result-node-hex");
+        var resultNodeId = document.getElementById("result-node-id");
+        var resultNodeDec = document.getElementById("result-node-dec");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function mod(a, m) {
+          var r = a % m;
+          return r >= 0n ? r : r + m;
+        }
+
+        function bytesToHex(bytes) {
+          var hex = "";
+          for (var i = 0; i < bytes.length; i++) {
+            var h = bytes[i].toString(16);
+            hex += h.length === 1 ? "0" + h : h;
+          }
+          return hex;
+        }
+
+        function bytesToBase64(bytes) {
+          var binary = "";
+          for (var i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          return btoa(binary);
+        }
+
+        function decodeBase64Flexible(value) {
+          var normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+          var missing = normalized.length % 4;
+          if (missing) {
+            normalized += "=".repeat(4 - missing);
+          }
+          var binary = atob(normalized);
+          var out = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) {
+            out[i] = binary.charCodeAt(i);
+          }
+          return out;
+        }
+
+        function parseKeyBytes(raw) {
+          var cleaned = raw.trim().replace(/\s+/g, "");
+          if (!cleaned) {
+            throw new Error("Input is empty.");
+          }
+
+          if (/^0x/i.test(cleaned)) {
+            cleaned = cleaned.slice(2);
+          }
+
+          if (/^[0-9a-fA-F]+$/.test(cleaned)) {
+            if (cleaned.length % 2 !== 0) {
+              throw new Error("Hex input must have an even number of characters.");
+            }
+            var hexBytes = new Uint8Array(cleaned.length / 2);
+            for (var i = 0; i < cleaned.length; i += 2) {
+              hexBytes[i / 2] = parseInt(cleaned.slice(i, i + 2), 16);
+            }
+            return hexBytes;
+          }
+
+          try {
+            return decodeBase64Flexible(cleaned);
+          } catch (_error) {
+            throw new Error("Input is not valid hex or base64/base64url.");
+          }
+        }
+
+        function setByteCounter(counterElement, inputValue) {
+          var trimmed = inputValue.trim();
+          if (!trimmed) {
+            counterElement.textContent = "0 bytes";
+            counterElement.classList.remove("error");
+            return;
+          }
+
+          try {
+            var keyBytes = parseKeyBytes(inputValue);
+            counterElement.textContent = String(keyBytes.length) + " bytes";
+            counterElement.classList.toggle("error", keyBytes.length !== 32);
+          } catch (_error) {
+            counterElement.textContent = "invalid";
+            counterElement.classList.add("error");
+          }
+        }
+
+        function updateByteCounters() {
+          setByteCounter(privateByteCounter, privateKeyInput.value);
+          setByteCounter(publicByteCounter, publicKeyInput.value);
+        }
+
+        function toBigIntLE(bytes) {
+          var value = 0n;
+          for (var i = bytes.length - 1; i >= 0; i--) {
+            value = (value << 8n) + BigInt(bytes[i]);
+          }
+          return value;
+        }
+
+        function fromBigIntLE(value, size) {
+          var out = new Uint8Array(size);
+          var tmp = value;
+          for (var i = 0; i < size; i++) {
+            out[i] = Number(tmp & 0xffn);
+            tmp >>= 8n;
+          }
+          return out;
+        }
+
+        function clampScalar(privateKey) {
+          var scalar = new Uint8Array(privateKey);
+          scalar[0] &= 248;
+          scalar[31] &= 127;
+          scalar[31] |= 64;
+          return scalar;
+        }
+
+        function powMod(base, exp, modValue) {
+          var result = 1n;
+          var b = mod(base, modValue);
+          var e = exp;
+          while (e > 0n) {
+            if (e & 1n) {
+              result = mod(result * b, modValue);
+            }
+            b = mod(b * b, modValue);
+            e >>= 1n;
+          }
+          return result;
+        }
+
+        function x25519PublicFromPrivate(privateKey) {
+          var P = (1n << 255n) - 19n;
+          var A24 = 121665n;
+          var basePointU = 9n;
+
+          var scalarBytes = clampScalar(privateKey);
+          var scalar = toBigIntLE(scalarBytes);
+
+          var x1 = basePointU;
+          var x2 = 1n;
+          var z2 = 0n;
+          var x3 = x1;
+          var z3 = 1n;
+          var swap = 0n;
+
+          for (var t = 254; t >= 0; t--) {
+            var kT = (scalar >> BigInt(t)) & 1n;
+            swap ^= kT;
+            if (swap === 1n) {
+              var tx = x2;
+              x2 = x3;
+              x3 = tx;
+              var tz = z2;
+              z2 = z3;
+              z3 = tz;
+            }
+            swap = kT;
+
+            var A = mod(x2 + z2, P);
+            var B = mod(x2 - z2, P);
+            var AA = mod(A * A, P);
+            var BB = mod(B * B, P);
+            var E = mod(AA - BB, P);
+            var C = mod(x3 + z3, P);
+            var D = mod(x3 - z3, P);
+            var DA = mod(D * A, P);
+            var CB = mod(C * B, P);
+
+            x3 = mod((DA + CB) * (DA + CB), P);
+            z3 = mod(x1 * (DA - CB) * (DA - CB), P);
+            x2 = mod(AA * BB, P);
+            z2 = mod(E * (AA + A24 * E), P);
+          }
+
+          if (swap === 1n) {
+            var txFinal = x2;
+            x2 = x3;
+            x3 = txFinal;
+            var tzFinal = z2;
+            z2 = z3;
+            z3 = tzFinal;
+          }
+
+          var zInv = powMod(z2, P - 2n, P);
+          var u = mod(x2 * zInv, P);
+          return fromBigIntLE(u, 32);
+        }
+
+        var crcTable = null;
+
+        function getCrcTable() {
+          if (crcTable) return crcTable;
+          crcTable = new Uint32Array(256);
+          for (var i = 0; i < 256; i++) {
+            var c = i;
+            for (var j = 0; j < 8; j++) {
+              c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+            }
+            crcTable[i] = c >>> 0;
+          }
+          return crcTable;
+        }
+
+        function crc32(bytes) {
+          var table = getCrcTable();
+          var crc = 0xffffffff;
+          for (var i = 0; i < bytes.length; i++) {
+            crc = table[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+          }
+          return (crc ^ 0xffffffff) >>> 0;
+        }
+
+        function updateResults(publicKeyBytes) {
+          var nodeNum = crc32(publicKeyBytes);
+          var nodeHex = nodeNum.toString(16).padStart(8, "0");
+          resultPublicHex.textContent = bytesToHex(publicKeyBytes);
+          resultPublicBase64.textContent = bytesToBase64(publicKeyBytes);
+          resultNodeHex.textContent = "0x" + nodeHex;
+          resultNodeId.textContent = "!" + nodeHex;
+          resultNodeDec.textContent = String(nodeNum);
+        }
+
+        function setStatus(message, isError) {
+          status.textContent = message || "";
+          status.classList.toggle("error", !!isError);
+        }
+
+        function computeFromPrivate() {
+          try {
+            var privateKeyBytes = parseKeyBytes(privateKeyInput.value);
+            if (privateKeyBytes.length !== 32) {
+              throw new Error("Private key must decode to exactly 32 bytes.");
+            }
+            var publicKeyBytes = x25519PublicFromPrivate(privateKeyBytes);
+            publicKeyInput.value = bytesToHex(publicKeyBytes);
+            updateResults(publicKeyBytes);
+            setStatus("Derived public key with Curve25519 and computed node ID from CRC32(public key).", false);
+          } catch (error) {
+            setStatus(error.message, true);
+          }
+        }
+
+        function computeFromPublic() {
+          try {
+            var publicKeyBytes = parseKeyBytes(publicKeyInput.value);
+            if (publicKeyBytes.length !== 32) {
+              throw new Error("Public key must decode to exactly 32 bytes.");
+            }
+            updateResults(publicKeyBytes);
+            setStatus("Computed node ID from CRC32(public key).", false);
+          } catch (error) {
+            setStatus(error.message, true);
+          }
+        }
+
+        function clearAll() {
+          privateKeyInput.value = "";
+          publicKeyInput.value = "";
+          resultPublicHex.textContent = "-";
+          resultPublicBase64.textContent = "-";
+          resultNodeHex.textContent = "-";
+          resultNodeId.textContent = "-";
+          resultNodeDec.textContent = "-";
+          setStatus("", false);
+          updateByteCounters();
+        }
+
+        function generateRandomPrivateKey() {
+          if (!window.crypto || typeof window.crypto.getRandomValues !== "function") {
+            setStatus("Secure random generator is not available in this browser.", true);
+            return;
+          }
+
+          var randomKey = new Uint8Array(32);
+          window.crypto.getRandomValues(randomKey);
+          privateKeyInput.value = bytesToHex(randomKey);
+          updateByteCounters();
+          computeFromPrivate();
+          setStatus("Generated a random private key with your browser/device internal RNG and derived node ID.", false);
+        }
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute("aria-label", "Theme mode " + mode + ". Activate to switch mode.");
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        deriveAllButton.addEventListener("click", computeFromPrivate);
+        fromPublicButton.addEventListener("click", computeFromPublic);
+        randomPrivateButton.addEventListener("click", generateRandomPrivateKey);
+        clearButton.addEventListener("click", clearAll);
+
+        privateKeyInput.addEventListener("input", function () {
+          updateByteCounters();
+          if (privateKeyInput.value.trim()) {
+            computeFromPrivate();
+          }
+        });
+
+        publicKeyInput.addEventListener("input", function () {
+          updateByteCounters();
+          if (publicKeyInput.value.trim() && !privateKeyInput.value.trim()) {
+            computeFromPublic();
+          }
+        });
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        if (autoThemeMediaQuery && typeof autoThemeMediaQuery.addEventListener === "function") {
+          autoThemeMediaQuery.addEventListener("change", function () {
+            if (themeMode === "auto") {
+              applyThemeMode("auto", false);
+            }
+          });
+        }
+
+        applyThemeMode(getStoredThemeMode(), false);
+        updateByteCounters();
+      })();
+    </script>
+  </body>
+</html>
