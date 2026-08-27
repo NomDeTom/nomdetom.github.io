@@ -1,0 +1,62 @@
+name: Sync Meshtastic URL tool
+
+# Pulls the single-file build of murltools into this site. The tool is built in
+# its own repo (tools/build_all_in_one.py); here we only copy the result, so the
+# workflow needs nothing beyond the default token.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, Mondays 06:00 UTC. Adjust or drop if manual runs are enough.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-murltools
+  cancel-in-progress: true
+
+env:
+  SOURCE_REPO: NomDeTom/murltools
+  SOURCE_REF: all-in-one
+  SOURCE_PATH: murltools.html
+  TARGET_PATH: meshtastic-url-tool.html
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the built page
+        run: |
+          url="https://raw.githubusercontent.com/${SOURCE_REPO}/${SOURCE_REF}/${SOURCE_PATH}"
+          curl --fail --silent --show-error --location "$url" -o fetched.html
+          echo "fetched $(wc -c < fetched.html) bytes"
+
+      - name: Check it looks like the tool
+        run: |
+          # Guard against fetching an error page or a truncated file.
+          test "$(wc -c < fetched.html)" -gt 100000
+          grep -q 'meshtastic.org/e/' fetched.html
+          grep -q '<title>' fetched.html
+          # Jekyll would try to render these; the build should never emit them.
+          if grep -q '{{\|{%' fetched.html; then
+            echo "Liquid syntax found - Jekyll would mangle this file" >&2
+            exit 1
+          fi
+
+      - name: Commit if changed
+        run: |
+          if [ -f "$TARGET_PATH" ] && cmp --silent fetched.html "$TARGET_PATH"; then
+            echo "No change."
+            rm fetched.html
+            exit 0
+          fi
+          mv fetched.html "$TARGET_PATH"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add "$TARGET_PATH"
+          git commit -m "Sync ${TARGET_PATH} from ${SOURCE_REPO}@${SOURCE_REF}"
+          git push
