@@ -639,6 +639,15 @@
         margin-bottom: 0.9rem;
       }
 
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
     </style>
   </head>
   <body>
@@ -1010,6 +1019,34 @@
             >
             <span class="result-value" id="out-max-2p5">&mdash;</span>
           </div>
+          <div class="result" id="result-row-file-100" hidden>
+            <span class="result-label"
+              >1.5 MB file transfer
+              <span class="optional">(100% duty &mdash; continuous)</span></span
+            >
+            <span class="result-value" id="out-file-100">&mdash;</span>
+          </div>
+          <div class="result" id="result-row-file-25" hidden>
+            <span class="result-label"
+              >1.5 MB file transfer
+              <span class="optional">(25% duty)</span></span
+            >
+            <span class="result-value" id="out-file-25">&mdash;</span>
+          </div>
+          <div class="result" id="result-row-file-10" hidden>
+            <span class="result-label"
+              >1.5 MB file transfer
+              <span class="optional">(10% duty)</span></span
+            >
+            <span class="result-value" id="out-file-10">&mdash;</span>
+          </div>
+          <div class="result" id="result-row-file-1" hidden>
+            <span class="result-label"
+              >1.5 MB file transfer
+              <span class="optional">(1% duty)</span></span
+            >
+            <span class="result-value" id="out-file-1">&mdash;</span>
+          </div>
         </output>
       </section>
 
@@ -1302,6 +1339,11 @@
         </p>
       </section>
     </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-08-30">30 August 2026</time>
+    </footer>
+
 
     <script>
       (function () {
@@ -1624,6 +1666,16 @@
         var outMax10         = document.getElementById("out-max-10");
         var outMax5          = document.getElementById("out-max-5");
         var outMax2p5        = document.getElementById("out-max-2p5");
+        var outFile100       = document.getElementById("out-file-100");
+        var outFile25        = document.getElementById("out-file-25");
+        var outFile10        = document.getElementById("out-file-10");
+        var outFile1         = document.getElementById("out-file-1");
+        var fileRows         = [
+          document.getElementById("result-row-file-100"),
+          document.getElementById("result-row-file-25"),
+          document.getElementById("result-row-file-10"),
+          document.getElementById("result-row-file-1"),
+        ];
 
         var comparisonCards  = document.getElementById("comparison-cards");
         var comparisonEmpty  = document.getElementById("comparison-empty");
@@ -2241,7 +2293,8 @@
           var allOutputs = [outSymTime, outLDRO, outPreambleSyms, outPreambleDur,
                             outOverheadSyms, outOverheadDur,
                             outPayloadSyms, outPayloadDur, outToa, outThroughput, outAppThroughput,
-                            outMax40, outMax25, outMax10, outMax5, outMax2p5];
+                            outMax40, outMax25, outMax10, outMax5, outMax2p5,
+                            outFile100, outFile25, outFile10, outFile1];
 
           if (mod === "gfsk" || mod === "flrc") {
             var r = mod === "gfsk" ? calculateGFSK() : calculateFLRC();
@@ -2281,6 +2334,7 @@
               max40: maxPkts(0.40), max25: maxPkts(0.25), max10: maxPkts(0.10),
               max5:  maxPkts(0.05), max2p5: maxPkts(0.025),
             };
+            updateFileTransferOutputs();
             if (!exportContent.hidden) updateExport();
             calculateLinkBudget();
             return;
@@ -2374,6 +2428,7 @@
             max2p5: maxPkts(0.025),
           };
 
+          updateFileTransferOutputs();
           if (!exportContent.hidden) updateExport();
           calculateLinkBudget();
         }
@@ -2489,6 +2544,16 @@
           return (FILE_TRANSFER_BYTES * 8) / (bps * duty);
         }
 
+        function updateFileTransferOutputs() {
+          var show = inputFileXfer.checked;
+          fileRows.forEach(function (row) { if (row) row.hidden = !show; });
+          if (!show || !lastResult) return;
+          outFile100.textContent = formatLongDuration(fileTransferSeconds(lastResult, 1));
+          outFile25.textContent  = formatLongDuration(fileTransferSeconds(lastResult, 0.25));
+          outFile10.textContent  = formatLongDuration(fileTransferSeconds(lastResult, 0.10));
+          outFile1.textContent   = formatLongDuration(fileTransferSeconds(lastResult, 0.01));
+        }
+
         function fileTransferRow(r) {
           if (!inputFileXfer.checked) return "";
           return (
@@ -2597,7 +2662,10 @@
 
         saveCompBtn.addEventListener("click", saveToComparison);
 
-        inputFileXfer.addEventListener("change", renderCards);
+        inputFileXfer.addEventListener("change", function () {
+          updateFileTransferOutputs();
+          renderCards();
+        });
 
         // ----- Markdown table builder (from template) -----
         function buildMarkdownTableFromCells(headers, rows, alignments) {

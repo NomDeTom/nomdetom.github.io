@@ -522,6 +522,15 @@
           grid-template-columns: 1fr;
         }
       }
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
     </style>
   </head>
   <body>
@@ -743,6 +752,11 @@
         </article>
       </section>
     </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-08-08">8 August 2026</time>
+    </footer>
+
 
     <script>
       const TWO_CCW_STARTS = new Set(["left-top", "right-bottom"]);
