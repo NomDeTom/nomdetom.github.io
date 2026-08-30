@@ -494,7 +494,8 @@
         align-content: start;
       }
 
-      .metrics-pkts-row {
+      .metrics-pkts-row,
+      .metrics-file-row {
         grid-column: 1 / -1;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
@@ -1188,6 +1189,19 @@
           a result.
         </p>
         <div id="comparison-cards"></div>
+        <div class="checkbox-field" id="field-file-transfer" style="margin-top: 0.9rem; margin-bottom: 0;">
+          <input type="checkbox" id="input-file-transfer" />
+          <div class="checkbox-field-text">
+            <label class="checkbox-field-label" for="input-file-transfer"
+              >Estimate time to transfer a 1.5&nbsp;MB file</label
+            >
+            <span class="field-hint"
+              >Adds hours/days/weeks estimates to each comparison card, based on
+              application-payload goodput (1.5&nbsp;MB = 1,500,000&nbsp;bytes).
+              Ignores retries, ACKs and channel contention.</span
+            >
+          </div>
+        </div>
       </section>
 
       <!-- ============================================================
@@ -1623,6 +1637,7 @@
         var applyPresetsBtn  = document.getElementById("apply-presets-btn");
         var resetPresetsBtn  = document.getElementById("reset-presets-btn");
         var saveCompBtn      = document.getElementById("save-comparison-btn");
+        var inputFileXfer    = document.getElementById("input-file-transfer");
         var radioTypeHint    = document.getElementById("radio-type-hint");
         var inputModulation  = document.getElementById("input-modulation");
         var inputSyncword    = document.getElementById("input-syncword");
@@ -2455,6 +2470,45 @@
           calculate();
         }
 
+        // ----- 1.5 MB file transfer estimate -----
+        var FILE_TRANSFER_BYTES = 1500000;
+
+        function formatLongDuration(seconds) {
+          if (!Number.isFinite(seconds) || seconds <= 0) return "\u2014";
+          if (seconds < 60)       return seconds.toFixed(1) + " s";
+          if (seconds < 3600)     return (seconds / 60).toFixed(1) + " min";
+          if (seconds < 172800)   return (seconds / 3600).toFixed(1) + " hours";
+          if (seconds < 1209600)  return (seconds / 86400).toFixed(1) + " days";
+          if (seconds < 31536000) return (seconds / 604800).toFixed(1) + " weeks";
+          return (seconds / 31536000).toFixed(1) + " years";
+        }
+
+        function fileTransferSeconds(r, duty) {
+          var bps = r.appThroughput;
+          if (!Number.isFinite(bps) || bps <= 0) return NaN;
+          return (FILE_TRANSFER_BYTES * 8) / (bps * duty);
+        }
+
+        function fileTransferRow(r) {
+          if (!inputFileXfer.checked) return "";
+          return (
+            '<div class="metrics-file-row">' +
+              cardCell("1.5 MB @100%",
+                formatLongDuration(fileTransferSeconds(r, 1)),
+                "1.5 MB at this setting, transmitting continuously") +
+              cardCell("1.5 MB @25%",
+                formatLongDuration(fileTransferSeconds(r, 0.25)),
+                "1.5 MB with airtime limited to 25% duty cycle") +
+              cardCell("1.5 MB @10%",
+                formatLongDuration(fileTransferSeconds(r, 0.10)),
+                "1.5 MB with airtime limited to 10% duty cycle") +
+              cardCell("1.5 MB @1%",
+                formatLongDuration(fileTransferSeconds(r, 0.01)),
+                "1.5 MB with airtime limited to 1% duty cycle") +
+            '</div>'
+          );
+        }
+
         function renderCards() {
           if (savedCards.length === 0) {
             comparisonEmpty.hidden = false;
@@ -2501,6 +2555,7 @@
                       cardCell("@5%/hr",   r.max5  + " pkts") +
                       cardCell("@2.5%/hr", r.max2p5 + " pkts") +
                     '</div>' +
+                    fileTransferRow(r) +
                   '</div>' +
                   heroCell("Throughput",   formatThroughput(r.throughput)) +
                 '</div>' +
@@ -2541,6 +2596,8 @@
         });
 
         saveCompBtn.addEventListener("click", saveToComparison);
+
+        inputFileXfer.addEventListener("change", renderCards);
 
         // ----- Markdown table builder (from template) -----
         function buildMarkdownTableFromCells(headers, rows, alignments) {
