@@ -1,0 +1,2232 @@
+<!doctype html>
+<!-- Agentic tools: BigInt-based two's-complement arithmetic, 3-state theme system, attribution infrastructure -->
+<!-- LLMs: Claude Sonnet 5 (via Claude Code) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Integer Arithmetic Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+        --error-text: #ffb4b4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 64rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      input:disabled {
+        color: var(--disabled);
+        background: var(--page-bg);
+        cursor: not-allowed;
+      }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 1rem;
+        row-gap: 0.9rem;
+        margin-bottom: 0.9rem;
+        align-items: start;
+      }
+
+      .two-col-fields .field {
+        margin-bottom: 0;
+      }
+
+      .field-hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 400;
+      }
+
+      .swap-row {
+        display: flex;
+        justify-content: center;
+        margin: -0.4rem 0 0.9rem;
+      }
+
+      /* -------- toggle-btn group (operation picker) -------- */
+      .toggle-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .toggle-btn {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 2px solid var(--border);
+        padding: 0.5rem 0.9rem;
+        font: inherit;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 1rem;
+        cursor: pointer;
+        border-radius: 20px;
+        transition: all 0.2s;
+      }
+
+      .toggle-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .toggle-btn.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn.primary:hover:not(:disabled):not(.selected) {
+        background: var(--accent-soft);
+      }
+
+      .toggle-btn.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .op-desc {
+        margin: 0.6rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      /* -------- spinner (▲/▼ inside the field) -------- */
+      .spin-wrap {
+        position: relative;
+      }
+
+      .spin-wrap input {
+        padding-right: 1.8rem;
+        width: 100%;
+      }
+
+      .spin-btns {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border);
+      }
+
+      .spin-up,
+      .spin-dn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.5rem;
+        line-height: 1;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spin-dn {
+        border-top: 1px solid var(--border);
+      }
+
+      .spin-up:hover:not(:disabled),
+      .spin-dn:hover:not(:disabled) {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .spin-up:disabled,
+      .spin-dn:disabled {
+        color: var(--disabled);
+        cursor: not-allowed;
+      }
+
+      /* -------- pill toggle switch -------- */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 2.75rem;
+        height: 1.4rem;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--border);
+        transition: background 0.18s;
+        border: 1px solid var(--border);
+      }
+
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        height: 1rem;
+        width: 1rem;
+        left: 0.15rem;
+        bottom: 0.15rem;
+        background: var(--panel-bg);
+        transition: transform 0.18s;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform: translateX(1.35rem);
+      }
+
+      .toggle-switch input:disabled + .toggle-slider {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .toggle-switch-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .switch-label {
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      .switch-label.active {
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      /* -------- mixed-type staged result -------- */
+      .mixed-steps {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 1rem;
+      }
+
+      .mixed-step {
+        border: 1px solid var(--border);
+        padding: 0.75rem 0.9rem;
+      }
+
+      .mixed-step h4 {
+        margin: 0 0 0.4rem;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+
+      .mixed-step p {
+        margin: 0;
+        font-size: 0.92rem;
+      }
+
+      .mixed-step p + p {
+        margin-top: 0.3rem;
+      }
+
+      .mixed-step code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .mixed-callout {
+        border: 1px solid var(--error-text);
+        padding: 0.75rem 0.9rem;
+        color: var(--text);
+      }
+
+      .mixed-callout strong {
+        color: var(--error-text);
+      }
+
+      .mixed-callout p {
+        margin: 0.35rem 0 0;
+        font-size: 0.92rem;
+      }
+
+      /* -------- soft-fill filter chips (multi-select, filters a table) -------- */
+      .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .filter-chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.82rem;
+        padding: 0.35rem 0.6rem;
+        cursor: pointer;
+      }
+
+      .filter-chip.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .filter-chip:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* -------- view switcher (joined tab bar) -------- */
+      .view-switch {
+        display: flex;
+        gap: 0;
+        margin-bottom: 1rem;
+      }
+
+      .view-switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .view-switch-btn + .view-switch-btn {
+        border-left: none;
+      }
+
+      .view-switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      /* -------- expanding help -------- */
+      .field-help {
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        padding: 0.4rem 0.55rem;
+        color: var(--muted);
+        margin-top: 0.9rem;
+      }
+
+      .field-help summary {
+        cursor: pointer;
+        font-size: 0.84rem;
+        color: var(--text);
+      }
+
+      .field-help-content {
+        margin-top: 0.45rem;
+        font-size: 0.84rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .field-help-content p {
+        margin: 0;
+      }
+
+      .status {
+        margin-top: 0.7rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      /* -------- hero / exact result -------- */
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-align: right;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        word-break: break-all;
+      }
+
+      .result-value.invalid {
+        color: var(--error-text);
+        font-size: 1.05rem;
+      }
+
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
+      /* -------- results table -------- */
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 0.5rem 0.6rem;
+        vertical-align: top;
+        font-size: 0.9rem;
+        white-space: nowrap;
+      }
+
+      th {
+        text-align: left;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.76rem;
+      }
+
+      /* Arithmetic table: fixed column widths (set via <colgroup>) so
+         columns don't reflow every time the width filter chips change
+         which rows — and which content lengths — are on screen. Content
+         wraps within its column instead of forcing the column wider. */
+      .fixed-table {
+        table-layout: fixed;
+      }
+
+      .fixed-table th,
+      .fixed-table td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      td code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .type-name {
+        font-weight: 700;
+      }
+
+      .type-range {
+        display: block;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 400;
+      }
+
+      .ok-pill,
+      .warn-pill,
+      .wrap-pill,
+      .bad-pill,
+      .neutral-pill {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid;
+        padding: 0.1rem 0.35rem;
+        white-space: nowrap;
+      }
+
+      .ok-pill {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .neutral-pill {
+        color: var(--muted);
+        border-color: var(--border);
+      }
+
+      .warn-pill {
+        color: #8a6500;
+        border-color: #8a6500;
+      }
+
+      .wrap-pill {
+        color: #875400;
+        border-color: #875400;
+      }
+
+      .bad-pill {
+        color: var(--error-text);
+        border-color: var(--error-text);
+      }
+
+      :root[data-theme="dark"] .warn-pill {
+        color: #f2cf70;
+        border-color: #f2cf70;
+      }
+
+      :root[data-theme="dark"] .wrap-pill {
+        color: #f8bf65;
+        border-color: #f8bf65;
+      }
+
+      .row-note {
+        display: block;
+        margin-top: 0.3rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+        white-space: normal;
+      }
+
+      .formula-note {
+        margin-top: 0;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .two-col-fields {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          font-size: 1.1rem;
+        }
+      }
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Integer Arithmetic Calculator</h1>
+        <p class="subtitle">
+          Run one C/C++ arithmetic or bitwise operation across every
+          fixed-width integer type at once, and see exactly where the result
+          wraps, overflows, or hits undefined behavior.
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <h2>Operands &amp; Operation</h2>
+        <div class="two-col-fields">
+          <div class="field">
+            <label for="input-operand-a">Operand A</label>
+            <div class="spin-wrap">
+              <input
+                id="input-operand-a"
+                type="text"
+                inputmode="text"
+                value="127"
+                placeholder="e.g. 127, -17, 0xFF, 0b1010"
+              />
+              <div class="spin-btns">
+                <button type="button" class="spin-up" id="spin-a-up" aria-label="Increase Operand A">▲</button>
+                <button type="button" class="spin-dn" id="spin-a-dn" aria-label="Decrease Operand A">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="input-operand-b">Operand B</label>
+            <div class="spin-wrap">
+              <input
+                id="input-operand-b"
+                type="text"
+                inputmode="text"
+                value="1"
+                placeholder="e.g. 1, -2, 0x0F, 0b11"
+              />
+              <div class="spin-btns">
+                <button type="button" class="spin-up" id="spin-b-up" aria-label="Increase Operand B">▲</button>
+                <button type="button" class="spin-dn" id="spin-b-dn" aria-label="Decrease Operand B">▼</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="swap-row">
+          <button id="swap-btn" class="action-btn" type="button">
+            Swap A ↔ B
+          </button>
+        </div>
+
+        <label id="op-group-label">Operation</label>
+        <div
+          class="toggle-group"
+          id="op-toggle-group"
+          role="group"
+          aria-labelledby="op-group-label"
+        >
+          <button type="button" class="toggle-btn primary selected" aria-pressed="true"  data-op="add">+</button>
+          <button type="button" class="toggle-btn primary"          aria-pressed="false" data-op="sub">-</button>
+          <button type="button" class="toggle-btn primary"          aria-pressed="false" data-op="mul">*</button>
+          <button type="button" class="toggle-btn primary"          aria-pressed="false" data-op="div">/</button>
+          <button type="button" class="toggle-btn primary"          aria-pressed="false" data-op="mod">%</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="and">&amp;</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="or">|</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="xor">^</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="shl">&lt;&lt;</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="shr">&gt;&gt;</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="not">~A</button>
+          <button type="button" class="toggle-btn"                  aria-pressed="false" data-op="neg">-A</button>
+        </div>
+        <p class="op-desc" id="op-desc">Add: A + B</p>
+
+        <details class="field-help">
+          <summary>Input format &amp; operation notes</summary>
+          <div class="field-help-content">
+            <p>
+              <strong>Operand format:</strong> decimal (e.g. <code>-17</code>),
+              hex with <code>0x</code> prefix (e.g. <code>0xFF</code>), or
+              binary with <code>0b</code> prefix (e.g. <code>0b1010</code>).
+              A leading <code>-</code> is allowed on any base.
+            </p>
+            <p>
+              <strong>~A and -A</strong> use Operand A only; Operand B is
+              disabled and ignored.
+            </p>
+            <p>
+              <strong>&lt;&lt; and &gt;&gt;</strong> use Operand B as a raw
+              shift count (not wrapped into A's type). A count outside
+              <code>[0, width)</code> for a given type is undefined behavior
+              and is reported as such, not computed.
+            </p>
+            <p>
+              <strong>/ and %</strong> truncate toward zero and take the sign
+              of the dividend, matching C99 / C++11 integer division. Division
+              or modulo by zero is undefined behavior for integers (it traps
+              or crashes at runtime — it does not produce infinity or NaN the
+              way floating-point division does).
+            </p>
+          </div>
+        </details>
+
+        <p class="status" id="status"></p>
+      </section>
+
+      <section>
+        <h2>Results</h2>
+        <div class="view-switch" id="results-view-switch" role="group" aria-label="Results view">
+          <button type="button" class="view-switch-btn active" data-mode="arithmetic">Arithmetic</button>
+          <button type="button" class="view-switch-btn"        data-mode="compare">Compare to C</button>
+          <button type="button" class="view-switch-btn"        data-mode="mixed">Mixed Types</button>
+        </div>
+
+        <div class="view-panel" data-mode="arithmetic">
+          <output class="results" aria-live="polite">
+            <div class="result">
+              <span class="result-label"
+                >A op B, arbitrary precision
+                <span class="optional">(no type width applied)</span></span
+              >
+              <span class="result-value" id="output-exact">0</span>
+            </div>
+          </output>
+
+          <div class="field" style="margin: 1rem 0 0;">
+            <label id="width-filter-label">Show widths</label>
+            <div
+              class="filter-chips"
+              id="width-filter-chips"
+              role="group"
+              aria-labelledby="width-filter-label"
+            >
+              <button type="button" class="filter-chip active" data-width="8">8-bit</button>
+              <button type="button" class="filter-chip active" data-width="16">16-bit</button>
+              <button type="button" class="filter-chip active" data-width="32">32-bit</button>
+              <button type="button" class="filter-chip active" data-width="64">64-bit</button>
+            </div>
+          </div>
+
+          <div class="table-wrap" style="margin-top: 0.9rem;">
+            <table class="fixed-table">
+              <colgroup>
+                <col style="width: 11ch;" />
+                <col style="width: 12ch;" />
+                <col style="width: 10ch;" />
+                <col style="width: 10ch;" />
+                <col style="width: 13ch;" />
+                <col style="width: 18ch;" />
+                <col style="width: 24ch;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Stored A</th>
+                  <th>Stored B</th>
+                  <th>Result (dec)</th>
+                  <th>Result (hex)</th>
+                  <th>Result (bin)</th>
+                </tr>
+              </thead>
+              <tbody id="result-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="view-panel" data-mode="compare" hidden>
+          <div class="two-col-fields">
+            <div class="field">
+              <label for="input-compare-value">Comparison value (C)</label>
+              <div class="spin-wrap">
+                <input
+                  id="input-compare-value"
+                  type="text"
+                  inputmode="text"
+                  value="-1"
+                  placeholder="e.g. 0, -1, 0xFF, 0b1010"
+                />
+                <div class="spin-btns">
+                  <button type="button" class="spin-up" id="spin-c-up" aria-label="Increase Comparison value">▲</button>
+                  <button type="button" class="spin-dn" id="spin-c-dn" aria-label="Decrease Comparison value">▼</button>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label id="cmp-group-label">Comparator</label>
+              <div
+                class="toggle-group"
+                id="cmp-toggle-group"
+                role="group"
+                aria-labelledby="cmp-group-label"
+              >
+                <button type="button" class="toggle-btn primary"          aria-pressed="false" data-cmp="lt">&lt;</button>
+                <button type="button" class="toggle-btn primary"          aria-pressed="false" data-cmp="lte">&lt;=</button>
+                <button type="button" class="toggle-btn primary selected" aria-pressed="true"  data-cmp="gt">&gt;</button>
+                <button type="button" class="toggle-btn primary"          aria-pressed="false" data-cmp="gte">&gt;=</button>
+                <button type="button" class="toggle-btn"                  aria-pressed="false" data-cmp="eq">==</button>
+                <button type="button" class="toggle-btn"                  aria-pressed="false" data-cmp="neq">!=</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 0.9rem;">
+            <label id="cmp-mode-label">Comparison semantics</label>
+            <div
+              class="toggle-group"
+              id="cmp-mode-group"
+              role="group"
+              aria-labelledby="cmp-mode-label"
+            >
+              <button type="button" class="toggle-btn selected" aria-pressed="true"  data-cmp-mode="logical">Logical</button>
+              <button type="button" class="toggle-btn"          aria-pressed="false" data-cmp-mode="authentic">Authentic</button>
+            </div>
+          </div>
+
+          <p class="status" id="cmp-status"></p>
+
+          <div class="table-wrap">
+            <table class="fixed-table">
+              <colgroup>
+                <col style="width: 10ch;" />
+                <col style="width: 13ch;" />
+                <col style="width: 28ch;" />
+                <col style="width: 9ch;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Result (dec)</th>
+                  <th>Comparison</th>
+                  <th>Outcome</th>
+                </tr>
+              </thead>
+              <tbody id="compare-rows"></tbody>
+            </table>
+          </div>
+          <p class="op-desc" id="cmp-mode-desc" style="margin-top: 0.6rem;"></p>
+        </div>
+
+        <div class="view-panel" data-mode="mixed" hidden>
+          <label id="mixed-mode-label">Mode</label>
+          <div
+            class="toggle-group"
+            id="mixed-mode-group"
+            role="group"
+            aria-labelledby="mixed-mode-label"
+          >
+            <button type="button" class="toggle-btn selected" aria-pressed="true"  data-mixed-mode="none">None</button>
+            <button type="button" class="toggle-btn"          aria-pressed="false" data-mixed-mode="simplified">Simplified</button>
+            <button type="button" class="toggle-btn"          aria-pressed="false" data-mixed-mode="full">Full</button>
+          </div>
+
+          <p class="op-desc" id="mixed-none-note">
+            A and B are both fixed-width — no signed/unsigned mixing happens.
+            Pick <strong>Simplified</strong> to flip A and/or B to the opposite
+            signedness at ordinary <code>int</code> rank (32-bit), or
+            <strong>Full</strong> to pick each operand's exact type and see
+            real C/C++ integer promotion and the "usual arithmetic
+            conversions" play out.
+          </p>
+
+          <div class="two-col-fields" id="mixed-simplified-controls" hidden style="margin-top: 0.9rem;">
+            <div class="field">
+              <label>Operand A</label>
+              <div class="toggle-switch-row">
+                <span class="switch-label active" id="simplified-a-label-signed">Signed</span>
+                <label class="toggle-switch" aria-label="Operand A signedness">
+                  <input type="checkbox" id="simplified-a-switch" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="switch-label" id="simplified-a-label-unsigned">Unsigned</span>
+              </div>
+            </div>
+            <div class="field">
+              <label>Operand B</label>
+              <div class="toggle-switch-row">
+                <span class="switch-label" id="simplified-b-label-signed">Signed</span>
+                <label class="toggle-switch" aria-label="Operand B signedness">
+                  <input type="checkbox" id="simplified-b-switch" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="switch-label active" id="simplified-b-label-unsigned">Unsigned</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="two-col-fields" id="mixed-full-controls" hidden style="margin-top: 0.9rem;">
+            <div class="field">
+              <label for="full-type-a">Operand A's declared type
+                <select id="full-type-a"></select>
+              </label>
+            </div>
+            <div class="field">
+              <label for="full-type-b">Operand B's declared type
+                <select id="full-type-b"></select>
+              </label>
+            </div>
+          </div>
+
+          <div id="mixed-result"></div>
+        </div>
+      </section>
+
+      <section class="formulas-section">
+        <h2>Notes</h2>
+        <p class="formula-note">
+          <span
+            ><strong>Wrapped</strong> — the unsigned result didn't fit the
+            type's width, so it was reduced modulo 2ⁿ. This is well-defined
+            behavior: arithmetic on unsigned types in C/C++ is always modulo
+            2ⁿ, never undefined.</span
+          >
+          <span
+            ><strong>Overflow*</strong> — the signed result didn't fit the
+            type's range. Signed integer overflow is undefined behavior per
+            the C/C++ standard; the value shown is the two's-complement
+            wraparound nearly every real compiler produces without overflow
+            sanitizers or <code>-ftrapv</code> — not a guarantee.</span
+          >
+          <span
+            ><strong>Undefined</strong> — division/modulo by zero, or a shift
+            count outside <code>[0, width)</code> for that type. No sane
+            numeric result exists; real code doing this typically
+            crashes or traps.</span
+          >
+          <span
+            ><strong>Right shift</strong> of a negative signed value is
+            implementation-defined by the standard; this calculator assumes
+            the sign-extending arithmetic shift used by GCC, Clang, and
+            MSVC. Left-shifting a value across a signed type's sign bit is
+            undefined behavior before C++20, and well-defined (wraps) from
+            C++20 onward.</span
+          >
+          <span
+            ><strong>Compare to C</strong> compares each type's own correctly
+            interpreted result value against C directly — it does not
+            simulate real C/C++'s "usual arithmetic conversions" between A
+            and B themselves. Use the <strong>Mixed Types</strong> tab to see
+            those conversions play out.</span
+          >
+          <span
+            ><strong>Mixed Types</strong> simulates what real C/C++ does when
+            A and B have different declared types. Anything narrower than
+            <code>int</code> (8/16-bit) is promoted to a plain signed
+            <code>int</code> before any arithmetic happens — so mixing
+            signed/unsigned <code>int8_t</code>/<code>int16_t</code> types
+            usually <em>doesn't</em> trigger the bug in real code. At
+            <code>int</code> rank and wider, mixing signedness converts one
+            operand to match the other via the "usual arithmetic
+            conversions": at equal rank the signed side converts to unsigned
+            first — add <code>(int32_t)-1 + (uint32_t)0</code> and you get
+            <code>4294967295</code>, not <code>-1</code>, because
+            <code>-1</code> is reinterpreted as <code>UINT32_MAX</code>
+            before the addition runs. When the signed type has strictly
+            greater rank it wins instead — <code>(int64_t)-1</code> combined
+            with a <code>uint32_t</code> stays signed and negative, because
+            <code>int64_t</code> can represent every <code>uint32_t</code>
+            value. Shift operators are exempt: they never merge A and B into
+            a common type — only A's promoted type sets the result, and B is
+            just a promoted count.</span
+          >
+        </p>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-09-01">1 September 2026</time>
+    </footer>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== CALCULATOR LOGIC ====================
+        var inputA = document.getElementById("input-operand-a");
+        var inputB = document.getElementById("input-operand-b");
+        var spinAUp = document.getElementById("spin-a-up");
+        var spinADn = document.getElementById("spin-a-dn");
+        var spinBUp = document.getElementById("spin-b-up");
+        var spinBDn = document.getElementById("spin-b-dn");
+        var swapBtn = document.getElementById("swap-btn");
+        var opGroupEl = document.getElementById("op-toggle-group");
+        var opBtns = Array.from(opGroupEl.querySelectorAll(".toggle-btn"));
+        var opDescEl = document.getElementById("op-desc");
+        var statusEl = document.getElementById("status");
+        var outputExact = document.getElementById("output-exact");
+        var resultRowsEl = document.getElementById("result-rows");
+        var widthFilterGroupEl = document.getElementById("width-filter-chips");
+        var widthFilterChips = Array.from(
+          widthFilterGroupEl.querySelectorAll(".filter-chip"),
+        );
+
+        var viewSwitchEl = document.getElementById("results-view-switch");
+        var viewSwitchBtns = Array.from(
+          viewSwitchEl.querySelectorAll(".view-switch-btn"),
+        );
+        var viewPanels = Array.from(document.querySelectorAll(".view-panel"));
+        var inputCompare = document.getElementById("input-compare-value");
+        var spinCUp = document.getElementById("spin-c-up");
+        var spinCDn = document.getElementById("spin-c-dn");
+        var cmpGroupEl = document.getElementById("cmp-toggle-group");
+        var cmpBtns = Array.from(cmpGroupEl.querySelectorAll(".toggle-btn"));
+        var cmpModeGroupEl = document.getElementById("cmp-mode-group");
+        var cmpModeBtns = Array.from(cmpModeGroupEl.querySelectorAll(".toggle-btn"));
+        var cmpModeDescEl = document.getElementById("cmp-mode-desc");
+        var cmpStatusEl = document.getElementById("cmp-status");
+        var compareRowsEl = document.getElementById("compare-rows");
+
+        var mixedModeGroupEl = document.getElementById("mixed-mode-group");
+        var mixedModeBtns = Array.from(mixedModeGroupEl.querySelectorAll(".toggle-btn"));
+        var mixedNoneNote = document.getElementById("mixed-none-note");
+        var mixedSimplifiedControls = document.getElementById("mixed-simplified-controls");
+        var mixedFullControls = document.getElementById("mixed-full-controls");
+        var mixedResultEl = document.getElementById("mixed-result");
+        var simplifiedASwitch = document.getElementById("simplified-a-switch");
+        var simplifiedBSwitch = document.getElementById("simplified-b-switch");
+        var simplifiedALabelSigned = document.getElementById("simplified-a-label-signed");
+        var simplifiedALabelUnsigned = document.getElementById("simplified-a-label-unsigned");
+        var simplifiedBLabelSigned = document.getElementById("simplified-b-label-signed");
+        var simplifiedBLabelUnsigned = document.getElementById("simplified-b-label-unsigned");
+        var fullTypeASelect = document.getElementById("full-type-a");
+        var fullTypeBSelect = document.getElementById("full-type-b");
+
+        var MAX_INPUT_LEN = 200; // guard against pathological paste
+        var MAX_EXACT_SHIFT = 4096n; // guard hero "<<" from exploding
+
+        var OPERATIONS = {
+          add: { symbol: "+", unary: false, desc: "Add: A + B" },
+          sub: { symbol: "-", unary: false, desc: "Subtract: A - B" },
+          mul: { symbol: "*", unary: false, desc: "Multiply: A * B" },
+          div: {
+            symbol: "/",
+            unary: false,
+            desc: "Divide, truncating toward zero: A / B",
+          },
+          mod: {
+            symbol: "%",
+            unary: false,
+            desc: "Modulo, sign follows dividend: A % B",
+          },
+          and: { symbol: "&", unary: false, desc: "Bitwise AND: A & B" },
+          or: { symbol: "|", unary: false, desc: "Bitwise OR: A | B" },
+          xor: { symbol: "^", unary: false, desc: "Bitwise XOR: A ^ B" },
+          shl: {
+            symbol: "<<",
+            unary: false,
+            desc: "Left shift: A << B (B is a raw shift count)",
+          },
+          shr: {
+            symbol: ">>",
+            unary: false,
+            desc: "Right shift: A >> B (B is a raw shift count)",
+          },
+          not: {
+            symbol: "~",
+            unary: true,
+            desc: "Bitwise NOT: ~A (Operand B ignored)",
+          },
+          neg: {
+            symbol: "-",
+            unary: true,
+            desc: "Negate: -A (Operand B ignored)",
+          },
+        };
+
+        var TYPES = [
+          { name: "int8_t", bits: 8, signed: true },
+          { name: "uint8_t", bits: 8, signed: false },
+          { name: "int16_t", bits: 16, signed: true },
+          { name: "uint16_t", bits: 16, signed: false },
+          { name: "int32_t", bits: 32, signed: true },
+          { name: "uint32_t", bits: 32, signed: false },
+          { name: "int64_t", bits: 64, signed: true },
+          { name: "uint64_t", bits: 64, signed: false },
+        ];
+
+        var COMPARATORS = {
+          lt: { symbol: "<", fn: function (a, b) { return a < b; } },
+          lte: { symbol: "<=", fn: function (a, b) { return a <= b; } },
+          gt: { symbol: ">", fn: function (a, b) { return a > b; } },
+          gte: { symbol: ">=", fn: function (a, b) { return a >= b; } },
+          eq: { symbol: "==", fn: function (a, b) { return a === b; } },
+          neq: { symbol: "!=", fn: function (a, b) { return a !== b; } },
+        };
+
+        var currentOp = "add";
+        var currentCmp = "lt";
+        var currentCmpMode = "logical"; // logical | authentic
+        // Which bit widths show in the Arithmetic table (all on by default).
+        var visibleWidths = { 8: true, 16: true, 32: true, 64: true };
+        var currentMixedMode = "none"; // none | simplified | full
+
+        // -------- parsing --------
+        function parseOperand(raw) {
+          var text = (raw || "").trim();
+          if (text === "" || text.length > MAX_INPUT_LEN) return null;
+          var neg = false;
+          if (text[0] === "-" || text[0] === "+") {
+            neg = text[0] === "-";
+            text = text.slice(1).trim();
+          }
+          if (text === "") return null;
+          var value;
+          if (/^0x[0-9a-f]+$/i.test(text)) {
+            value = BigInt(text);
+          } else if (/^0b[01]+$/i.test(text)) {
+            value = BigInt(text);
+          } else if (/^[0-9]+$/.test(text)) {
+            value = BigInt(text);
+          } else {
+            return null;
+          }
+          return neg ? -value : value;
+        }
+
+        // -------- two's-complement helpers --------
+        function intRange(bits, signed) {
+          if (signed) {
+            var max = (1n << BigInt(bits - 1)) - 1n;
+            var min = -(1n << BigInt(bits - 1));
+            return { min: min, max: max };
+          }
+          return { min: 0n, max: (1n << BigInt(bits)) - 1n };
+        }
+
+        function wrapToType(value, bits, signed) {
+          var modulus = 1n << BigInt(bits);
+          var unsignedVal = ((value % modulus) + modulus) % modulus;
+          if (!signed) {
+            return {
+              wrapped: unsignedVal,
+              unsigned: unsignedVal,
+              overflowed: value !== unsignedVal,
+            };
+          }
+          var cutoff = 1n << BigInt(bits - 1);
+          var signedVal =
+            unsignedVal >= cutoff ? unsignedVal - modulus : unsignedVal;
+          return {
+            wrapped: signedVal,
+            unsigned: unsignedVal,
+            overflowed: value !== signedVal,
+          };
+        }
+
+        function formatHex(unsignedVal, bits) {
+          var digits = bits / 4;
+          return "0x" + unsignedVal.toString(16).toUpperCase().padStart(digits, "0");
+        }
+
+        function formatBinary(unsignedVal, bits) {
+          var raw = unsignedVal.toString(2).padStart(bits, "0");
+          var groups = [];
+          for (var i = 0; i < raw.length; i += 4) {
+            groups.push(raw.slice(i, i + 4));
+          }
+          return groups.join(" ");
+        }
+
+        function formatRange(bits, signed) {
+          var r = intRange(bits, signed);
+          return r.min.toString() + " … " + r.max.toString();
+        }
+
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        }
+
+        // -------- exact (arbitrary precision, no width) result --------
+        function computeExact(rawA, rawB, opKey, opDef) {
+          switch (opKey) {
+            case "add":
+              return { value: rawA + rawB };
+            case "sub":
+              return { value: rawA - rawB };
+            case "mul":
+              return { value: rawA * rawB };
+            case "div":
+              if (rawB === 0n)
+                return { value: null, note: "Division by zero — undefined behavior." };
+              return { value: rawA / rawB };
+            case "mod":
+              if (rawB === 0n)
+                return { value: null, note: "Modulo by zero — undefined behavior." };
+              return { value: rawA % rawB };
+            case "and":
+              return { value: rawA & rawB };
+            case "or":
+              return { value: rawA | rawB };
+            case "xor":
+              return { value: rawA ^ rawB };
+            case "shl":
+              if (rawB < 0n)
+                return { value: null, note: "Negative shift count is undefined." };
+              if (rawB > MAX_EXACT_SHIFT)
+                return { value: null, note: "Shift amount too large to display exactly." };
+              return { value: rawA << rawB };
+            case "shr":
+              if (rawB < 0n)
+                return { value: null, note: "Negative shift count is undefined." };
+              return { value: rawA >> rawB };
+            case "not":
+              return { value: ~rawA };
+            case "neg":
+              return { value: -rawA };
+          }
+          return { value: null };
+        }
+
+        // -------- shared operation core --------
+        // Aval/Bval must already be wrapped into the type the operation runs
+        // in. rawShiftCount is the *unwrapped* count used for << / >> range
+        // checks (real C/C++ doesn't wrap a shift count into the left
+        // operand's type). Returns { raw } or { invalid: true, note }.
+        function applyOperationRaw(Aval, Bval, rawShiftCount, opKey, bits) {
+          switch (opKey) {
+            case "add":
+              return { raw: Aval + Bval };
+            case "sub":
+              return { raw: Aval - Bval };
+            case "mul":
+              return { raw: Aval * Bval };
+            case "div":
+              if (Bval === 0n) return { invalid: true, note: "Division by zero — undefined behavior." };
+              return { raw: Aval / Bval };
+            case "mod":
+              if (Bval === 0n) return { invalid: true, note: "Modulo by zero — undefined behavior." };
+              return { raw: Aval % Bval };
+            case "and":
+              return { raw: Aval & Bval };
+            case "or":
+              return { raw: Aval | Bval };
+            case "xor":
+              return { raw: Aval ^ Bval };
+            case "shl":
+            case "shr": {
+              var count = rawShiftCount;
+              if (count < 0n || count >= BigInt(bits)) {
+                return {
+                  invalid: true,
+                  note:
+                    "Shift amount must satisfy 0 ≤ B < " +
+                    bits +
+                    " for this type — undefined behavior otherwise.",
+                };
+              }
+              return { raw: opKey === "shl" ? Aval << count : Aval >> count };
+            }
+            case "not":
+              return { raw: ~Aval };
+            case "neg":
+              return { raw: -Aval };
+          }
+          return { invalid: true, note: "Unknown operation." };
+        }
+
+        // -------- per-type result --------
+        function computeTypeRow(type, rawA, rawB, opKey, opDef) {
+          var bits = type.bits;
+          var signed = type.signed;
+          var Aw = wrapToType(rawA, bits, signed);
+          var Bw = opDef.unary ? null : wrapToType(rawB, bits, signed);
+
+          var opResult = applyOperationRaw(
+            Aw.wrapped,
+            opDef.unary ? 0n : Bw.wrapped,
+            rawB, // unwrapped shift count for shl/shr
+            opKey,
+            bits,
+          );
+
+          if (opResult.invalid) {
+            return { status: "invalid", note: opResult.note, Aw: Aw, Bw: Bw };
+          }
+
+          var final = wrapToType(opResult.raw, bits, signed);
+          var status = "ok";
+          if (final.overflowed) {
+            status = signed ? "signed-overflow" : "wrap";
+          }
+          return {
+            status: status,
+            Aw: Aw,
+            Bw: Bw,
+            resultWrapped: final.wrapped,
+            resultUnsigned: final.unsigned,
+          };
+        }
+
+        // -------- mixed-type (usual arithmetic conversions) --------
+        var TYPES_BY_NAME = {};
+        TYPES.forEach(function (t) { TYPES_BY_NAME[t.name] = t; });
+
+        var PROMOTED_MIN_BITS = 32; // types narrower than `int` promote to it
+
+        // Integer promotion: anything narrower than int (8/16-bit) becomes a
+        // plain signed int; int/unsigned int and wider keep their own type.
+        function promoteType(type) {
+          if (type.bits < PROMOTED_MIN_BITS) {
+            return { bits: PROMOTED_MIN_BITS, signed: true };
+          }
+          return { bits: type.bits, signed: type.signed };
+        }
+
+        // The "usual arithmetic conversions": given two already-promoted
+        // types, find the common type both operands convert to.
+        function chooseCommonType(pa, pb) {
+          if (pa.signed === pb.signed) {
+            var bits = pa.bits >= pb.bits ? pa.bits : pb.bits;
+            if (pa.bits === pb.bits) {
+              return { bits: bits, signed: pa.signed, note: "Both operands are already the same type — no conversion needed." };
+            }
+            return {
+              bits: bits,
+              signed: pa.signed,
+              note: "Same signedness, different rank — both convert to the wider type (" + bits + "-bit).",
+            };
+          }
+          var signedSide = pa.signed ? pa : pb;
+          var unsignedSide = pa.signed ? pb : pa;
+          if (unsignedSide.bits >= signedSide.bits) {
+            return {
+              bits: unsignedSide.bits,
+              signed: false,
+              note:
+                "Different signedness; the unsigned operand's rank (" +
+                unsignedSide.bits +
+                "-bit) is ≥ the signed operand's rank (" +
+                signedSide.bits +
+                "-bit) — the signed operand converts to unsigned.",
+            };
+          }
+          // Signed side has strictly greater rank. For the clean 32/64-bit
+          // ladder used here, a wider signed type always represents every
+          // value of the narrower unsigned type, so the unsigned operand
+          // converts to signed instead (the "surprising" direction).
+          return {
+            bits: signedSide.bits,
+            signed: true,
+            note:
+              "Different signedness; the signed operand's rank (" +
+              signedSide.bits +
+              "-bit) is wider than the unsigned operand's (" +
+              unsignedSide.bits +
+              "-bit) and can represent all its values — the unsigned operand converts to signed.",
+          };
+        }
+
+        function typeLabel(bits, signed) {
+          return (signed ? "int" : "uint") + bits + "_t";
+        }
+
+        // Given two already-promoted types/values, resolve the common type
+        // via the usual arithmetic conversions and convert both into it.
+        function convertToCommonType(promotedTypeA, promotedValueA, promotedTypeB, promotedValueB) {
+          var chosen = chooseCommonType(promotedTypeA, promotedTypeB);
+          var commonType = { bits: chosen.bits, signed: chosen.signed };
+          return {
+            commonType: commonType,
+            convertedA: wrapToType(promotedValueA, commonType.bits, commonType.signed).wrapped,
+            convertedB: wrapToType(promotedValueB, commonType.bits, commonType.signed).wrapped,
+            note: chosen.note,
+          };
+        }
+
+        function computeMixedResult(rawA, rawB, opKey, opDef, declaredTypeA, declaredTypeB) {
+          var declaredA = wrapToType(rawA, declaredTypeA.bits, declaredTypeA.signed);
+          var declaredB = opDef.unary ? null : wrapToType(rawB, declaredTypeB.bits, declaredTypeB.signed);
+
+          var promotedTypeA = promoteType(declaredTypeA);
+          var promotedValueA = wrapToType(declaredA.wrapped, promotedTypeA.bits, promotedTypeA.signed).wrapped;
+
+          var promotedTypeB = opDef.unary ? null : promoteType(declaredTypeB);
+          var promotedValueB = opDef.unary
+            ? null
+            : wrapToType(declaredB.wrapped, promotedTypeB.bits, promotedTypeB.signed).wrapped;
+
+          var commonType, conversionNote, AvalForOp, BvalForOp, shiftCount;
+
+          if (opKey === "shl" || opKey === "shr") {
+            // Shifts don't apply the usual arithmetic conversions: only the
+            // left operand's promoted type determines the result type. The
+            // right operand is independently promoted and used purely as a
+            // count.
+            commonType = promotedTypeA;
+            AvalForOp = promotedValueA;
+            BvalForOp = promotedValueB;
+            shiftCount = promotedValueB;
+            conversionNote =
+              "Shift operations don't use the usual arithmetic conversions — only A's promoted type (" +
+              typeLabel(promotedTypeA.bits, promotedTypeA.signed) +
+              ") sets the result type. B's promoted value (" +
+              promotedValueB.toString() +
+              ") is used purely as the shift count.";
+          } else if (opDef.unary) {
+            commonType = promotedTypeA;
+            AvalForOp = promotedValueA;
+            BvalForOp = 0n;
+            shiftCount = 0n;
+            conversionNote = "Unary operation — only A promotes; B is unused.";
+          } else {
+            var conv = convertToCommonType(promotedTypeA, promotedValueA, promotedTypeB, promotedValueB);
+            commonType = conv.commonType;
+            conversionNote = conv.note;
+            AvalForOp = conv.convertedA;
+            BvalForOp = conv.convertedB;
+            shiftCount = 0n;
+          }
+
+          var opResult = applyOperationRaw(AvalForOp, BvalForOp, shiftCount, opKey, commonType.bits);
+
+          var result = null;
+          if (!opResult.invalid) {
+            var final = wrapToType(opResult.raw, commonType.bits, commonType.signed);
+            var status = "ok";
+            if (final.overflowed) status = commonType.signed ? "signed-overflow" : "wrap";
+            result = { status: status, resultWrapped: final.wrapped, resultUnsigned: final.unsigned };
+          }
+
+          // "Naive" comparison: what you'd get evaluating A and B's declared
+          // values as plain arbitrary-precision math, with no conversion at
+          // all. Only meaningful for the ops that actually combine both
+          // operands' values via the usual arithmetic conversions.
+          var surprise = null;
+          var comparable = !opDef.unary && opKey !== "shl" && opKey !== "shr";
+          if (comparable && result && result.status !== "invalid") {
+            var naive = computeExact(declaredA.wrapped, declaredB.wrapped, opKey, opDef);
+            if (naive.value !== null && naive.value !== result.resultWrapped) {
+              surprise = { naive: naive.value, actual: result.resultWrapped };
+            }
+          }
+
+          return {
+            declaredA: declaredA,
+            declaredB: declaredB,
+            promotedTypeA: promotedTypeA,
+            promotedValueA: promotedValueA,
+            promotedTypeB: promotedTypeB,
+            promotedValueB: promotedValueB,
+            commonType: commonType,
+            conversionNote: conversionNote,
+            opInvalidNote: opResult.invalid ? opResult.note : null,
+            result: result,
+            surprise: surprise,
+          };
+        }
+
+        // A bare, un-suffixed integer literal in C/C++ (like the "0" in
+        // `result < 0`) is the first type in int, long int, long long int
+        // (all signed) that can hold its value. This tool models "long" and
+        // "long long" the same way it treats everything 64-bit wide
+        // elsewhere: as int64_t. Returns null if C is too large even for
+        // that — real code would need an explicit suffix (e.g. ULL) to
+        // express it, which this tool doesn't attempt to infer.
+        function literalTypeForC(rawC) {
+          var r32 = intRange(32, true);
+          if (rawC >= r32.min && rawC <= r32.max) return TYPES_BY_NAME.int32_t;
+          var r64 = intRange(64, true);
+          if (rawC >= r64.min && rawC <= r64.max) return TYPES_BY_NAME.int64_t;
+          return null;
+        }
+
+        // Simulates `(rowType)rowResultValue <op> C` the way a real
+        // compiler evaluates it: C gets the type its literal would actually
+        // have, then both sides go through the same promotion + usual
+        // arithmetic conversions as the Mixed Types tab. Returns null when C
+        // is too large to model as a plain literal (see literalTypeForC).
+        function authenticCompareRow(rowType, rowResultValue, rawC) {
+          var cType = literalTypeForC(rawC);
+          if (cType === null) return null;
+
+          var promotedRow = promoteType(rowType);
+          var promotedRowValue = wrapToType(rowResultValue, promotedRow.bits, promotedRow.signed).wrapped;
+          var promotedC = promoteType(cType);
+          var promotedCValue = wrapToType(rawC, promotedC.bits, promotedC.signed).wrapped;
+
+          var conv = convertToCommonType(promotedRow, promotedRowValue, promotedC, promotedCValue);
+          return {
+            cType: cType,
+            commonType: conv.commonType,
+            convertedResult: conv.convertedA,
+            convertedC: conv.convertedB,
+            note: conv.note,
+          };
+        }
+
+        function statusPillHtml(status) {
+          if (status === "ok") return '<span class="ok-pill">OK</span>';
+          if (status === "wrap") return '<span class="wrap-pill">Wrapped</span>';
+          if (status === "signed-overflow")
+            return '<span class="warn-pill">Overflow*</span>';
+          return '<span class="bad-pill">Undefined</span>';
+        }
+
+        function operandCellHtml(rawValue, wrapInfo) {
+          var text = wrapInfo.wrapped.toString();
+          if (wrapInfo.overflowed) {
+            text += ' <span class="optional">← ' + escapeHtml(rawValue.toString()) + "</span>";
+          }
+          return text;
+        }
+
+        // -------- render --------
+        function setOperation(op) {
+          currentOp = op;
+          opBtns.forEach(function (btn) {
+            var active = btn.dataset.op === op;
+            btn.classList.toggle("selected", active);
+            btn.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          var opDef = OPERATIONS[op];
+          opDescEl.textContent = opDef.desc;
+          inputB.disabled = opDef.unary;
+          spinBUp.disabled = opDef.unary;
+          spinBDn.disabled = opDef.unary;
+          simplifiedBSwitch.disabled = opDef.unary;
+          fullTypeBSelect.disabled = opDef.unary;
+          update();
+        }
+
+        opBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (btn.dataset.op !== currentOp) setOperation(btn.dataset.op);
+          });
+        });
+
+        swapBtn.addEventListener("click", function () {
+          if (OPERATIONS[currentOp].unary) return;
+          var tmp = inputA.value;
+          inputA.value = inputB.value;
+          inputB.value = tmp;
+          update();
+        });
+
+        // -------- spinner controls (▲/▼ + arrow keys) --------
+        // Nudges the underlying integer value by ±1, ignoring whatever
+        // base (decimal/hex/binary) it was typed in — the field always
+        // reflects the nudged value as plain decimal afterward.
+        function nudgeOperand(inputEl, delta) {
+          if (inputEl.disabled) return;
+          var parsed = parseOperand(inputEl.value);
+          var next = (parsed === null ? 0n : parsed) + BigInt(delta);
+          inputEl.value = next.toString();
+          update();
+        }
+
+        function wireSpinner(inputEl, upBtn, dnBtn) {
+          inputEl.addEventListener("keydown", function (event) {
+            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              nudgeOperand(inputEl, 1);
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault();
+              nudgeOperand(inputEl, -1);
+            }
+          });
+          upBtn.addEventListener("click", function () { nudgeOperand(inputEl, 1); });
+          dnBtn.addEventListener("click", function () { nudgeOperand(inputEl, -1); });
+        }
+
+        wireSpinner(inputA, spinAUp, spinADn);
+        wireSpinner(inputB, spinBUp, spinBDn);
+        wireSpinner(inputCompare, spinCUp, spinCDn);
+
+        // -------- width filter chips (Arithmetic tab only) --------
+        widthFilterChips.forEach(function (chip) {
+          chip.addEventListener("click", function () {
+            var width = Number(chip.dataset.width);
+            visibleWidths[width] = !visibleWidths[width];
+            chip.classList.toggle("active", visibleWidths[width]);
+            update();
+          });
+        });
+
+        // -------- Mixed Types tab --------
+        TYPES.forEach(function (t) {
+          [fullTypeASelect, fullTypeBSelect].forEach(function (select) {
+            var opt = document.createElement("option");
+            opt.value = t.name;
+            opt.textContent = t.name;
+            select.appendChild(opt);
+          });
+        });
+        fullTypeASelect.value = "int32_t";
+        fullTypeBSelect.value = "uint32_t";
+
+        function setMixedMode(mode) {
+          currentMixedMode = mode;
+          mixedModeBtns.forEach(function (btn) {
+            var active = btn.dataset.mixedMode === mode;
+            btn.classList.toggle("selected", active);
+            btn.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          mixedNoneNote.hidden = mode !== "none";
+          mixedSimplifiedControls.hidden = mode !== "simplified";
+          mixedFullControls.hidden = mode !== "full";
+          update();
+        }
+
+        mixedModeBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (btn.dataset.mixedMode !== currentMixedMode) setMixedMode(btn.dataset.mixedMode);
+          });
+        });
+
+        function updateSimplifiedLabels() {
+          var aSigned = !simplifiedASwitch.checked;
+          var bSigned = !simplifiedBSwitch.checked;
+          simplifiedALabelSigned.classList.toggle("active", aSigned);
+          simplifiedALabelUnsigned.classList.toggle("active", !aSigned);
+          simplifiedBLabelSigned.classList.toggle("active", bSigned);
+          simplifiedBLabelUnsigned.classList.toggle("active", !bSigned);
+        }
+
+        simplifiedASwitch.addEventListener("change", function () {
+          updateSimplifiedLabels();
+          update();
+        });
+        simplifiedBSwitch.addEventListener("change", function () {
+          updateSimplifiedLabels();
+          update();
+        });
+        fullTypeASelect.addEventListener("change", update);
+        fullTypeBSelect.addEventListener("change", update);
+
+        function mixedOperandCellText(rawValue, wrapInfo) {
+          var text = wrapInfo.wrapped.toString();
+          if (wrapInfo.overflowed) {
+            text += " (entered " + escapeHtml(rawValue.toString()) + ")";
+          }
+          return text;
+        }
+
+        function renderMixedResult(rawA, rawB, opDef) {
+          if (currentMixedMode === "none") {
+            mixedResultEl.innerHTML = "";
+            return;
+          }
+
+          var declaredTypeA, declaredTypeB;
+          if (currentMixedMode === "simplified") {
+            declaredTypeA = simplifiedASwitch.checked ? TYPES_BY_NAME.uint32_t : TYPES_BY_NAME.int32_t;
+            declaredTypeB = simplifiedBSwitch.checked ? TYPES_BY_NAME.uint32_t : TYPES_BY_NAME.int32_t;
+          } else {
+            declaredTypeA = TYPES_BY_NAME[fullTypeASelect.value];
+            declaredTypeB = TYPES_BY_NAME[fullTypeBSelect.value];
+          }
+
+          var mixed = computeMixedResult(rawA, rawB, currentOp, opDef, declaredTypeA, declaredTypeB);
+
+          var aStepHtml =
+            "<h4>A — Declared &amp; Promoted</h4>" +
+            "<p>Declared <code>" + declaredTypeA.name + "</code>: <code>" +
+            mixedOperandCellText(rawA, mixed.declaredA) + "</code></p>" +
+            "<p>Promotes to <code>" + typeLabel(mixed.promotedTypeA.bits, mixed.promotedTypeA.signed) +
+            "</code>: <code>" + mixed.promotedValueA.toString() + "</code></p>";
+
+          var bStepHtml;
+          if (opDef.unary) {
+            bStepHtml = "<h4>B</h4><p><span class=\"optional\">Unused for this operation.</span></p>";
+          } else {
+            bStepHtml =
+              "<h4>B — Declared &amp; Promoted</h4>" +
+              "<p>Declared <code>" + declaredTypeB.name + "</code>: <code>" +
+              mixedOperandCellText(rawB, mixed.declaredB) + "</code></p>" +
+              "<p>Promotes to <code>" + typeLabel(mixed.promotedTypeB.bits, mixed.promotedTypeB.signed) +
+              "</code>: <code>" + mixed.promotedValueB.toString() + "</code></p>";
+          }
+
+          var conversionHtml =
+            '<div class="mixed-step">' +
+            "<h4>Usual Arithmetic Conversion</h4>" +
+            "<p>" + escapeHtml(mixed.conversionNote) + "</p>" +
+            "<p>Operating type: <code>" + typeLabel(mixed.commonType.bits, mixed.commonType.signed) + "</code></p>" +
+            "</div>";
+
+          var resultHtml;
+          if (mixed.opInvalidNote) {
+            resultHtml =
+              '<div class="mixed-step">' +
+              "<h4>Result</h4>" +
+              "<p>" + statusPillHtml("invalid") + "</p>" +
+              "<p>" + escapeHtml(mixed.opInvalidNote) + "</p>" +
+              "</div>";
+          } else {
+            var r = mixed.result;
+            resultHtml =
+              '<div class="mixed-step">' +
+              "<h4>Result</h4>" +
+              "<p>" + statusPillHtml(r.status) + "</p>" +
+              "<p>dec: <code>" + r.resultWrapped.toString() + "</code> &nbsp; hex: <code>" +
+              formatHex(r.resultUnsigned, mixed.commonType.bits) + "</code></p>" +
+              "<p>bin: <code>" + formatBinary(r.resultUnsigned, mixed.commonType.bits) + "</code></p>" +
+              "</div>";
+          }
+
+          var calloutHtml = "";
+          if (mixed.surprise) {
+            calloutHtml =
+              '<div class="mixed-callout">' +
+              "<strong>⚠ Silent conversion changed the outcome.</strong>" +
+              "<p>Treating A and B as plain arbitrary-precision numbers, you'd expect <code>" +
+              mixed.surprise.naive.toString() +
+              "</code>. Because of the implicit conversion above, C/C++ actually computes <code>" +
+              mixed.surprise.actual.toString() +
+              "</code>.</p>" +
+              "</div>";
+          }
+
+          mixedResultEl.innerHTML =
+            '<div class="mixed-steps">' +
+            '<div class="two-col-fields" style="margin-bottom: 0;">' +
+            '<div class="mixed-step">' + aStepHtml + "</div>" +
+            '<div class="mixed-step">' + bStepHtml + "</div>" +
+            "</div>" +
+            conversionHtml +
+            resultHtml +
+            calloutHtml +
+            "</div>";
+        }
+
+        // -------- results view switch (Arithmetic / Compare to C) --------
+        function setView(mode) {
+          viewSwitchBtns.forEach(function (btn) {
+            btn.classList.toggle("active", btn.dataset.mode === mode);
+          });
+          viewPanels.forEach(function (panel) {
+            panel.hidden = panel.dataset.mode !== mode;
+          });
+        }
+
+        viewSwitchBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            setView(btn.dataset.mode);
+          });
+        });
+
+        // -------- comparator picker --------
+        function setComparator(cmp) {
+          currentCmp = cmp;
+          cmpBtns.forEach(function (btn) {
+            var active = btn.dataset.cmp === cmp;
+            btn.classList.toggle("selected", active);
+            btn.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          update();
+        }
+
+        cmpBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (btn.dataset.cmp !== currentCmp) setComparator(btn.dataset.cmp);
+          });
+        });
+
+        function setCmpMode(mode) {
+          currentCmpMode = mode;
+          cmpModeBtns.forEach(function (btn) {
+            var active = btn.dataset.cmpMode === mode;
+            btn.classList.toggle("selected", active);
+            btn.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          cmpModeDescEl.textContent =
+            mode === "logical"
+              ? "Logical: compares each type's mathematically correct value directly against C — usually what you actually want to check."
+              : "Authentic: simulates the real C/C++ comparison — C is typed as a plain int literal (or a wider one if it doesn't fit), and both sides go through real integer promotion and the usual arithmetic conversions before comparing.";
+          update();
+        }
+
+        cmpModeBtns.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (btn.dataset.cmpMode !== currentCmpMode) setCmpMode(btn.dataset.cmpMode);
+          });
+        });
+
+        function update() {
+          var opDef = OPERATIONS[currentOp];
+          var rawA = parseOperand(inputA.value);
+          var rawB = opDef.unary ? 0n : parseOperand(inputB.value);
+
+          statusEl.textContent = "";
+          statusEl.className = "status";
+
+          if (rawA === null) {
+            statusEl.textContent =
+              "Operand A is not a valid integer. Use decimal (-17), 0x hex (0xFF), or 0b binary (0b1010).";
+            statusEl.className = "status error";
+            outputExact.textContent = "—";
+            resultRowsEl.innerHTML = "";
+            compareRowsEl.innerHTML = "";
+            mixedResultEl.innerHTML = "";
+            return;
+          }
+          if (!opDef.unary && rawB === null) {
+            statusEl.textContent =
+              "Operand B is not a valid integer. Use decimal (-17), 0x hex (0xFF), or 0b binary (0b1010).";
+            statusEl.className = "status error";
+            outputExact.textContent = "—";
+            resultRowsEl.innerHTML = "";
+            compareRowsEl.innerHTML = "";
+            mixedResultEl.innerHTML = "";
+            return;
+          }
+
+          // Exact / arbitrary-precision hero result
+          var exact = computeExact(rawA, rawB, currentOp, opDef);
+          if (exact.value === null) {
+            outputExact.textContent = "Undefined — " + exact.note;
+            outputExact.classList.add("invalid");
+          } else {
+            outputExact.textContent = exact.value.toString();
+            outputExact.classList.remove("invalid");
+          }
+
+          // Compute every type's row once; the arithmetic table and the
+          // compare-to-C table are both built from the same results.
+          var typeRows = TYPES.map(function (type) {
+            return { type: type, row: computeTypeRow(type, rawA, rawB, currentOp, opDef) };
+          });
+
+          // Arithmetic table — only widths toggled on in the filter chips
+          var visibleTypeRows = typeRows.filter(function (entry) {
+            return visibleWidths[entry.type.bits];
+          });
+
+          var rowsHtml;
+          if (visibleTypeRows.length === 0) {
+            rowsHtml =
+              '<tr><td colspan="7"><span class="row-note" style="margin-top: 0;">' +
+              "All widths are hidden — enable at least one chip above." +
+              "</span></td></tr>";
+          } else {
+            rowsHtml = visibleTypeRows
+              .map(function (entry) {
+                var type = entry.type;
+                var row = entry.row;
+
+                var typeCell =
+                  '<span class="type-name">' +
+                  type.name +
+                  '</span><span class="type-range">' +
+                  formatRange(type.bits, type.signed) +
+                  "</span>";
+
+                var aCell = operandCellHtml(rawA, row.Aw);
+
+                var bCell;
+                if (opDef.unary) {
+                  bCell = '<span class="optional">—</span>';
+                } else if (currentOp === "shl" || currentOp === "shr") {
+                  bCell = rawB.toString() + ' <span class="optional">(shift count)</span>';
+                } else {
+                  bCell = operandCellHtml(rawB, row.Bw);
+                }
+
+                var decCell, hexCell, binCell, statusCell;
+                if (row.status === "invalid") {
+                  decCell = "—";
+                  hexCell = "—";
+                  binCell = "—";
+                  statusCell =
+                    statusPillHtml("invalid") +
+                    '<span class="row-note">' +
+                    escapeHtml(row.note) +
+                    "</span>";
+                } else {
+                  decCell = "<code>" + row.resultWrapped.toString() + "</code>";
+                  hexCell = "<code>" + formatHex(row.resultUnsigned, type.bits) + "</code>";
+                  binCell = "<code>" + formatBinary(row.resultUnsigned, type.bits) + "</code>";
+                  statusCell = statusPillHtml(row.status);
+                }
+
+                return (
+                  "<tr>" +
+                  "<td>" + typeCell + "</td>" +
+                  "<td>" + statusCell + "</td>" +
+                  "<td>" + aCell + "</td>" +
+                  "<td>" + bCell + "</td>" +
+                  "<td>" + decCell + "</td>" +
+                  "<td>" + hexCell + "</td>" +
+                  "<td>" + binCell + "</td>" +
+                  "</tr>"
+                );
+              })
+              .join("");
+          }
+
+          resultRowsEl.innerHTML = rowsHtml;
+
+          // Compare-to-C table — reuses each type's already-computed,
+          // correctly signed/unsigned-interpreted result value.
+          var cmpDef = COMPARATORS[currentCmp];
+          var rawC = parseOperand(inputCompare.value);
+          var authentic = currentCmpMode === "authentic";
+          var cLiteralType = rawC === null ? null : literalTypeForC(rawC);
+
+          cmpStatusEl.textContent = "";
+          cmpStatusEl.className = "status";
+          if (rawC === null) {
+            cmpStatusEl.textContent =
+              "Comparison value C is not a valid integer. Use decimal (-17), 0x hex (0xFF), or 0b binary (0b1010).";
+            cmpStatusEl.className = "status error";
+          } else if (authentic && cLiteralType === null) {
+            cmpStatusEl.textContent =
+              "C is too large to model as a plain int/long literal (would need an explicit unsigned suffix in real code) — showing N/A below.";
+            cmpStatusEl.className = "status error";
+          } else if (authentic) {
+            cmpStatusEl.textContent =
+              "Comparing each type's Result " + cmpDef.symbol + " C, as real C would evaluate it — C is typed as " +
+              cLiteralType.name + ".";
+          } else {
+            cmpStatusEl.textContent = "Comparing each type's Result " + cmpDef.symbol + " C.";
+          }
+
+          var compareRowsHtml = typeRows
+            .map(function (entry) {
+              var type = entry.type;
+              var row = entry.row;
+              var typeCell = '<span class="type-name">' + type.name + "</span>";
+
+              var resultCell, cmpCell, outcomeCell;
+              if (row.status === "invalid") {
+                resultCell = "—";
+                cmpCell = "—";
+                outcomeCell = '<span class="neutral-pill">N/A</span>';
+              } else if (rawC === null || (authentic && cLiteralType === null)) {
+                resultCell = "<code>" + row.resultWrapped.toString() + "</code>";
+                cmpCell = "—";
+                outcomeCell = '<span class="neutral-pill">N/A</span>';
+              } else if (authentic) {
+                var sim = authenticCompareRow(type, row.resultWrapped, rawC);
+                var outcomeA = cmpDef.fn(sim.convertedResult, sim.convertedC);
+                resultCell = "<code>" + row.resultWrapped.toString() + "</code>";
+                var reinterpreted = sim.convertedResult !== row.resultWrapped || sim.convertedC !== rawC;
+                cmpCell =
+                  "<code>" + sim.convertedResult.toString() + " " + cmpDef.symbol + " " + sim.convertedC.toString() + "</code>" +
+                  (reinterpreted
+                    ? ' <span class="optional">(both as ' + typeLabel(sim.commonType.bits, sim.commonType.signed) + ")</span>"
+                    : "");
+                outcomeCell = outcomeA
+                  ? '<span class="ok-pill">True</span>'
+                  : '<span class="neutral-pill">False</span>';
+              } else {
+                var outcome = cmpDef.fn(row.resultWrapped, rawC);
+                resultCell = "<code>" + row.resultWrapped.toString() + "</code>";
+                cmpCell =
+                  "<code>" +
+                  row.resultWrapped.toString() +
+                  " " +
+                  cmpDef.symbol +
+                  " " +
+                  rawC.toString() +
+                  "</code>";
+                outcomeCell = outcome
+                  ? '<span class="ok-pill">True</span>'
+                  : '<span class="neutral-pill">False</span>';
+              }
+
+              return (
+                "<tr>" +
+                "<td>" + typeCell + "</td>" +
+                "<td>" + resultCell + "</td>" +
+                "<td>" + cmpCell + "</td>" +
+                "<td>" + outcomeCell + "</td>" +
+                "</tr>"
+              );
+            })
+            .join("");
+
+          compareRowsEl.innerHTML = compareRowsHtml;
+
+          // Mixed Types tab
+          renderMixedResult(rawA, rawB, opDef);
+        }
+
+        inputA.addEventListener("input", update);
+        inputB.addEventListener("input", update);
+        inputCompare.addEventListener("input", update);
+
+        // ==================== INITIALIZATION ====================
+        applyThemeMode(getStoredThemeMode(), false);
+
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) hostedNote.hidden = true;
+        }
+
+        setOperation("add");
+        setView("arithmetic");
+        setComparator("gt");
+        setCmpMode("logical");
+        updateSimplifiedLabels();
+        setMixedMode("none");
+      })();
+    </script>
+  </body>
+</html>
