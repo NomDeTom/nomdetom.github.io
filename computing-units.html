@@ -762,7 +762,7 @@
 
         var CONVERSION_REFERENCES = {
           bases:
-            "<span><strong>Number Bases:</strong> Convert between binary (base 2), octal (base 8), decimal (base 10), and hexadecimal (base 16). Enter in any base, automatically formatted with prefixes on blur.</span>",
+            "<span><strong>Number Bases:</strong> Convert between binary (base 2), octal (base 8), decimal (base 10), and hexadecimal (base 16). Enter in any base, automatically formatted with prefixes on blur.</span><span><strong>Base64:</strong> Encodes binary/text data as ASCII using 64 characters (A–Z, a–z, 0–9, + and /), padded with =. URL-safe Base64 swaps + for - and / for _ and drops padding.</span>",
           storage:
             "<span><strong>Storage Units (Decimal):</strong> 1 KB = 1000 B, 1 MB = 1000 KB, 1 GB = 1000 MB, 1 TB = 1000 GB, 1 PB = 1000 TB</span><span><strong>Storage Units (Binary):</strong> 1 KiB = 1024 B, 1 MiB = 1024 KiB, 1 GiB = 1024 MiB, 1 TiB = 1024 GiB, 1 PiB = 1024 TiB</span>",
           bandwidth:
@@ -874,12 +874,68 @@
             '<div class="field"><label>Decimal<div class="spin-wrap"><input class="input-base" data-base="10" data-id="base10" type="text" placeholder="e.g. 255" /><div class="spin-btns"><button type="button" class="spin-up" data-jog="1" data-for="base10">▲</button><button type="button" class="spin-dn" data-jog="-1" data-for="base10">▼</button></div></div></label></div>' +
             '<div class="field"><label>Hexadecimal (0x...)<div class="spin-wrap"><input class="input-base" data-base="16" data-id="base16" type="text" placeholder="e.g. FF" /><div class="spin-btns"><button type="button" class="spin-up" data-jog="1" data-for="base16">▲</button><button type="button" class="spin-dn" data-jog="-1" data-for="base16">▼</button></div></div></label></div>' +
             '<div class="status">Enter a value in any base to convert.</div>' +
+            "</section>" +
+            '<section><div class="section-header"><h2>Base64</h2><button type="button" class="chip urlsafe-chip">URL-safe: Off</button><button type="button" class="chip reset-chip-b64">Reset</button></div>' +
+            '<div class="field"><label>Plain text<textarea class="markdown-io input-base64-text" spellcheck="false" placeholder="Type text to encode..."></textarea></label></div>' +
+            '<div class="field"><label>Base64<textarea class="markdown-io input-base64-encoded" spellcheck="false" placeholder="Paste Base64 to decode..."></textarea></label></div>' +
+            '<div class="status status-b64">Enter text or Base64 to convert.</div>' +
             "</section>";
 
           var status = card.querySelector(".status");
           var resetChip = card.querySelector(".reset-chip");
           var baseInputs = card.querySelectorAll(".input-base");
           var activeInput = null;
+
+          var b64TextInput = card.querySelector(".input-base64-text");
+          var b64EncodedInput = card.querySelector(".input-base64-encoded");
+          var b64UrlSafeChip = card.querySelector(".urlsafe-chip");
+          var b64ResetChip = card.querySelector(".reset-chip-b64");
+          var b64Status = card.querySelector(".status-b64");
+          var b64UrlSafe = false;
+
+          b64TextInput.addEventListener("input", function () {
+            var value = b64TextInput.value;
+            if (value === "") {
+              b64EncodedInput.value = "";
+              b64Status.textContent = "Enter text or Base64 to convert.";
+              return;
+            }
+            var encoded = utf8ToBase64(value, b64UrlSafe);
+            b64EncodedInput.value = encoded == null ? "" : encoded;
+            b64Status.textContent =
+              encoded == null
+                ? "Unable to encode this text."
+                : "Encoded to Base64.";
+          });
+
+          b64EncodedInput.addEventListener("input", function () {
+            var value = b64EncodedInput.value;
+            if (value.trim() === "") {
+              b64TextInput.value = "";
+              b64Status.textContent = "Enter text or Base64 to convert.";
+              return;
+            }
+            var decoded = base64ToUtf8(value);
+            b64TextInput.value = decoded == null ? "" : decoded;
+            b64Status.textContent =
+              decoded == null ? "Invalid Base64 input." : "Decoded from Base64.";
+          });
+
+          b64UrlSafeChip.addEventListener("click", function () {
+            b64UrlSafe = !b64UrlSafe;
+            b64UrlSafeChip.textContent =
+              "URL-safe: " + (b64UrlSafe ? "On" : "Off");
+            if (b64TextInput.value !== "") {
+              var encoded = utf8ToBase64(b64TextInput.value, b64UrlSafe);
+              b64EncodedInput.value = encoded == null ? "" : encoded;
+            }
+          });
+
+          b64ResetChip.addEventListener("click", function () {
+            b64TextInput.value = "";
+            b64EncodedInput.value = "";
+            b64Status.textContent = "Enter text or Base64 to convert.";
+          });
 
           function parseInputValue(input) {
             var value = input.value.trim();
@@ -1440,6 +1496,42 @@
             calc(null);
           });
           mountSingleConverterCard(card);
+        }
+
+        function utf8ToBase64(text, urlSafe) {
+          try {
+            var bytes = new TextEncoder().encode(text);
+            var binary = "";
+            for (var i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            var b64 = btoa(binary);
+            if (urlSafe) {
+              b64 = b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+            }
+            return b64;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function base64ToUtf8(value) {
+          try {
+            var normalized = value.replace(/\s+/g, "");
+            if (!normalized) return null;
+            normalized = normalized.replace(/-/g, "+").replace(/_/g, "/");
+            while (normalized.length % 4 !== 0) {
+              normalized += "=";
+            }
+            var binary = atob(normalized);
+            var bytes = new Uint8Array(binary.length);
+            for (var i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+            return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+          } catch (e) {
+            return null;
+          }
         }
 
         pickBasesConverterButton.addEventListener("click", function () {
