@@ -240,7 +240,7 @@
     <main>
       <header>
         <h1>ASCII and Unicode Converter</h1>
-        <p class="subtitle">Convert between plain text, code points, UTF-8 bytes, UTF-16 units, and escaped representations.</p>
+        <p class="subtitle">Convert between plain text, code points, UTF-8 bytes, UTF-16 units, escaped representations, and Base64.</p>
         <div class="top-actions">
           <a class="action-btn" href="index.html">Back to index</a>
           <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
@@ -289,6 +289,12 @@
             <label for="input-escapes">Escaped form</label>
             <textarea id="input-escapes" class="mono" spellcheck="false">A</textarea>
             <div class="hint">Supports mixed text and escapes: \xNN, \uXXXX, \u{XXXXX}, \n, \t, \\</div>
+          </div>
+
+          <div class="field">
+            <label for="input-base64">Base64 (UTF-8)</label>
+            <textarea id="input-base64" class="mono" spellcheck="false">QQ==</textarea>
+            <div class="hint">Base64 of the UTF-8 bytes. Accepts URL-safe (-_) and missing padding.</div>
           </div>
         </div>
         <p id="status" class="status">Live conversion ready.</p>
@@ -341,6 +347,7 @@
         var utf8El = document.getElementById("input-utf8");
         var utf16El = document.getElementById("input-utf16");
         var escapesEl = document.getElementById("input-escapes");
+        var base64El = document.getElementById("input-base64");
         var statusEl = document.getElementById("status");
         var inspectorRowsEl = document.getElementById("inspector-rows");
 
@@ -357,7 +364,8 @@
           codepoints: codePointsEl,
           utf8: utf8El,
           utf16: utf16El,
-          escapes: escapesEl
+          escapes: escapesEl,
+          base64: base64El
         };
 
         function capitalizeWord(value) {
@@ -446,6 +454,29 @@
         function utf8BytesToText(bytes) {
           if (!dec) throw new Error("TextDecoder is not available in this browser.");
           return dec.decode(Uint8Array.from(bytes));
+        }
+
+        function bytesToBase64(bytes) {
+          var binary = "";
+          for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          return btoa(binary);
+        }
+
+        function base64ToBytes(raw) {
+          var normalized = String(raw || "").trim().replace(/\s+/g, "");
+          if (!normalized) return [];
+          normalized = normalized.replace(/-/g, "+").replace(/_/g, "/");
+          while (normalized.length % 4 !== 0) normalized += "=";
+          if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) throw new Error("Invalid Base64 input.");
+          var binary;
+          try {
+            binary = atob(normalized);
+          } catch (e) {
+            throw new Error("Invalid Base64 input.");
+          }
+          var bytes = new Array(binary.length);
+          for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          return bytes;
         }
 
         function textToUtf16Units(str) {
@@ -623,12 +654,17 @@
           return tokens.join(" ");
         }
 
+        function formatBase64FromText(text) {
+          return bytesToBase64(textToUtf8Bytes(text));
+        }
+
         function textFromSource(sourceKey, rawValue) {
           if (sourceKey === "text") return String(rawValue || "");
           if (sourceKey === "codepoints") return codePointsToText(parseCodePointStream(rawValue));
           if (sourceKey === "utf8") return utf8BytesToText(parseHexByteStream(rawValue));
           if (sourceKey === "utf16") return utf16UnitsToText(parseHexWordStream(rawValue));
           if (sourceKey === "escapes") return parseEscapes(rawValue);
+          if (sourceKey === "base64") return utf8BytesToText(base64ToBytes(rawValue));
           throw new Error("Unknown source key.");
         }
 
@@ -638,6 +674,7 @@
           if (sourceKey !== "utf8") utf8El.value = formatUtf8FromText(text);
           if (sourceKey !== "utf16") utf16El.value = formatUtf16FromText(text);
           if (sourceKey !== "escapes") escapesEl.value = toEscapes(text);
+          if (sourceKey !== "base64") base64El.value = formatBase64FromText(text);
           renderInspector(text);
         }
 
@@ -646,6 +683,7 @@
           else if (sourceKey === "utf8") utf8El.value = formatUtf8FromText(text);
           else if (sourceKey === "utf16") utf16El.value = formatUtf16FromText(text);
           else if (sourceKey === "escapes") escapesEl.value = toEscapes(text);
+          else if (sourceKey === "base64") base64El.value = formatBase64FromText(text);
         }
 
         function glyphForCodePoint(cp) {
@@ -775,6 +813,7 @@
         bindSource("utf8");
         bindSource("utf16");
         bindSource("escapes");
+        bindSource("base64");
 
         applyThemeMode(getStoredThemeMode(), false);
         handleSourceInput(activeSource);
