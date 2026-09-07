@@ -910,7 +910,7 @@
 
         var CONVERSION_REFERENCES = {
           generic:
-            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. Use import/export below to work with the active table.</span>",
+            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. A fourth <code>Offset to base unit</code> column is optional and defaults to 0; a unit converts as <code>value \u00d7 factor + offset</code>, which is what lets Celsius and Fahrenheit sit in the same table as Kelvin. Tables with an offset accept negative values. Use import/export below to work with the active table.</span>",
           mixed:
             "<span><strong>Mixed Units:</strong> Carries one measure across the units of a scale, so 9.5 st reads as 9 st 7 lb 0 oz. A scale is a set of units that chain by remainder — stone, pounds and ounces are one weight at 14 lb to the stone and 16 oz to the pound, not three interchangeable units. Scales are defined in <code>MIXED_SCALES_CATALOG_MARKDOWN</code> in <code>unit-conversion-custom-units.js</code>, where each <code>##</code> heading names a unit type from the conversion catalog and each row lists the units it chains, largest first. Decimal systems have no scales, because 3.7 t is written 3.7 t and never 3 t 700 kg; use Unit Conversion for those. Every unit except the smallest takes a whole number and the smallest absorbs the remainder. Typing is left alone until you leave a field, so you can enter 133 in the lb box and it settles into stone and pounds on blur. <code>Zeros</code> switches the combined reading between <code>9 st 7 lb</code> and <code>9 st 7 lb 0 oz</code>; the individual fields always show every place.</span>",
           formulas:
@@ -1004,6 +1004,7 @@
               name: rows[i].name,
               factor: rows[i].factor,
               units: rows[i].units,
+              offset: rows[i].offset || 0,
             });
           }
           return clone;
@@ -1311,20 +1312,31 @@
           var nameHeader = "Name";
           var factorHeader = "Factor to base unit";
           var unitsHeader = "Units";
+          var offsetHeader = "Offset to base unit";
           var nameWidth = nameHeader.length;
           var factorWidth = factorHeader.length;
           var unitsWidth = unitsHeader.length;
+          var offsetWidth = offsetHeader.length;
           var factorTexts = [];
+          var offsetTexts = [];
+          // Pure-ratio tables stay three columns wide, as they were written.
+          var hasOffsets = false;
 
           for (var i = 0; i < rows.length; i++) {
             var nameText = String(rows[i].name || "");
             var factorText = formatGenericFactor(rows[i].factor);
             var unitsText = String(rows[i].units || "");
+            var offsetValue = Number(rows[i].offset) || 0;
+            var offsetText = formatGenericFactor(offsetValue);
+            if (offsetValue !== 0) hasOffsets = true;
             factorTexts.push(factorText);
+            offsetTexts.push(offsetText);
             if (nameText.length > nameWidth) nameWidth = nameText.length;
             if (factorText.length > factorWidth)
               factorWidth = factorText.length;
             if (unitsText.length > unitsWidth) unitsWidth = unitsText.length;
+            if (offsetText.length > offsetWidth)
+              offsetWidth = offsetText.length;
           }
 
           var lines = [
@@ -1334,20 +1346,27 @@
               factorHeader.padEnd(factorWidth, " ") +
               " | " +
               unitsHeader.padEnd(unitsWidth, " ") +
-              " |",
+              " |" +
+              (hasOffsets
+                ? " " + offsetHeader.padEnd(offsetWidth, " ") + " |"
+                : ""),
             "| " +
               "-".repeat(nameWidth) +
               " | " +
               "-".repeat(Math.max(0, factorWidth - 1)) +
               ": | " +
               "-".repeat(unitsWidth) +
-              ": |",
+              ": |" +
+              (hasOffsets
+                ? " " + "-".repeat(Math.max(0, offsetWidth - 1)) + ": |"
+                : ""),
           ];
 
           for (var j = 0; j < rows.length; j++) {
             var rowName = String(rows[j].name || "");
             var rowFactor = factorTexts[j] || "";
             var rowUnits = String(rows[j].units || "");
+            var rowOffset = offsetTexts[j] || "0";
             lines.push(
               "| " +
                 rowName.padEnd(nameWidth, " ") +
@@ -1355,7 +1374,10 @@
                 rowFactor.padStart(factorWidth, " ") +
                 " | " +
                 rowUnits.padEnd(unitsWidth, " ") +
-                " |",
+                " |" +
+                (hasOffsets
+                  ? " " + rowOffset.padStart(offsetWidth, " ") + " |"
+                  : ""),
             );
           }
 
@@ -1463,6 +1485,28 @@
           return parsed;
         }
 
+        // Offsets may be negative or zero, both of which the factor parser
+        // rejects, so the sign is stripped and reapplied around it. A blank
+        // cell means no offset, which is the pure-ratio case.
+        function parseLocalizedOffsetForMarkdown(value) {
+          var raw = String(value == null ? "" : value).trim();
+          if (!raw) return 0;
+
+          var sign = 1;
+          if (raw.charAt(0) === "-") {
+            sign = -1;
+            raw = raw.slice(1).trim();
+          } else if (raw.charAt(0) === "+") {
+            raw = raw.slice(1).trim();
+          }
+          if (!raw) return null;
+          if (/^0+(?:[.,]0+)?$/.test(raw)) return 0;
+
+          var magnitude = parseLocalizedNumberForMarkdown(raw);
+          if (magnitude == null) return null;
+          return sign * magnitude;
+        }
+
         function markdownToGenericRows(markdown) {
           var text = String(markdown || "");
           var lines = text.split(/\r?\n/);
@@ -1479,13 +1523,21 @@
             var name = cells[0].trim();
             var factor = parseLocalizedNumberForMarkdown(cells[1]);
             var units = cells.length >= 3 ? cells[2].trim() : "";
+            var offset =
+              cells.length >= 4 ? parseLocalizedOffsetForMarkdown(cells[3]) : 0;
+            if (offset == null) offset = 0;
             if (!name || factor == null) continue;
 
             // Skip likely header rows.
             var lowerName = name.toLowerCase();
             if (lowerName === "unit" || lowerName === "name") continue;
 
-            rows.push({ name: name, factor: factor, units: units });
+            rows.push({
+              name: name,
+              factor: factor,
+              units: units,
+              offset: offset,
+            });
           }
 
           return rows;
@@ -1495,6 +1547,12 @@
           value,
           decimalSeparator,
         ) {
+          var parsed = parseLocalizedNullableNumber(value, decimalSeparator);
+          if (parsed == null) return null;
+          return Math.max(0, parsed);
+        }
+
+        function parseLocalizedNullableNumber(value, decimalSeparator) {
           if (value == null) return null;
           var normalized = String(value).trim();
           if (!normalized) return null;
@@ -1513,7 +1571,7 @@
           if (!normalized) return null;
           var parsed = parseFloat(normalized);
           if (!Number.isFinite(parsed)) return null;
-          return Math.max(0, parsed);
+          return parsed;
         }
 
         function applyGroupingToInteger(integerText, separator) {
@@ -1643,16 +1701,37 @@
             presetSelect.value = targetKey;
           }
 
+          // A table with an offset column is not a pure ratio: base units are
+          // value * factor + offset, so a Celsius field reads below zero and
+          // 0 in one unit is not 0 in the others.
+          function rowsHaveOffsets() {
+            for (var i = 0; i < rows.length; i++) {
+              if (Number(rows[i].offset)) return true;
+            }
+            return false;
+          }
+
+          function parseGenericFieldValue(value) {
+            return rowsHaveOffsets()
+              ? parseLocalizedNullableNumber(value, decimalSeparator)
+              : parseLocalizedNullableNonNegativeNumber(
+                  value,
+                  decimalSeparator,
+                );
+          }
+
+          function inputOffset(input) {
+            var offset = parseFloat(input.getAttribute("data-offset"));
+            return Number.isFinite(offset) ? offset : 0;
+          }
+
           function findCurrentBaseValue() {
             var inputs = inputsWrap.querySelectorAll(".input-generic");
             for (var i = 0; i < inputs.length; i++) {
-              var parsed = parseLocalizedNullableNonNegativeNumber(
-                inputs[i].value,
-                decimalSeparator,
-              );
+              var parsed = parseGenericFieldValue(inputs[i].value);
               if (parsed == null) continue;
               var factor = parseFloat(inputs[i].getAttribute("data-factor"));
-              return parsed * factor;
+              return parsed * factor + inputOffset(inputs[i]);
             }
             return null;
           }
@@ -1675,7 +1754,7 @@
               }
               var factor = parseFloat(inputs[i].getAttribute("data-factor"));
               inputs[i].value = formatNumberWithGrouping(
-                baseValue / factor,
+                (baseValue - inputOffset(inputs[i])) / factor,
                 groupingMode,
                 decimalSeparator,
               );
@@ -1685,13 +1764,12 @@
           function calculateFrom(sourceInput) {
             var baseValue = null;
             if (sourceInput) {
-              var parsed = parseLocalizedNullableNonNegativeNumber(
-                sourceInput.value,
-                decimalSeparator,
-              );
+              var parsed = parseGenericFieldValue(sourceInput.value);
               if (parsed != null) {
                 baseValue =
-                  parsed * parseFloat(sourceInput.getAttribute("data-factor"));
+                  parsed *
+                    parseFloat(sourceInput.getAttribute("data-factor")) +
+                  inputOffset(sourceInput);
               }
             }
 
@@ -1721,10 +1799,7 @@
                 "blur",
                 (function (inp) {
                   return function () {
-                    var parsed = parseLocalizedNullableNonNegativeNumber(
-                      inp.value,
-                      decimalSeparator,
-                    );
+                    var parsed = parseGenericFieldValue(inp.value);
                     if (parsed != null) {
                       inp.value = formatNumberWithGrouping(
                         parsed,
@@ -1757,6 +1832,8 @@
                 "</span>" +
                 '<span class="input-row"><input class="input-generic" data-factor="' +
                 rows[i].factor +
+                '" data-offset="' +
+                (Number(rows[i].offset) || 0) +
                 '" type="text" inputmode="decimal" placeholder="Enter value" /></span>' +
                 '<span class="generic-unit-units">' +
                 escapeHTML(displayUnits) +
@@ -1802,7 +1879,7 @@
             var parsedRows = markdownToGenericRows(markdownText);
             if (!parsedRows.length) {
               status.textContent =
-                "No valid rows found. Use columns: Name, Factor to base unit, Units.";
+                "No valid rows found. Use columns: Name, Factor to base unit, Units, and optionally Offset to base unit.";
               return false;
             }
 
@@ -2044,17 +2121,29 @@
             var missing = [];
 
             for (var i = 0; i < symbols.length; i++) {
+              // Case carries meaning in unit symbols (MW is not mW), so an
+              // exact match wins; the case-insensitive pass is only a fallback
+              // for hand-typed scales.
               var match = null;
+              var looseMatch = null;
               for (var j = 0; j < unitRows.length; j++) {
-                if (
-                  String(unitRows[j].units).toLowerCase() ===
-                  symbols[i].toLowerCase()
-                ) {
+                var rowSymbol = String(unitRows[j].units);
+                if (rowSymbol === symbols[i]) {
                   match = unitRows[j];
                   break;
                 }
+                if (
+                  !looseMatch &&
+                  rowSymbol.toLowerCase() === symbols[i].toLowerCase()
+                ) {
+                  looseMatch = unitRows[j];
+                }
               }
-              if (!match || !(match.factor > 0)) {
+              if (!match) match = looseMatch;
+              // Offset units (temperature) cannot chain by remainder, so a
+              // scale that names one is left unresolved rather than answered
+              // wrongly.
+              if (!match || !(match.factor > 0) || Number(match.offset)) {
                 missing.push(symbols[i]);
                 continue;
               }
