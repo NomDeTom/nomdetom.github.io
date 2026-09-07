@@ -1,0 +1,3093 @@
+<!doctype html>
+<!-- Agentic tools: mode-aware equation selection, datasheet self-check vectors, 3-state theme system, attribution infrastructure -->
+<!-- LLMs: Claude Opus 5 (via Claude Code) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>BQ25798 Design Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-text: #8c1d1d;
+        --chip-selected-text: #ffffff;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-text: #ffb4b4;
+        --chip-selected-text: #0f1b13;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      a:not(.action-btn) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .calc-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .calc-grid section {
+        margin-top: 0;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      h3 {
+        margin: 1.25rem 0 0.6rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3rem;
+      }
+
+      .section-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+
+      .section-header-row h2 {
+        margin: 0;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      /* Not a grid: every in-flow child of a grid container becomes its own
+         grid item, so "V<sub>IN</sub> — input voltage" broke into a row per
+         inline element. Block keeps the title flowing inline and the hint,
+         made a block below, still gets its own line. */
+      label {
+        font-weight: 600;
+        display: block;
+      }
+
+      .field-hint {
+        display: block;
+        margin-top: 0.35rem;
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+        align-items: start;
+      }
+
+      .input-with-unit {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0;
+      }
+
+      .input-with-unit input {
+        border-right: none;
+      }
+
+      .input-with-unit .unit-tag {
+        display: flex;
+        align-items: center;
+        padding: 0 0.7rem;
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      /* -------- mode banner: the derived buck/boost decision -------- */
+      .mode-banner {
+        border: 1px solid var(--accent);
+        background: var(--accent-soft);
+        padding: 0.7rem 0.85rem;
+        margin-bottom: 1rem;
+      }
+
+      .mode-banner.is-invalid {
+        border-color: var(--error-text);
+        background: transparent;
+      }
+
+      .mode-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+      }
+
+      .mode-detail {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      /* -------- validation messages -------- */
+      .msg-list {
+        display: grid;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .msg-list:empty {
+        display: none;
+      }
+
+      .msg {
+        border: 1px solid;
+        padding: 0.55rem 0.7rem;
+        font-size: 0.88rem;
+      }
+
+      .msg.error {
+        color: var(--error-text);
+        border-color: var(--error-text);
+      }
+
+      .msg.warning {
+        color: #8a6500;
+        border-color: #8a6500;
+      }
+
+      :root[data-theme="dark"] .msg.warning {
+        color: #f2cf70;
+        border-color: #f2cf70;
+      }
+
+      /* -------- status pills -------- */
+      .ok-pill,
+      .warn-pill,
+      .bad-pill {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid;
+        padding: 0.1rem 0.35rem;
+      }
+
+      .ok-pill {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .warn-pill {
+        color: #8a6500;
+        border-color: #8a6500;
+      }
+
+      :root[data-theme="dark"] .warn-pill {
+        color: #f2cf70;
+        border-color: #f2cf70;
+      }
+
+      .bad-pill {
+        color: var(--error-text);
+        border-color: var(--error-text);
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-eq {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-family: "Courier New", monospace;
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .result-sub {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-align: right;
+        grid-column: 2;
+      }
+
+      .results-group[hidden] {
+        display: none !important;
+      }
+
+      /* -------- self-check vector table -------- */
+      .vec-panel[hidden] {
+        display: none !important;
+      }
+
+      .vec-table,
+      .sweep-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      .vec-table th,
+      .vec-table td,
+      .sweep-table th,
+      .sweep-table td {
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+
+      .vec-table th,
+      .sweep-table th {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      .vec-table td.num,
+      .sweep-table td.num {
+        font-family: "Courier New", monospace;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .vec-inputs {
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .vec-summary {
+        margin: 0 0 0.9rem;
+        font-size: 0.9rem;
+      }
+
+      /* -------- formulas / reference -------- */
+      .formula-note {
+        margin-top: 0.6rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .formula-note code,
+      .mono {
+        font-family: "Courier New", monospace;
+      }
+
+      .ref-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      .ref-table th,
+      .ref-table td {
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+
+      .ref-table th {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      .caveat {
+        margin: 0.9rem 0 0;
+        padding: 0.7rem 0.85rem;
+        border-left: 3px solid var(--accent);
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .caveat strong {
+        color: var(--text);
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      @media (max-width: 900px) {
+        .calc-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .two-col-fields {
+          grid-template-columns: 1fr;
+        }
+
+        .calculator-picker {
+          grid-template-columns: 1fr;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value,
+        .result-sub {
+          text-align: left;
+        }
+      }
+
+      /* -------- calculation mode tabs (calculator-picker pattern, as in
+         Computing Units and the Unit Converter) -------- */
+      .calculator-picker {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 17rem));
+        gap: 0.55rem;
+        margin-top: 1.25rem;
+      }
+
+      .calculator-picker-btn {
+        width: 100%;
+        text-align: center;
+        padding: 0.5rem 0.65rem;
+      }
+
+      .calculator-picker-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      [data-tabpanel][hidden] {
+        display: none !important;
+      }
+
+      /* -------- value sliders under the number fields.
+         The global input rule gives every input a box; a range input needs
+         that undone, and accent-color carries the theme into the native
+         track and thumb. -------- */
+      /* -------- selection chips (house .chip pattern). Selected fill uses
+         --chip-selected-text so it stays readable in both themes. -------- */
+      .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--chip-selected-text);
+      }
+
+      .chip.selected:hover {
+        border-color: var(--accent);
+        color: var(--chip-selected-text);
+      }
+
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-top: 0.4rem;
+      }
+
+      .field-slider {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        accent-color: var(--accent);
+        height: 1.15rem;
+        cursor: pointer;
+      }
+
+      /* Overrides the global label rule, which is a bold grid. */
+      .clamp-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex: 0 0 auto;
+        font-weight: 400;
+        font-size: 0.76rem;
+        color: var(--muted);
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .clamp-toggle:hover {
+        color: var(--accent);
+      }
+
+      .clamp-toggle input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+        padding: 0;
+        flex-shrink: 0;
+        accent-color: var(--accent);
+      }
+
+      .field-slider:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* -------- range sweep -------- */
+      .sweep-block + .sweep-block {
+        margin-top: 1.5rem;
+      }
+
+      .sweep-block h3 {
+        margin-top: 0;
+      }
+
+      .sweep-note {
+        margin: 0 0 0.9rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      /* Column maximum for a mode — the number that drives the part choice. */
+      .cell-max {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>BQ25798 Design Calculator</h1>
+        <p class="subtitle">
+          Inductor and capacitor sizing for the TI BQ25798 buck-boost charger,
+          from the design equations in &sect;10.2.2 of the datasheet
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            Equations from Texas Instruments BQ25798 datasheet SLUSDV2B (revised
+            January 2023), &sect;10.2.2 Detailed Design Procedure, pages
+            133&ndash;134. Equation numbering follows the numbers printed beside
+            each equation, not TI's in-text cross-references. This page is not
+            affiliated with or endorsed by Texas Instruments.
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <div
+        id="mode-picker"
+        class="calculator-picker"
+        role="tablist"
+        aria-label="Calculation mode"
+      >
+        <button
+          id="tab-point"
+          class="action-btn calculator-picker-btn active"
+          type="button"
+          aria-pressed="true"
+        >
+          Single operating point
+        </button>
+        <button
+          id="tab-sweep"
+          class="action-btn calculator-picker-btn"
+          type="button"
+          aria-pressed="false"
+        >
+          Range sweep
+        </button>
+      </div>
+
+      <div class="calc-grid">
+        <section>
+          <div class="section-header-row">
+            <h2>Inputs</h2>
+            <button
+              id="reset-btn"
+              class="action-btn"
+              type="button"
+              aria-label="Reset inputs to the datasheet design example"
+            >
+              Reset to datasheet example
+            </button>
+          </div>
+
+          <form id="calculator-form">
+            <div data-tabpanel="point">
+              <h3>Operating point</h3>
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="input-vbus">
+                    V<sub>BUS</sub> &mdash; input voltage
+                    <span class="field-hint">Adapter or PV, 3.6&ndash;24 V</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="input-vbus"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="15"
+                    />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="input-vsys">
+                    V<sub>SYS</sub> &mdash; system voltage
+                    <span class="field-hint">&asymp; battery voltage</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="input-vsys"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="8"
+                    />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="input-ichg">
+                    I<sub>CHG</sub> &mdash; fast-charge current
+                    <span class="field-hint">ICHG[8:0], 0&ndash;5 A</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="input-ichg"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="3"
+                    />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="input-iin">
+                    I<sub>IN</sub> &mdash; input current limit
+                    <span class="field-hint">IINDPM[8:0], 0&ndash;3.3 A</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="input-iin"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="3"
+                    />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div data-tabpanel="sweep" hidden>
+              <h3>Input ranges</h3>
+              <p class="sweep-note">
+                Every combination of these ranges is evaluated. Give a variable
+                the same min and max to pin it.
+              </p>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-vbus-min">
+                    V<sub>BUS</sub> min
+                    <span class="field-hint">Input voltage, 3.6&ndash;24 V</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-vbus-min"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="5"
+                    />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="sweep-vbus-max">
+                    V<sub>BUS</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-vbus-max"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="20"
+                    />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label id="cell-picker-label">
+                  Cells in series
+                  <span class="field-hint" id="cell-picker-hint"
+                    >Pick a cell count to set the V<sub>SYS</sub> range for that
+                    pack</span
+                  >
+                </label>
+                <div
+                  class="chip-group"
+                  id="cell-picker"
+                  role="group"
+                  aria-labelledby="cell-picker-label"
+                >
+                  <button
+                    type="button"
+                    class="chip"
+                    aria-pressed="false"
+                    data-cells="1"
+                  >
+                    1s
+                  </button>
+                  <button
+                    type="button"
+                    class="chip"
+                    aria-pressed="false"
+                    data-cells="2"
+                  >
+                    2s
+                  </button>
+                  <button
+                    type="button"
+                    class="chip"
+                    aria-pressed="false"
+                    data-cells="3"
+                  >
+                    3s
+                  </button>
+                  <button
+                    type="button"
+                    class="chip"
+                    aria-pressed="false"
+                    data-cells="4"
+                  >
+                    4s
+                  </button>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-vsys-min">
+                    V<sub>SYS</sub> min
+                    <span class="field-hint">Battery range, e.g. 6&ndash;8.4 V for 2s</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-vsys-min"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="6"
+                    />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="sweep-vsys-max">
+                    V<sub>SYS</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-vsys-max"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="8.4"
+                    />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-ichg-min">
+                    I<sub>CHG</sub> min
+                    <span class="field-hint">Fast-charge current, 0&ndash;5 A</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-ichg-min"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="0.5"
+                    />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="sweep-ichg-max">
+                    I<sub>CHG</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-ichg-max"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="3"
+                    />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-iin-min">
+                    I<sub>IN</sub> min
+                    <span class="field-hint">Input current limit, 0&ndash;3.3 A</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-iin-min"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="0.5"
+                    />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="sweep-iin-max">
+                    I<sub>IN</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input
+                      id="sweep-iin-max"
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      value="3"
+                    />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="select-sweep-steps">
+                    Steps per range
+                    <span class="field-hint">Applied to each range that is not pinned</span>
+                  </label>
+                  <select id="select-sweep-steps">
+                    <option value="5">5</option>
+                    <option value="9" selected>9</option>
+                    <option value="11">11</option>
+                    <option value="21">21</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="select-sweep-axis">
+                    Table axis
+                    <span class="field-hint">Variable tabulated below</span>
+                  </label>
+                  <select id="select-sweep-axis">
+                    <option value="vbus" selected>V_BUS</option>
+                    <option value="vsys">V_SYS</option>
+                    <option value="ichg">I_CHG</option>
+                    <option value="iin">I_IN</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <h3>Power stage</h3>
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="select-fsw">
+                  F<sub>SW</sub> &mdash; switching frequency
+                  <span class="field-hint">Must pair with the inductor</span>
+                </label>
+                <select id="select-fsw">
+                  <option value="1500000" selected>1.5 MHz</option>
+                  <option value="750000">750 kHz</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="select-l">
+                  L &mdash; inductance
+                  <span class="field-hint">1 &micro;H or 2.2 &micro;H</span>
+                </label>
+                <select id="select-l">
+                  <option value="1e-6" selected>1 &micro;H</option>
+                  <option value="2.2e-6">2.2 &micro;H</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-cin">
+                  C<sub>IN</sub> &mdash; VBUS/PMID capacitance
+                  <span class="field-hint">Suggested 0.1 + 3&times;10 &micro;F</span>
+                </label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-cin"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    value="30.1"
+                  />
+                  <span class="unit-tag">&micro;F</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-cout">
+                  C<sub>OUT</sub> &mdash; VSYS capacitance
+                  <span class="field-hint">Suggested 0.1 + 5&times;10 &micro;F</span>
+                </label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-cout"
+                    type="number"
+                    inputmode="decimal"
+                    step="any"
+                    value="50.1"
+                  />
+                  <span class="unit-tag">&micro;F</span>
+                </div>
+              </div>
+            </div>
+
+            <h3>Inductor check</h3>
+            <div class="field">
+              <label for="input-isat">
+                I<sub>SAT</sub> &mdash; saturation rating of your chosen inductor
+                <span class="field-hint"
+                  >Checked against the equation (4) minimum. Leave blank to skip
+                  the check.</span
+                >
+              </label>
+              <div class="input-with-unit">
+                <input
+                  id="input-isat"
+                  type="number"
+                  inputmode="decimal"
+                  step="any"
+                  value="6"
+                />
+                <span class="unit-tag">A</span>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section data-tabpanel="point">
+          <h2>Results</h2>
+
+          <div
+            id="mode-banner"
+            class="mode-banner"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="mode-name" id="mode-name">Buck mode</span>
+            <span class="mode-detail" id="mode-detail"
+              >V<sub>BUS</sub> &gt; V<sub>SYS</sub></span
+            >
+          </div>
+
+          <div id="msg-list" class="msg-list" role="alert"></div>
+
+          <div class="results">
+            <div class="result">
+              <span class="result-label">
+                Duty cycle
+                <span class="result-eq" id="duty-eq">D = V_SYS / V_BUS</span>
+              </span>
+              <span class="result-value" id="out-duty">&mdash;</span>
+            </div>
+
+            <div class="result">
+              <span class="result-label">
+                Inductor ripple current
+                <span class="result-eq" id="ripple-eq"
+                  >(5) I_RIPPLE = V_SYS &times; (V_BUS &minus; V_SYS) / (V_BUS
+                  &times; F_SW &times; L)</span
+                >
+              </span>
+              <span class="result-value" id="out-ripple">&mdash;</span>
+              <span class="result-sub" id="out-ripple-sub"></span>
+            </div>
+
+            <div class="result">
+              <span class="result-label">
+                Inductor saturation rating required
+                <span class="result-eq"
+                  >(4) I_SAT &ge; MAX(I_IN + I_RIPPLE/2, I_CHG +
+                  I_RIPPLE/2)</span
+                >
+              </span>
+              <span class="result-value" id="out-isat">&mdash;</span>
+              <span class="result-sub" id="out-isat-sub"></span>
+            </div>
+
+            <div class="result" id="row-cap-current">
+              <span class="result-label">
+                <span id="cap-current-label"
+                  >Input capacitor RMS ripple current</span
+                >
+                <span class="result-eq" id="cap-current-eq"
+                  >(7) I_CIN = I_CHG &times; sqrt(D &times; (1 &minus; D))</span
+                >
+              </span>
+              <span class="result-value" id="out-cap-current">&mdash;</span>
+              <span class="result-sub" id="out-cap-current-sub"></span>
+            </div>
+
+            <div class="result" id="row-cap-ripple">
+              <span class="result-label">
+                <span id="cap-ripple-label">Input voltage ripple</span>
+                <span class="result-eq" id="cap-ripple-eq"
+                  >(8) &Delta;V_IN = D &times; (1 &minus; D) &times; I_CHG /
+                  (C_IN &times; F_SW)</span
+                >
+              </span>
+              <span class="result-value" id="out-cap-ripple">&mdash;</span>
+              <span class="result-sub" id="out-cap-ripple-sub"
+                >Ideal capacitor &mdash; excludes ESR</span
+              >
+            </div>
+          </div>
+
+          <p class="caveat">
+            Only the equations for the active mode are shown. The inactive set
+            is meaningless here &mdash; equation (5) returns a negative number
+            when V<sub>SYS</sub> &gt; V<sub>BUS</sub>, and the two modes define
+            <span class="mono">D</span> differently.
+          </p>
+        </section>
+
+        <section data-tabpanel="sweep" hidden>
+          <h2>Worst case across the range</h2>
+
+          <div
+            id="sweep-banner"
+            class="mode-banner"
+            role="status"
+            aria-live="polite"
+          >
+            <span class="mode-name" id="sweep-coverage">&mdash;</span>
+            <span class="mode-detail" id="sweep-detail"></span>
+          </div>
+
+          <div id="sweep-msg-list" class="msg-list" role="alert"></div>
+
+          <div id="sweep-summary"></div>
+
+          <p class="caveat">
+            Buck and boost worst cases are computed separately, each from only
+            the operating points in that mode. Points where V<sub>BUS</sub> =
+            V<sub>SYS</sub> are skipped &mdash; neither equation applies in
+            buck-boost transition.
+          </p>
+        </section>
+      </div>
+
+      <section data-tabpanel="sweep" hidden>
+        <h2>Sweep table</h2>
+        <p class="sweep-note" id="sweep-table-note"></p>
+        <div class="table-scroll">
+          <table class="sweep-table">
+            <thead>
+              <tr>
+                <th scope="col" id="sweep-axis-heading">V_BUS</th>
+                <th scope="col">Mode</th>
+                <th scope="col">D</th>
+                <th scope="col">Inductor ripple max</th>
+                <th scope="col">I_SAT required</th>
+                <th scope="col">Cap RMS current max</th>
+                <th scope="col">Cap voltage ripple max</th>
+              </tr>
+            </thead>
+            <tbody id="sweep-tbody"></tbody>
+          </table>
+        </div>
+        <p class="caveat">
+          Each row is the worst case over every combination of the other three
+          ranges at that axis value. Buck rows use the input capacitor
+          (equations 7 and 8); boost rows use the output capacitor (9 and 10).
+          An accent-coloured cell is the column maximum for that mode.
+        </p>
+        <p class="caveat">
+          <strong
+            >Sweeping V<sub>BUS</sub> alone will not show the D = 0.5
+            peak.</strong
+          >
+          With V<sub>SYS</sub> pinned, inductor ripple simply rises with
+          V<sub>BUS</sub>. The D = 0.5 maximum the datasheet describes appears
+          when V<sub>SYS</sub> varies at fixed V<sub>BUS</sub>. Both readings are
+          the same formula &mdash; give V<sub>SYS</sub> a range to see it.
+        </p>
+      </section>
+
+      <section>
+        <div class="section-header-row">
+          <h2>Self-check against the datasheet design example</h2>
+          <button
+            id="toggle-vectors-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+            aria-controls="vec-panel"
+          >
+            Show self-check
+          </button>
+        </div>
+        <div id="vec-panel" class="vec-panel" hidden>
+          <p class="vec-summary" id="vec-summary"></p>
+          <div class="table-scroll">
+            <table class="vec-table">
+              <thead>
+                <tr>
+                  <th scope="col">Eq</th>
+                  <th scope="col">Inputs</th>
+                  <th scope="col">Expected</th>
+                  <th scope="col">This page</th>
+                  <th scope="col">Result</th>
+                </tr>
+              </thead>
+              <tbody id="vec-tbody"></tbody>
+            </table>
+          </div>
+          <p class="caveat">
+            These are self-consistency checks on the transcribed equations, not
+            values printed in the datasheet &mdash; TI gives no worked numeric
+            answers in &sect;10.2.2. They are computed from the design example
+            in Table 10-1 (V<sub>BUS</sub> 5&ndash;20 V, I<sub>CHG</sub> =
+            I<sub>IN</sub> = 3.0 A, V<sub>REG</sub> = 8.4 V, V<sub>SYS</sub>
+            &asymp; 8 V for the 2s configuration) with C<sub>IN</sub> = 30.1
+            &micro;F and C<sub>OUT</sub> = 50.1 &micro;F.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Equations as printed</h2>
+
+        <div class="table-scroll">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th scope="col">Eq</th>
+                <th scope="col">Mode</th>
+                <th scope="col">Formula</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>4</td>
+                <td>Either</td>
+                <td class="mono">
+                  I_SAT &ge; MAX[ (I_IN + I_RIPPLE / 2), (I_CHG + I_RIPPLE / 2)
+                  ]
+                </td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>Buck</td>
+                <td class="mono">
+                  I_RIPPLE_BUCK = ( V_SYS &times; (V_BUS &minus; V_SYS) ) /
+                  ( V_BUS &times; F_SW &times; L )
+                </td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>Boost</td>
+                <td class="mono">
+                  I_RIPPLE_BOOST = ( V_BUS &times; (V_SYS &minus; V_BUS) ) /
+                  ( V_SYS &times; F_SW &times; L )
+                </td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td>Buck</td>
+                <td class="mono">
+                  I_CIN_BUCK = I_CHG &times; &radic;( D &times; (1 &minus; D) )
+                  &nbsp; where D = V_SYS / V_BUS
+                </td>
+              </tr>
+              <tr>
+                <td>8</td>
+                <td>Buck</td>
+                <td class="mono">
+                  &Delta;V_IN_BUCK = ( D &times; (1 &minus; D) &times; I_CHG ) /
+                  ( C_IN &times; F_SW ) &nbsp; where D = V_SYS / V_BUS
+                </td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <td>Boost</td>
+                <td class="mono">
+                  I_COUT_BOOST = I_CHG &times; &radic;( D / (1 &minus; D) )
+                  &nbsp; where D = 1 &minus; V_BUS / V_SYS
+                </td>
+              </tr>
+              <tr>
+                <td>10</td>
+                <td>Boost</td>
+                <td class="mono">
+                  &Delta;V_OUT_BOOST = ( I_CHG &times; D ) / ( C_OUT &times;
+                  F_SW ) &nbsp; where D = 1 &minus; V_BUS / V_SYS
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="caveat">
+          <strong>D is defined differently in the two modes.</strong> Buck (7,
+          8): <span class="mono">D = V_SYS / V_BUS</span>. Boost (9, 10):
+          <span class="mono">D = 1 &minus; V_BUS / V_SYS</span>. A calculator
+          that computes one duty cycle and reuses it is wrong in one of the two
+          modes.
+        </p>
+
+        <p class="caveat">
+          <strong>TI's in-text equation cross-references are off by one.</strong>
+          Every prose reference in &sect;10.2.2 points at the equation before
+          the one it means &mdash; the text's &ldquo;equations (4) and (5)&rdquo;
+          for inductor ripple actually means (5) and (6), and so on through
+          (10). Equation (4) is the inductor saturation requirement, not a
+          ripple formula. The numbering used on this page is the one printed
+          beside each equation.
+        </p>
+
+        <p class="caveat">
+          <strong>Ripple voltages (8, 10) assume an ideal capacitor.</strong>
+          There is no ESR term, so real ripple is higher. For ceramic X5R/X7R
+          parts the effective capacitance also drops with DC bias and
+          temperature, which raises ripple further.
+        </p>
+
+        <h3>Worst cases the datasheet calls out</h3>
+        <p class="formula-note">
+          <span
+            ><strong>Inductor ripple (5):</strong> with V<sub>SYS</sub> pinned
+            near 8 V, ripple rises with V<sub>BUS</sub> &mdash; worst at
+            15&ndash;20 V. The text's &ldquo;maximum in the vicinity of D =
+            0.5&rdquo; holds for fixed V<sub>BUS</sub> with varying
+            V<sub>SYS</sub>; sweeping V<sub>BUS</sub> instead will not show a
+            peak at D = 0.5.</span
+          >
+          <span
+            ><strong>Input capacitor (7, 8):</strong> worst at D = 0.5, i.e.
+            V<sub>BUS</sub> 15&ndash;20 V for V<sub>SYS</sub> &asymp; 8 V. At D
+            = 0.5 the RMS current is exactly I<sub>CHG</sub> / 2.</span
+          >
+          <span
+            ><strong>Output capacitor (9, 10):</strong> worst at the lowest
+            V<sub>BUS</sub>, i.e. 5 V. Equation (9) diverges as D &rarr; 1.</span
+          >
+        </p>
+
+        <h3>Not covered by these equations</h3>
+        <p class="formula-note">
+          <span
+            >MPPT / VOC_PCT (&sect;10.2.2.1, &sect;9.3.6.3) is a ratio lookup,
+            not an equation: V<sub>MPP</sub> / V<sub>OC</sub> from the panel
+            datasheet, rounded to the nearest available setting. TI's worked
+            example is 8.0 V / 10.0 V = 80% &rarr; VOC_PCT = 4
+            (81.25%).</span
+          >
+          <span
+            >Efficiency, thermal and power-loss equations are not in
+            &sect;10.2.2.</span
+          >
+          <span
+            >Register field encodings for ICHG / IINDPM / VREG / VOTG are in the
+            register map, &sect;9.6.</span
+          >
+          <span
+            >If backup mode is used, add 2&times;33 &micro;F POSCAP at PMID to
+            hold the rail through adapter removal (&sect;10.2.2.3/4).</span
+          >
+        </p>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-09-04">4 September 2026</time>
+    </footer>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== EQUATIONS ====================
+        // All quantities here are SI base units: V, A, F, H, Hz.
+        // Conversion from uF / uH / MHz happens at the UI boundary only.
+
+        // (5) Inductor ripple current, buck mode
+        function rippleBuck(vSys, vBus, fSw, l) {
+          return (vSys * (vBus - vSys)) / (vBus * fSw * l);
+        }
+
+        // (6) Inductor ripple current, boost mode
+        function rippleBoost(vBus, vSys, fSw, l) {
+          return (vBus * (vSys - vBus)) / (vSys * fSw * l);
+        }
+
+        // (7) Input capacitor RMS ripple current, buck mode
+        function cinRmsBuck(iChg, dBuck) {
+          return iChg * Math.sqrt(dBuck * (1 - dBuck));
+        }
+
+        // (8) Input voltage ripple, buck mode
+        function vinRippleBuck(dBuck, iChg, cIn, fSw) {
+          return (dBuck * (1 - dBuck) * iChg) / (cIn * fSw);
+        }
+
+        // (9) Output capacitor RMS ripple current, boost mode
+        function coutRmsBoost(iChg, dBoost) {
+          return iChg * Math.sqrt(dBoost / (1 - dBoost));
+        }
+
+        // (10) Output voltage ripple, boost mode
+        function voutRippleBoost(iChg, dBoost, cOut, fSw) {
+          return (iChg * dBoost) / (cOut * fSw);
+        }
+
+        // (4) Inductor saturation requirement. An inequality, not an equality:
+        // the chosen inductor's rating must exceed this.
+        function isatRequired(iIn, iChg, iRipple) {
+          return Math.max(iIn + iRipple / 2, iChg + iRipple / 2);
+        }
+
+        // ==================== FORMATTING ====================
+        // The unit is chosen from the rounded number, not the raw one, so a
+        // value just under 1 does not render as "1000.0 mA".
+        function formatAmps(value) {
+          if (!isFinite(value)) return "—";
+          if (Math.abs(value) < 1) {
+            var milliAmps = (value * 1000).toFixed(1);
+            if (Math.abs(Number(milliAmps)) < 1000) return milliAmps + " mA";
+          }
+          return value.toFixed(4) + " A";
+        }
+
+        function formatVolts(value) {
+          if (!isFinite(value)) return "—";
+          if (Math.abs(value) < 1) {
+            var milliVolts = (value * 1000).toFixed(3);
+            if (Math.abs(Number(milliVolts)) < 1000) return milliVolts + " mV";
+          }
+          return value.toFixed(4) + " V";
+        }
+
+        // ==================== CALCULATOR ====================
+        var inputVbus = document.getElementById("input-vbus");
+        var inputVsys = document.getElementById("input-vsys");
+        var inputIchg = document.getElementById("input-ichg");
+        var inputIin = document.getElementById("input-iin");
+        var selectFsw = document.getElementById("select-fsw");
+        var selectL = document.getElementById("select-l");
+        var inputCin = document.getElementById("input-cin");
+        var inputCout = document.getElementById("input-cout");
+        var inputIsat = document.getElementById("input-isat");
+
+        var modeBanner = document.getElementById("mode-banner");
+        var modeName = document.getElementById("mode-name");
+        var modeDetail = document.getElementById("mode-detail");
+        var msgList = document.getElementById("msg-list");
+
+        var dutyEq = document.getElementById("duty-eq");
+        var outDuty = document.getElementById("out-duty");
+        var rippleEq = document.getElementById("ripple-eq");
+        var outRipple = document.getElementById("out-ripple");
+        var outRippleSub = document.getElementById("out-ripple-sub");
+        var outIsat = document.getElementById("out-isat");
+        var outIsatSub = document.getElementById("out-isat-sub");
+        var capCurrentLabel = document.getElementById("cap-current-label");
+        var capCurrentEq = document.getElementById("cap-current-eq");
+        var outCapCurrent = document.getElementById("out-cap-current");
+        var outCapCurrentSub = document.getElementById("out-cap-current-sub");
+        var capRippleLabel = document.getElementById("cap-ripple-label");
+        var capRippleEq = document.getElementById("cap-ripple-eq");
+        var outCapRipple = document.getElementById("out-cap-ripple");
+
+        var DEFAULTS = {
+          "input-vbus": "15",
+          "input-vsys": "8",
+          "input-ichg": "3",
+          "input-iin": "3",
+          "select-fsw": "1500000",
+          "select-l": "1e-6",
+          "input-cin": "30.1",
+          "input-cout": "50.1",
+          "input-isat": "6",
+          "sweep-vbus-min": "5",
+          "sweep-vbus-max": "20",
+          "sweep-vsys-min": "6",
+          "sweep-vsys-max": "8.4",
+          "sweep-ichg-min": "0.5",
+          "sweep-ichg-max": "3",
+          "sweep-iin-min": "0.5",
+          "sweep-iin-max": "3",
+          "select-sweep-steps": "9",
+          "select-sweep-axis": "vbus",
+        };
+
+        function readNumber(el) {
+          var raw = el.value.trim();
+          if (raw === "") return NaN;
+          var value = Number(raw);
+          return isFinite(value) ? value : NaN;
+        }
+
+        function addMessage(list, severity, text) {
+          list.push({ severity: severity, text: text });
+        }
+
+        function renderMessages(messages, target) {
+          target.textContent = "";
+          messages.forEach(function (message) {
+            var div = document.createElement("div");
+            div.className = "msg " + message.severity;
+            div.textContent =
+              (message.severity === "error" ? "Error: " : "Warning: ") +
+              message.text;
+            target.appendChild(div);
+          });
+        }
+
+        // Datasheet restriction, not a recommendation: 1.5 MHz pairs only
+        // with 1 uH, 750 kHz only with 2.2 uH (§10.2.2.2). Shared by both tabs.
+        function checkPairing(messages, fSw, l) {
+          var pairingOk =
+            (fSw === 1500000 && l === 1e-6) || (fSw === 750000 && l === 2.2e-6);
+          if (!pairingOk) {
+            addMessage(
+              messages,
+              "error",
+              "§10.2.2.2: 1.5 MHz works only with the 1 µH inductor, " +
+                "750 kHz only with 2.2 µH. The datasheet states this as a " +
+                "restriction, not a recommendation.",
+            );
+          }
+        }
+
+        function blankResults() {
+          outDuty.textContent = "—";
+          outRipple.textContent = "—";
+          outRippleSub.textContent = "";
+          outIsat.textContent = "—";
+          outIsatSub.textContent = "";
+          outCapCurrent.textContent = "—";
+          outCapCurrentSub.textContent = "";
+          outCapRipple.textContent = "—";
+        }
+
+        function calculate() {
+          var vBus = readNumber(inputVbus);
+          var vSys = readNumber(inputVsys);
+          var iChg = readNumber(inputIchg);
+          var iIn = readNumber(inputIin);
+          var fSw = Number(selectFsw.value);
+          var l = Number(selectL.value);
+          var cIn = readNumber(inputCin) * 1e-6;
+          var cOut = readNumber(inputCout) * 1e-6;
+          var isatRating = readNumber(inputIsat);
+
+          var messages = [];
+
+          checkPairing(messages, fSw, l);
+
+          if (isFinite(vBus) && vBus > 24) {
+            addMessage(
+              messages,
+              "error",
+              "24 V is the recommended operating maximum on VIN1/VIN2. For a PV " +
+                "panel this bounds V_OC, not V_MPP.",
+            );
+          }
+
+          if (isFinite(vBus) && vBus > 0 && vBus < 3.6) {
+            addMessage(
+              messages,
+              "warning",
+              "V_BUS is below the 3.6 V minimum operating input voltage.",
+            );
+          }
+
+          if (isFinite(iChg) && iChg > 5) {
+            addMessage(
+              messages,
+              "warning",
+              "I_CHG above the 5 A maximum of the ICHG[8:0] field.",
+            );
+          }
+
+          if (isFinite(iIn) && iIn > 3.3) {
+            addMessage(
+              messages,
+              "warning",
+              "I_IN above the 3.3 A maximum of the IINDPM[8:0] field.",
+            );
+          }
+
+          if (
+            !isFinite(vBus) ||
+            !isFinite(vSys) ||
+            !isFinite(iChg) ||
+            !isFinite(iIn) ||
+            !isFinite(cIn) ||
+            !isFinite(cOut)
+          ) {
+            addMessage(
+              messages,
+              "error",
+              "Fill in every operating point and power stage field.",
+            );
+            renderMessages(messages, msgList);
+            modeBanner.classList.add("is-invalid");
+            modeName.textContent = "No result";
+            modeDetail.textContent = "Inputs incomplete";
+            blankResults();
+            return;
+          }
+
+          if (vBus <= 0 || vSys <= 0) {
+            addMessage(
+              messages,
+              "error",
+              "V_BUS and V_SYS must both be greater than zero.",
+            );
+            renderMessages(messages, msgList);
+            modeBanner.classList.add("is-invalid");
+            modeName.textContent = "No result";
+            modeDetail.textContent = "Voltages must be positive";
+            blankResults();
+            return;
+          }
+
+          // Mode selection is the first decision. Never compute both sets: the
+          // inactive one is meaningless, and (5) goes negative when V_SYS > V_BUS.
+          if (vBus === vSys) {
+            addMessage(
+              messages,
+              "warning",
+              "Neither the buck nor the boost equation applies at V_BUS = V_SYS; " +
+                "the part is in buck-boost transition.",
+            );
+            renderMessages(messages, msgList);
+            modeBanner.classList.add("is-invalid");
+            modeName.textContent = "Buck-boost transition";
+            modeDetail.textContent = "V_BUS = V_SYS — no equation applies";
+            blankResults();
+            return;
+          }
+
+          var isBuck = vBus > vSys;
+          var duty = isBuck ? vSys / vBus : 1 - vBus / vSys;
+          var iRipple = isBuck
+            ? rippleBuck(vSys, vBus, fSw, l)
+            : rippleBoost(vBus, vSys, fSw, l);
+
+          modeBanner.classList.remove("is-invalid");
+          modeName.textContent = isBuck ? "Buck mode" : "Boost mode";
+          modeDetail.textContent = isBuck
+            ? "V_BUS > V_SYS — equations (4), (5), (7), (8)"
+            : "V_BUS < V_SYS — equations (4), (6), (9), (10)";
+
+          dutyEq.textContent = isBuck
+            ? "D = V_SYS / V_BUS"
+            : "D = 1 − V_BUS / V_SYS";
+          outDuty.textContent = duty.toFixed(4);
+
+          rippleEq.textContent = isBuck
+            ? "(5) I_RIPPLE = V_SYS × (V_BUS − V_SYS) / (V_BUS × F_SW × L)"
+            : "(6) I_RIPPLE = V_BUS × (V_SYS − V_BUS) / (V_SYS × F_SW × L)";
+          outRipple.textContent = formatAmps(iRipple);
+          outRippleSub.textContent =
+            "Peak-to-peak, " +
+            (isBuck ? "buck" : "boost") +
+            " mode at D = " +
+            duty.toFixed(3);
+
+          var isatMin = isatRequired(iIn, iChg, iRipple);
+          outIsat.textContent = "≥ " + formatAmps(isatMin);
+          if (isFinite(isatRating)) {
+            if (isatRating >= isatMin) {
+              outIsatSub.innerHTML =
+                '<span class="ok-pill">OK</span> ' +
+                isatRating.toFixed(2) +
+                " A rating clears the minimum";
+            } else {
+              outIsatSub.innerHTML =
+                '<span class="bad-pill">Under-rated</span> ' +
+                isatRating.toFixed(2) +
+                " A rating is below the minimum";
+            }
+          } else {
+            outIsatSub.textContent = "Minimum requirement, not a computed value";
+          }
+
+          if (isBuck) {
+            capCurrentLabel.textContent = "Input capacitor RMS ripple current";
+            capCurrentEq.textContent =
+              "(7) I_CIN = I_CHG × sqrt(D × (1 − D))";
+            outCapCurrent.textContent = formatAmps(cinRmsBuck(iChg, duty));
+            outCapCurrentSub.textContent =
+              "Worst case at D = 0.5, where it is I_CHG / 2";
+
+            capRippleLabel.textContent = "Input voltage ripple";
+            capRippleEq.textContent =
+              "(8) ΔV_IN = D × (1 − D) × I_CHG / (C_IN × F_SW)";
+            outCapRipple.textContent = formatVolts(
+              vinRippleBuck(duty, iChg, cIn, fSw),
+            );
+          } else {
+            capCurrentLabel.textContent = "Output capacitor RMS ripple current";
+            capCurrentEq.textContent =
+              "(9) I_COUT = I_CHG × sqrt(D / (1 − D))";
+            outCapCurrent.textContent = formatAmps(coutRmsBoost(iChg, duty));
+            outCapCurrentSub.textContent =
+              "Diverges as D → 1, i.e. as V_BUS → 0";
+
+            capRippleLabel.textContent = "Output voltage ripple";
+            capRippleEq.textContent =
+              "(10) ΔV_OUT = I_CHG × D / (C_OUT × F_SW)";
+            outCapRipple.textContent = formatVolts(
+              voutRippleBoost(iChg, duty, cOut, fSw),
+            );
+          }
+
+          renderMessages(messages, msgList);
+        }
+
+        // ==================== VALUE SLIDERS ====================
+        // A range input under each number box, with a "Clamp to range" box.
+        //
+        // Two separate spans are in play per field:
+        //
+        //   slider min/max  how far the handle can be dragged. Set above the
+        //                   datasheet limit where there is one, so an unticked
+        //                   field can still be dragged past it.
+        //   clampMin/Max    the part's real operating envelope. What the tick
+        //                   box holds the value to.
+        //
+        // Where a field has no datasheet limit (the capacitors, the inductor
+        // rating) the two spans are the same. A min/max pair additionally
+        // clamps against its partner, so a ticked range cannot invert.
+        var SLIDERS = [
+          {
+            id: "input-vbus", label: "V_BUS", min: 0, max: 30, step: 0.1,
+            clampMin: 3.6, clampMax: 24,
+          },
+          { id: "input-vsys", label: "V_SYS", min: 0, max: 24, step: 0.1 },
+          {
+            id: "input-ichg", label: "I_CHG", min: 0, max: 6, step: 0.05,
+            clampMax: 5,
+          },
+          {
+            id: "input-iin", label: "I_IN", min: 0, max: 4, step: 0.05,
+            clampMax: 3.3,
+          },
+          { id: "input-cin", label: "C_IN", min: 1, max: 200, step: 0.1 },
+          { id: "input-cout", label: "C_OUT", min: 1, max: 200, step: 0.1 },
+          {
+            id: "input-isat",
+            label: "Inductor saturation rating",
+            min: 0,
+            max: 15,
+            step: 0.1,
+          },
+          {
+            id: "sweep-vbus-min", label: "V_BUS min", min: 0, max: 30, step: 0.1,
+            clampMin: 3.6, clampMax: 24,
+            partnerId: "sweep-vbus-max", pairRole: "min",
+          },
+          {
+            id: "sweep-vbus-max", label: "V_BUS max", min: 0, max: 30, step: 0.1,
+            clampMin: 3.6, clampMax: 24,
+            partnerId: "sweep-vbus-min", pairRole: "max",
+          },
+          {
+            id: "sweep-vsys-min", label: "V_SYS min", min: 0, max: 24, step: 0.1,
+            partnerId: "sweep-vsys-max", pairRole: "min",
+          },
+          {
+            id: "sweep-vsys-max", label: "V_SYS max", min: 0, max: 24, step: 0.1,
+            partnerId: "sweep-vsys-min", pairRole: "max",
+          },
+          {
+            id: "sweep-ichg-min", label: "I_CHG min", min: 0, max: 6, step: 0.05,
+            clampMax: 5, partnerId: "sweep-ichg-max", pairRole: "min",
+          },
+          {
+            id: "sweep-ichg-max", label: "I_CHG max", min: 0, max: 6, step: 0.05,
+            clampMax: 5, partnerId: "sweep-ichg-min", pairRole: "max",
+          },
+          {
+            id: "sweep-iin-min", label: "I_IN min", min: 0, max: 4, step: 0.05,
+            clampMax: 3.3, partnerId: "sweep-iin-max", pairRole: "min",
+          },
+          {
+            id: "sweep-iin-max", label: "I_IN max", min: 0, max: 4, step: 0.05,
+            clampMax: 3.3, partnerId: "sweep-iin-min", pairRole: "max",
+          },
+        ];
+
+        var sliderPairs = [];
+
+        function readFieldValue(input) {
+          var raw = input.value.trim();
+          if (raw === "") return NaN;
+          var value = Number(raw);
+          return isFinite(value) ? value : NaN;
+        }
+
+        // A blank box leaves the handle where it is rather than snapping it to
+        // zero, so clearing I_SAT to skip its check does not move the handle.
+        function syncSlider(input, slider) {
+          var value = readFieldValue(input);
+          if (!isFinite(value)) return;
+          slider.value = String(
+            Math.min(Math.max(value, Number(slider.min)), Number(slider.max)),
+          );
+        }
+
+        // The span a ticked field is held to: its datasheet envelope, narrowed
+        // by the partner end so a min/max pair cannot cross over.
+        function clampBounds(pair) {
+          var lo = pair.clampMin;
+          var hi = pair.clampMax;
+
+          if (pair.partnerId) {
+            var partnerValue = readFieldValue(
+              document.getElementById(pair.partnerId),
+            );
+            if (isFinite(partnerValue)) {
+              if (pair.pairRole === "min") hi = Math.min(hi, partnerValue);
+              else lo = Math.max(lo, partnerValue);
+            }
+          }
+
+          // A partner parked outside the envelope — its own box unticked —
+          // would invert the bounds. Fall back to the envelope alone.
+          if (lo > hi) return { lo: pair.clampMin, hi: pair.clampMax };
+          return { lo: lo, hi: hi };
+        }
+
+        function clampValue(pair) {
+          var value = readFieldValue(pair.input);
+          if (!isFinite(value)) return;
+          var bounds = clampBounds(pair);
+          var clamped = Math.min(Math.max(value, bounds.lo), bounds.hi);
+          if (clamped !== value) pair.input.value = String(clamped);
+        }
+
+        // The clamped span is otherwise invisible, so it goes in the tooltip.
+        function updateClampTitle(pair) {
+          pair.toggle.title =
+            "Clamp to range: hold " +
+            pair.label +
+            " between " +
+            pair.clampMin +
+            " and " +
+            pair.clampMax +
+            ". Untick to go outside it.";
+        }
+
+        function syncAllSliders() {
+          sliderPairs.forEach(function (pair) {
+            if (pair.clamp.checked) clampValue(pair);
+            syncSlider(pair.input, pair.slider);
+          });
+        }
+
+        function buildSliders() {
+          SLIDERS.forEach(function (config) {
+            var input = document.getElementById(config.id);
+            if (!input) return;
+
+            var slider = document.createElement("input");
+            slider.type = "range";
+            slider.className = "field-slider";
+            slider.id = config.id + "-slider";
+            slider.min = String(config.min);
+            slider.max = String(config.max);
+            slider.step = String(config.step);
+            slider.setAttribute("aria-label", config.label + " slider");
+
+            var clamp = document.createElement("input");
+            clamp.type = "checkbox";
+            clamp.id = config.id + "-clamp";
+            clamp.checked = true;
+            // The visible text is "Clamp to range"; the accessible name opens
+            // with that same string and only adds the field, so the two agree
+            // (WCAG 2.5.3 Label in Name) while staying distinguishable.
+            clamp.setAttribute("aria-label", "Clamp to range: " + config.label);
+
+            var clampToggle = document.createElement("label");
+            clampToggle.className = "clamp-toggle";
+            clampToggle.appendChild(clamp);
+            clampToggle.appendChild(document.createTextNode("Clamp to range"));
+
+            var row = document.createElement("div");
+            row.className = "slider-row";
+            row.appendChild(slider);
+            row.appendChild(clampToggle);
+
+            // Sits directly under the number box and inside the form, so the
+            // events bubble to the form listener that recalculates.
+            var host = input.closest(".input-with-unit") || input;
+            host.parentNode.insertBefore(row, host.nextSibling);
+
+            var clampMin = config.clampMin === undefined ? config.min : config.clampMin;
+            var clampMax = config.clampMax === undefined ? config.max : config.clampMax;
+
+            var pair = {
+              input: input,
+              slider: slider,
+              clamp: clamp,
+              toggle: clampToggle,
+              label: config.label,
+              clampMin: clampMin,
+              clampMax: clampMax,
+              // Kept so the cell picker can hand V_SYS back its own envelope.
+              defaultClampMin: clampMin,
+              defaultClampMax: clampMax,
+              partnerId: config.partnerId || null,
+              pairRole: config.pairRole || null,
+            };
+
+            // Dragging past the envelope is what the headroom is for, so while
+            // the box is ticked the handle is pulled back with the value.
+            slider.addEventListener("input", function () {
+              input.value = slider.value;
+              if (clamp.checked) {
+                clampValue(pair);
+                syncSlider(input, slider);
+              }
+            });
+
+            input.addEventListener("input", function () {
+              if (clamp.checked) clampValue(pair);
+              syncSlider(input, slider);
+            });
+
+            // Ticking the box pulls an already out-of-range value in at once.
+            clamp.addEventListener("change", function () {
+              if (clamp.checked) clampValue(pair);
+              syncSlider(input, slider);
+            });
+
+            syncSlider(input, slider);
+            updateClampTitle(pair);
+            sliderPairs.push(pair);
+          });
+        }
+
+        // ==================== CELL COUNT PICKER ====================
+        // Series cell count for the pack on VSYS. Picking one moves the V_SYS
+        // sweep range to that pack's own span, narrows both V_SYS sliders to it
+        // and ticks their clamp boxes so the range stays there. Clicking the
+        // selected chip is the exit back to the full slider range.
+        //
+        // Nominal V_SYS is a fully charged Li-ion cell, 4.2 V per cell, and the
+        // top of the range adds 0.8 V of headroom per cell — so the maximum is
+        // 5 V a cell. The minimum is per cell count rather than a fixed
+        // per-cell figure, so it is tabulated:
+        //
+        //   1s  3.5 – 5 V    (nominal 4.2)
+        //   2s  7 – 10 V     (nominal 8.4)
+        //   3s  9 – 15 V     (nominal 12.6)
+        //   4s  12 – 20 V    (nominal 16.8)
+        var CELL_NOMINAL_VOLTS = 4.2;
+        var CELL_HEADROOM_VOLTS = 0.8;
+        var CELL_MIN_VOLTS = { 1: 3.5, 2: 7, 3: 9, 4: 12 };
+        var VSYS_FULL_MIN = 0;
+        var VSYS_FULL_MAX = 24;
+        var VSYS_RANGE_IDS = ["sweep-vsys-min", "sweep-vsys-max"];
+
+        var cellPicker = document.getElementById("cell-picker");
+        var cellPickerHint = document.getElementById("cell-picker-hint");
+        var cellChips = Array.prototype.slice.call(
+          cellPicker.querySelectorAll(".chip"),
+        );
+        var selectedCells = 0;
+
+        // 4.2 does not land cleanly in binary floating point, so 3 x 4.2 is
+        // 12.600000000000001; round before the values reach the UI.
+        function roundVolts(value) {
+          return Math.round(value * 100) / 100;
+        }
+
+        function cellBand(cells) {
+          var nominal = roundVolts(cells * CELL_NOMINAL_VOLTS);
+          return {
+            min: CELL_MIN_VOLTS[cells],
+            max: roundVolts(nominal + cells * CELL_HEADROOM_VOLTS),
+            nominal: nominal,
+          };
+        }
+
+        function vsysPairs() {
+          return sliderPairs.filter(function (pair) {
+            return VSYS_RANGE_IDS.indexOf(pair.input.id) >= 0;
+          });
+        }
+
+        // Does not recalculate — callers decide when, so a reset can batch it.
+        function setCellCount(cells) {
+          selectedCells = cells;
+          var band =
+            cells > 0
+              ? cellBand(cells)
+              : { min: VSYS_FULL_MIN, max: VSYS_FULL_MAX };
+
+          // The picker moves the range to the pack's own span rather than
+          // trimming whatever happened to be there.
+          if (cells > 0) {
+            document.getElementById("sweep-vsys-min").value = String(band.min);
+            document.getElementById("sweep-vsys-max").value = String(band.max);
+          }
+
+          vsysPairs().forEach(function (pair) {
+            pair.slider.min = String(band.min);
+            pair.slider.max = String(band.max);
+            // The pack's span becomes the clamped envelope too, so V_SYS stays
+            // inside it. Clearing the picker hands back the field's own.
+            pair.clampMin = cells > 0 ? band.min : pair.defaultClampMin;
+            pair.clampMax = cells > 0 ? band.max : pair.defaultClampMax;
+            // Clamping is on by default; a band only narrows the bounds,
+            // and clearing it widens them again without turning clamping off.
+            pair.clamp.checked = true;
+            updateClampTitle(pair);
+            syncSlider(pair.input, pair.slider);
+          });
+
+          cellChips.forEach(function (chip) {
+            var isOn = Number(chip.getAttribute("data-cells")) === cells;
+            chip.classList.toggle("selected", isOn);
+            chip.setAttribute("aria-pressed", isOn ? "true" : "false");
+          });
+
+          cellPickerHint.textContent =
+            cells > 0
+              ? cells +
+                "s — V_SYS " +
+                band.min +
+                "–" +
+                band.max +
+                " V, nominal " +
+                band.nominal +
+                " V"
+              : "Pick a cell count to set the V_SYS range for that pack";
+        }
+
+        cellChips.forEach(function (chip) {
+          chip.addEventListener("click", function () {
+            var cells = Number(chip.getAttribute("data-cells"));
+            setCellCount(cells === selectedCells ? 0 : cells);
+            recalculate();
+          });
+        });
+
+        // ==================== RANGE SWEEP ====================
+        // Every combination of the four ranges is evaluated. Buck and boost
+        // points are accumulated separately: the modes use different equations
+        // and define D differently, so a worst case pooled across both would be
+        // meaningless.
+
+        var SWEEP_VARS = [
+          { key: "vbus", label: "V_BUS", unit: "V" },
+          { key: "vsys", label: "V_SYS", unit: "V" },
+          { key: "ichg", label: "I_CHG", unit: "A" },
+          { key: "iin", label: "I_IN", unit: "A" },
+        ];
+
+        var SWEEP_VAR_BY_KEY = {};
+        SWEEP_VARS.forEach(function (item) {
+          SWEEP_VAR_BY_KEY[item.key] = item;
+        });
+
+        var SWEEP_METRICS = ["ripple", "isat", "capI", "capV"];
+        var MAX_GRID_POINTS = 250000;
+
+        var selectSweepSteps = document.getElementById("select-sweep-steps");
+        var selectSweepAxis = document.getElementById("select-sweep-axis");
+        var sweepBanner = document.getElementById("sweep-banner");
+        var sweepCoverage = document.getElementById("sweep-coverage");
+        var sweepDetail = document.getElementById("sweep-detail");
+        var sweepMsgList = document.getElementById("sweep-msg-list");
+        var sweepSummary = document.getElementById("sweep-summary");
+        var sweepTbody = document.getElementById("sweep-tbody");
+        var sweepTableNote = document.getElementById("sweep-table-note");
+        var sweepAxisHeading = document.getElementById("sweep-axis-heading");
+
+        function sweepField(key, end) {
+          return document.getElementById("sweep-" + key + "-" + end);
+        }
+
+        // A range whose max is not above its min is pinned to a single value.
+        function linspace(min, max, steps) {
+          if (!(max > min)) return [min];
+          var values = [];
+          for (var i = 0; i < steps; i++) {
+            values.push(min + ((max - min) * i) / (steps - 1));
+          }
+          return values;
+        }
+
+        function formatPlain(value) {
+          return String(parseFloat(value.toFixed(4)));
+        }
+
+        function newAccumulator() {
+          return {
+            count: 0,
+            dMin: Infinity,
+            dMax: -Infinity,
+            ripple: null,
+            isat: null,
+            capI: null,
+            capV: null,
+          };
+        }
+
+        // Ties are common — equation (4) is flat wherever I_IN >= I_CHG, and the
+        // ripple equations ignore both currents entirely. Comparing with >= lets
+        // the last point visited win, and the loops ascend, so the corner shown
+        // is the highest combination that attains the maximum rather than the
+        // first one stumbled across.
+        function recordMax(acc, name, value, vBus, vSys, iChg, iIn, d) {
+          var slot = acc[name];
+          if (!slot || value >= slot.value) {
+            acc[name] = {
+              value: value,
+              vBus: vBus,
+              vSys: vSys,
+              iChg: iChg,
+              iIn: iIn,
+              d: d,
+            };
+          }
+        }
+
+        function runSweep(grid) {
+          var vbusVals = grid.vbus;
+          var vsysVals = grid.vsys;
+          var ichgVals = grid.ichg;
+          var iinVals = grid.iin;
+          var axisKey = grid.axisKey;
+          var axisVals = grid[axisKey];
+
+          var totals = { buck: newAccumulator(), boost: newAccumulator() };
+          var stepAccs = [];
+          for (var a = 0; a < axisVals.length; a++) {
+            stepAccs.push({
+              value: axisVals[a],
+              buck: newAccumulator(),
+              boost: newAccumulator(),
+            });
+          }
+          var skipped = 0;
+
+          for (var i = 0; i < vbusVals.length; i++) {
+            for (var j = 0; j < vsysVals.length; j++) {
+              for (var k = 0; k < ichgVals.length; k++) {
+                for (var m = 0; m < iinVals.length; m++) {
+                  var vBus = vbusVals[i];
+                  var vSys = vsysVals[j];
+                  var iChg = ichgVals[k];
+                  var iIn = iinVals[m];
+
+                  // Neither equation applies in buck-boost transition.
+                  if (vBus === vSys) {
+                    skipped += 1;
+                    continue;
+                  }
+
+                  var isBuck = vBus > vSys;
+                  var d = isBuck ? vSys / vBus : 1 - vBus / vSys;
+                  var iRipple = isBuck
+                    ? rippleBuck(vSys, vBus, grid.fSw, grid.l)
+                    : rippleBoost(vBus, vSys, grid.fSw, grid.l);
+                  var capI = isBuck
+                    ? cinRmsBuck(iChg, d)
+                    : coutRmsBoost(iChg, d);
+                  var capV = isBuck
+                    ? vinRippleBuck(d, iChg, grid.cIn, grid.fSw)
+                    : voutRippleBoost(iChg, d, grid.cOut, grid.fSw);
+                  var isat = isatRequired(iIn, iChg, iRipple);
+
+                  var modeKey = isBuck ? "buck" : "boost";
+                  var axisIndex =
+                    axisKey === "vbus"
+                      ? i
+                      : axisKey === "vsys"
+                        ? j
+                        : axisKey === "ichg"
+                          ? k
+                          : m;
+
+                  var targets = [totals[modeKey], stepAccs[axisIndex][modeKey]];
+                  for (var t = 0; t < targets.length; t++) {
+                    var acc = targets[t];
+                    acc.count += 1;
+                    if (d < acc.dMin) acc.dMin = d;
+                    if (d > acc.dMax) acc.dMax = d;
+                    recordMax(acc, "ripple", iRipple, vBus, vSys, iChg, iIn, d);
+                    recordMax(acc, "isat", isat, vBus, vSys, iChg, iIn, d);
+                    recordMax(acc, "capI", capI, vBus, vSys, iChg, iIn, d);
+                    recordMax(acc, "capV", capV, vBus, vSys, iChg, iIn, d);
+                  }
+                }
+              }
+            }
+          }
+
+          return { totals: totals, stepAccs: stepAccs, skipped: skipped };
+        }
+
+        // Names only the variables the equation actually depends on, so the
+        // corner never implies that an irrelevant input drove the maximum.
+        function cornerText(slot, vars) {
+          var parts = [];
+          if (vars.indexOf("vbus") >= 0) {
+            parts.push("V_BUS " + formatPlain(slot.vBus) + " V");
+          }
+          if (vars.indexOf("vsys") >= 0) {
+            parts.push("V_SYS " + formatPlain(slot.vSys) + " V");
+          }
+          if (vars.indexOf("ichg") >= 0) {
+            parts.push("I_CHG " + formatPlain(slot.iChg) + " A");
+          }
+          if (vars.indexOf("iin") >= 0) {
+            parts.push("I_IN " + formatPlain(slot.iIn) + " A");
+          }
+          return "at " + parts.join(", ") + " (D = " + slot.d.toFixed(4) + ")";
+        }
+
+        function appendResultRow(container, label, equation, value, subNodes) {
+          var row = document.createElement("div");
+          row.className = "result";
+
+          var labelCell = document.createElement("span");
+          labelCell.className = "result-label";
+          labelCell.appendChild(document.createTextNode(label + " "));
+          var eqLabel = document.createElement("span");
+          eqLabel.className = "result-eq";
+          eqLabel.textContent = equation;
+          labelCell.appendChild(eqLabel);
+          row.appendChild(labelCell);
+
+          var valueCell = document.createElement("span");
+          valueCell.className = "result-value";
+          valueCell.textContent = value;
+          row.appendChild(valueCell);
+
+          var subCell = document.createElement("span");
+          subCell.className = "result-sub";
+          subNodes.forEach(function (node) {
+            subCell.appendChild(node);
+          });
+          row.appendChild(subCell);
+
+          container.appendChild(row);
+        }
+
+        function renderModeBlock(modeKey, acc, isatRating) {
+          var isBuck = modeKey === "buck";
+          var block = document.createElement("div");
+          block.className = "sweep-block";
+          block.setAttribute("data-mode", modeKey);
+
+          var heading = document.createElement("h3");
+          heading.textContent =
+            (isBuck ? "Buck mode" : "Boost mode") +
+            " — " +
+            acc.count +
+            " points, D " +
+            acc.dMin.toFixed(4) +
+            " to " +
+            acc.dMax.toFixed(4);
+          block.appendChild(heading);
+
+          var results = document.createElement("div");
+          results.className = "results";
+
+          appendResultRow(
+            results,
+            "Max inductor ripple current",
+            isBuck ? "(5)" : "(6)",
+            formatAmps(acc.ripple.value),
+            [document.createTextNode(cornerText(acc.ripple, ["vbus", "vsys"]))],
+          );
+
+          var isatSub = [];
+          if (isFinite(isatRating)) {
+            var pill = document.createElement("span");
+            var ratingOk = isatRating >= acc.isat.value;
+            pill.className = ratingOk ? "ok-pill" : "bad-pill";
+            pill.textContent = ratingOk ? "OK" : "Under-rated";
+            isatSub.push(pill);
+            isatSub.push(
+              document.createTextNode(
+                " " + formatPlain(isatRating) + " A rating · ",
+              ),
+            );
+          }
+          isatSub.push(
+            document.createTextNode(
+              cornerText(acc.isat, ["vbus", "vsys", "ichg", "iin"]),
+            ),
+          );
+          appendResultRow(
+            results,
+            "Inductor saturation rating required",
+            "(4)",
+            "≥ " + formatAmps(acc.isat.value),
+            isatSub,
+          );
+
+          appendResultRow(
+            results,
+            isBuck
+              ? "Max input capacitor RMS ripple current"
+              : "Max output capacitor RMS ripple current",
+            isBuck ? "(7)" : "(9)",
+            formatAmps(acc.capI.value),
+            [
+              document.createTextNode(
+                cornerText(acc.capI, ["vbus", "vsys", "ichg"]),
+              ),
+            ],
+          );
+
+          appendResultRow(
+            results,
+            isBuck ? "Max input voltage ripple" : "Max output voltage ripple",
+            isBuck ? "(8)" : "(10)",
+            formatVolts(acc.capV.value),
+            [
+              document.createTextNode(
+                cornerText(acc.capV, ["vbus", "vsys", "ichg"]) +
+                  " · ideal capacitor, excludes ESR",
+              ),
+            ],
+          );
+
+          block.appendChild(results);
+          return block;
+        }
+
+        function renderSweepTable(stepAccs, axisVar) {
+          sweepTbody.textContent = "";
+
+          var rows = [];
+          stepAccs.forEach(function (step) {
+            ["buck", "boost"].forEach(function (modeKey) {
+              if (step[modeKey].count > 0) {
+                rows.push({
+                  value: step.value,
+                  modeKey: modeKey,
+                  acc: step[modeKey],
+                });
+              }
+            });
+          });
+
+          // Column maxima are per mode: the two modes are different equations.
+          var maxima = { buck: {}, boost: {} };
+          SWEEP_METRICS.forEach(function (metric) {
+            ["buck", "boost"].forEach(function (modeKey) {
+              var best = -Infinity;
+              rows.forEach(function (row) {
+                if (row.modeKey === modeKey && row.acc[metric].value > best) {
+                  best = row.acc[metric].value;
+                }
+              });
+              maxima[modeKey][metric] = best;
+            });
+          });
+
+          rows.forEach(function (row) {
+            var isBuck = row.modeKey === "buck";
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-mode", row.modeKey);
+
+            var axisCell = document.createElement("td");
+            axisCell.className = "num";
+            axisCell.textContent =
+              formatPlain(row.value) + " " + axisVar.unit;
+            tr.appendChild(axisCell);
+
+            var modeCell = document.createElement("td");
+            modeCell.textContent = isBuck
+              ? "Buck (5, 7, 8)"
+              : "Boost (6, 9, 10)";
+            tr.appendChild(modeCell);
+
+            var dCell = document.createElement("td");
+            dCell.className = "num";
+            dCell.textContent =
+              row.acc.dMin === row.acc.dMax
+                ? row.acc.dMin.toFixed(4)
+                : row.acc.dMin.toFixed(4) + "–" + row.acc.dMax.toFixed(4);
+            tr.appendChild(dCell);
+
+            SWEEP_METRICS.forEach(function (metric) {
+              var value = row.acc[metric].value;
+              var cell = document.createElement("td");
+              cell.className =
+                value === maxima[row.modeKey][metric] ? "num cell-max" : "num";
+              cell.textContent =
+                metric === "capV"
+                  ? formatVolts(value)
+                  : (metric === "isat" ? "≥ " : "") + formatAmps(value);
+              tr.appendChild(cell);
+            });
+
+            sweepTbody.appendChild(tr);
+          });
+
+          return rows.length;
+        }
+
+        function blankSweep(note) {
+          sweepBanner.classList.add("is-invalid");
+          sweepCoverage.textContent = "No result";
+          sweepDetail.textContent = "";
+          sweepSummary.textContent = "";
+          sweepTbody.textContent = "";
+          sweepTableNote.textContent = note;
+        }
+
+        function calculateSweep() {
+          var messages = [];
+          var ranges = {};
+          var blanks = false;
+          var invalid = false;
+
+          SWEEP_VARS.forEach(function (item) {
+            var min = readNumber(sweepField(item.key, "min"));
+            var max = readNumber(sweepField(item.key, "max"));
+            if (!isFinite(min) || !isFinite(max)) {
+              blanks = true;
+              return;
+            }
+            if (max < min) {
+              addMessage(
+                messages,
+                "error",
+                item.label + " max is below " + item.label + " min.",
+              );
+              invalid = true;
+              return;
+            }
+            ranges[item.key] = { min: min, max: max };
+          });
+
+          if (blanks) {
+            addMessage(
+              messages,
+              "error",
+              "Fill in both ends of every input range.",
+            );
+            invalid = true;
+          }
+
+          var fSw = Number(selectFsw.value);
+          var l = Number(selectL.value);
+          var cIn = readNumber(inputCin) * 1e-6;
+          var cOut = readNumber(inputCout) * 1e-6;
+          var isatRating = readNumber(inputIsat);
+
+          checkPairing(messages, fSw, l);
+
+          if (!isFinite(cIn) || !isFinite(cOut)) {
+            addMessage(
+              messages,
+              "error",
+              "Fill in the power stage capacitance fields.",
+            );
+            invalid = true;
+          }
+
+          if (!invalid) {
+            if (ranges.vbus.min <= 0 || ranges.vsys.min <= 0) {
+              addMessage(
+                messages,
+                "error",
+                "V_BUS and V_SYS must both be greater than zero.",
+              );
+              invalid = true;
+            }
+          }
+
+          if (!invalid) {
+            if (ranges.vbus.max > 24) {
+              addMessage(
+                messages,
+                "error",
+                "24 V is the recommended operating maximum on VIN1/VIN2. For a PV " +
+                  "panel this bounds V_OC, not V_MPP.",
+              );
+            }
+            if (ranges.vbus.min < 3.6) {
+              addMessage(
+                messages,
+                "warning",
+                "V_BUS range starts below the 3.6 V minimum operating input voltage.",
+              );
+            }
+            if (ranges.ichg.max > 5) {
+              addMessage(
+                messages,
+                "warning",
+                "I_CHG range exceeds the 5 A maximum of the ICHG[8:0] field.",
+              );
+            }
+            if (ranges.iin.max > 3.3) {
+              addMessage(
+                messages,
+                "warning",
+                "I_IN range exceeds the 3.3 A maximum of the IINDPM[8:0] field.",
+              );
+            }
+          }
+
+          if (invalid) {
+            renderMessages(messages, sweepMsgList);
+            blankSweep("Fix the input ranges to see the sweep.");
+            return;
+          }
+
+          var steps = Number(selectSweepSteps.value);
+          var grid = {
+            vbus: linspace(ranges.vbus.min, ranges.vbus.max, steps),
+            vsys: linspace(ranges.vsys.min, ranges.vsys.max, steps),
+            ichg: linspace(ranges.ichg.min, ranges.ichg.max, steps),
+            iin: linspace(ranges.iin.min, ranges.iin.max, steps),
+            fSw: fSw,
+            l: l,
+            cIn: cIn,
+            cOut: cOut,
+            axisKey: selectSweepAxis.value,
+          };
+
+          var total =
+            grid.vbus.length *
+            grid.vsys.length *
+            grid.ichg.length *
+            grid.iin.length;
+
+          if (total > MAX_GRID_POINTS) {
+            addMessage(
+              messages,
+              "error",
+              "That grid is " + total + " points. Reduce the steps per range.",
+            );
+            renderMessages(messages, sweepMsgList);
+            blankSweep("Grid too large to evaluate.");
+            return;
+          }
+
+          var result = runSweep(grid);
+          var buck = result.totals.buck;
+          var boost = result.totals.boost;
+
+          if (buck.count === 0 && boost.count === 0) {
+            addMessage(
+              messages,
+              "error",
+              "Every point in the range sits at V_BUS = V_SYS, where neither the " +
+                "buck nor the boost equation applies.",
+            );
+            renderMessages(messages, sweepMsgList);
+            blankSweep("No usable operating points in this range.");
+            return;
+          }
+
+          sweepBanner.classList.remove("is-invalid");
+          sweepCoverage.textContent =
+            buck.count > 0 && boost.count > 0
+              ? "Buck and boost"
+              : buck.count > 0
+                ? "Buck mode only"
+                : "Boost mode only";
+
+          var detail =
+            total +
+            " operating points · " +
+            buck.count +
+            " buck · " +
+            boost.count +
+            " boost";
+          if (result.skipped > 0) {
+            detail += " · " + result.skipped + " skipped at V_BUS = V_SYS";
+          }
+          sweepDetail.textContent = detail;
+
+          sweepSummary.textContent = "";
+          if (buck.count > 0) {
+            sweepSummary.appendChild(renderModeBlock("buck", buck, isatRating));
+          }
+          if (boost.count > 0) {
+            sweepSummary.appendChild(
+              renderModeBlock("boost", boost, isatRating),
+            );
+          }
+
+          var axisVar = SWEEP_VAR_BY_KEY[grid.axisKey];
+          var axisLength = grid[grid.axisKey].length;
+          sweepAxisHeading.textContent = axisVar.label;
+          var rowCount = renderSweepTable(result.stepAccs, axisVar);
+          sweepTableNote.textContent =
+            axisLength +
+            " " +
+            axisVar.label +
+            " values × " +
+            total / axisLength +
+            " combinations of the other three ranges · " +
+            rowCount +
+            " rows";
+
+          renderMessages(messages, sweepMsgList);
+        }
+
+        // ==================== TABS ====================
+        var TAB_POINT = "point";
+        var TAB_SWEEP = "sweep";
+        var activeTab = TAB_POINT;
+        var tabButtons = {
+          point: document.getElementById("tab-point"),
+          sweep: document.getElementById("tab-sweep"),
+        };
+
+        function recalculate() {
+          if (activeTab === TAB_SWEEP) {
+            calculateSweep();
+          } else {
+            calculate();
+          }
+        }
+
+        function setTab(tab) {
+          activeTab = tab === TAB_SWEEP ? TAB_SWEEP : TAB_POINT;
+
+          Object.keys(tabButtons).forEach(function (key) {
+            var isActive = key === activeTab;
+            tabButtons[key].classList.toggle("active", isActive);
+            tabButtons[key].setAttribute(
+              "aria-pressed",
+              isActive ? "true" : "false",
+            );
+          });
+
+          var panels = document.querySelectorAll("[data-tabpanel]");
+          Array.prototype.forEach.call(panels, function (panel) {
+            if (panel.getAttribute("data-tabpanel") === activeTab) {
+              panel.removeAttribute("hidden");
+            } else {
+              panel.setAttribute("hidden", "hidden");
+            }
+          });
+
+          recalculate();
+        }
+
+        tabButtons.point.addEventListener("click", function () {
+          setTab(TAB_POINT);
+        });
+
+        tabButtons.sweep.addEventListener("click", function () {
+          setTab(TAB_SWEEP);
+        });
+
+        // ==================== SELF-CHECK VECTORS ====================
+        // Reproduce the verification vectors from the transcription notes.
+        // These are self-consistency checks, not values printed by TI.
+        var VECTORS = [
+          {
+            eq: 5,
+            inputs: "V_BUS=15, V_SYS=8, F_SW=1.5 MHz, L=1 µH",
+            expected: 2.4889,
+            unit: "A",
+            compute: function () {
+              return rippleBuck(8, 15, 1.5e6, 1e-6);
+            },
+          },
+          {
+            eq: 5,
+            inputs: "V_BUS=16, V_SYS=8 (D=0.5)",
+            expected: 2.6667,
+            unit: "A",
+            compute: function () {
+              return rippleBuck(8, 16, 1.5e6, 1e-6);
+            },
+          },
+          {
+            eq: 5,
+            inputs: "V_BUS=20, V_SYS=8",
+            expected: 3.2,
+            unit: "A",
+            compute: function () {
+              return rippleBuck(8, 20, 1.5e6, 1e-6);
+            },
+          },
+          {
+            eq: 5,
+            inputs: "V_BUS=20, V_SYS=8, F_SW=750 kHz, L=2.2 µH",
+            expected: 2.9091,
+            unit: "A",
+            compute: function () {
+              return rippleBuck(8, 20, 750e3, 2.2e-6);
+            },
+          },
+          {
+            eq: 6,
+            inputs: "V_BUS=5, V_SYS=8, F_SW=1.5 MHz, L=1 µH (D=0.375)",
+            expected: 1.25,
+            unit: "A",
+            compute: function () {
+              return rippleBoost(5, 8, 1.5e6, 1e-6);
+            },
+          },
+          {
+            eq: 6,
+            inputs: "V_BUS=6, V_SYS=8 (D=0.25)",
+            expected: 1.0,
+            unit: "A",
+            compute: function () {
+              return rippleBoost(6, 8, 1.5e6, 1e-6);
+            },
+          },
+          {
+            eq: 7,
+            inputs: "D=0.5, I_CHG=3",
+            expected: 1.5,
+            unit: "A",
+            compute: function () {
+              return cinRmsBuck(3, 0.5);
+            },
+          },
+          {
+            eq: 8,
+            inputs: "D=0.5, I_CHG=3, C_IN=30.1 µF, F_SW=1.5 MHz",
+            expected: 0.016611,
+            unit: "V",
+            compute: function () {
+              return vinRippleBuck(0.5, 3, 30.1e-6, 1.5e6);
+            },
+          },
+          {
+            eq: 9,
+            inputs: "V_BUS=5, V_SYS=8 (D=0.375), I_CHG=3",
+            expected: 2.3238,
+            unit: "A",
+            compute: function () {
+              return coutRmsBoost(3, 1 - 5 / 8);
+            },
+          },
+          {
+            eq: 10,
+            inputs: "D=0.375, I_CHG=3, C_OUT=50.1 µF, F_SW=1.5 MHz",
+            expected: 0.014970,
+            unit: "V",
+            compute: function () {
+              return voutRippleBoost(3, 0.375, 50.1e-6, 1.5e6);
+            },
+          },
+          {
+            eq: 4,
+            inputs: "I_IN=I_CHG=3, I_RIPPLE=3.2",
+            expected: 4.6,
+            unit: "A",
+            relation: "≥ ",
+            compute: function () {
+              return isatRequired(3, 3, 3.2);
+            },
+          },
+        ];
+
+        var toggleVectorsButton = document.getElementById("toggle-vectors-btn");
+        var vecPanel = document.getElementById("vec-panel");
+        var vecTbody = document.getElementById("vec-tbody");
+        var vecSummary = document.getElementById("vec-summary");
+        var vectorsRendered = false;
+
+        function formatVector(value, unit) {
+          return unit === "V" ? formatVolts(value) : formatAmps(value);
+        }
+
+        function renderVectors() {
+          var passed = 0;
+          vecTbody.textContent = "";
+
+          VECTORS.forEach(function (vector) {
+            var actual = vector.compute();
+            // Expected values are quoted to 4-5 significant figures, so compare
+            // on relative error rather than exact equality.
+            var ok =
+              Math.abs(actual - vector.expected) / Math.abs(vector.expected) <
+              1e-3;
+            if (ok) passed += 1;
+
+            var relation = vector.relation || "";
+            var row = document.createElement("tr");
+
+            var cellEq = document.createElement("td");
+            cellEq.textContent = "(" + vector.eq + ")";
+            row.appendChild(cellEq);
+
+            var cellInputs = document.createElement("td");
+            cellInputs.className = "vec-inputs";
+            cellInputs.textContent = vector.inputs;
+            row.appendChild(cellInputs);
+
+            var cellExpected = document.createElement("td");
+            cellExpected.className = "num";
+            cellExpected.textContent =
+              relation + formatVector(vector.expected, vector.unit);
+            row.appendChild(cellExpected);
+
+            var cellActual = document.createElement("td");
+            cellActual.className = "num";
+            cellActual.textContent =
+              relation + formatVector(actual, vector.unit);
+            row.appendChild(cellActual);
+
+            var cellResult = document.createElement("td");
+            var pill = document.createElement("span");
+            pill.className = ok ? "ok-pill" : "bad-pill";
+            pill.textContent = ok ? "Pass" : "Fail";
+            cellResult.appendChild(pill);
+            row.appendChild(cellResult);
+
+            vecTbody.appendChild(row);
+          });
+
+          vecSummary.textContent =
+            passed + " of " + VECTORS.length + " vectors reproduced.";
+          vectorsRendered = true;
+        }
+
+        function setVectorPanelVisibility(visible) {
+          if (visible) {
+            if (!vectorsRendered) renderVectors();
+            vecPanel.removeAttribute("hidden");
+            toggleVectorsButton.setAttribute("aria-expanded", "true");
+            toggleVectorsButton.textContent = "Hide self-check";
+          } else {
+            vecPanel.setAttribute("hidden", "hidden");
+            toggleVectorsButton.setAttribute("aria-expanded", "false");
+            toggleVectorsButton.textContent = "Show self-check";
+          }
+        }
+
+        toggleVectorsButton.addEventListener("click", function () {
+          setVectorPanelVisibility(vecPanel.hasAttribute("hidden"));
+        });
+
+        // ==================== WIRING ====================
+        var form = document.getElementById("calculator-form");
+        form.addEventListener("input", recalculate);
+        form.addEventListener("change", recalculate);
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+        });
+
+        document
+          .getElementById("reset-btn")
+          .addEventListener("click", function () {
+            Object.keys(DEFAULTS).forEach(function (id) {
+              document.getElementById(id).value = DEFAULTS[id];
+            });
+            setCellCount(0);
+            syncAllSliders();
+            recalculate();
+          });
+
+        // ==================== INITIALIZATION ====================
+        applyThemeMode(getStoredThemeMode(), false);
+
+        // Hide "save locally" tip when already running locally
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = document.getElementById("hosted-note");
+          if (hostedNote) {
+            hostedNote.hidden = true;
+          }
+        }
+
+        setVectorPanelVisibility(false);
+        buildSliders();
+        setTab(TAB_POINT);
+      })();
+    </script>
+  </body>
+</html>

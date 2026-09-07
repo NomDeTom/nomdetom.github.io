@@ -1,0 +1,4429 @@
+<!doctype html>
+<!-- Agentic tools: mode-aware equation selection, boost compensator, datasheet self-check vectors, 3-state theme system, attribution infrastructure -->
+<!-- LLMs: Claude Opus 5 (via Claude Code) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>TPS55287 Design Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-text: #8c1d1d;
+        --chip-selected-text: #ffffff;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-text: #ffb4b4;
+        --chip-selected-text: #0f1b13;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      a:not(.action-btn) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .calc-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .calc-grid section {
+        margin-top: 0;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      h3 {
+        margin: 1.25rem 0 0.6rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3rem;
+      }
+
+      .section-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+
+      .section-header-row h2 {
+        margin: 0;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      /* Not a grid: every in-flow child of a grid container becomes its own
+         grid item, so "V<sub>IN</sub> — input voltage" broke into a row per
+         inline element. Block keeps the title flowing inline and the hint,
+         made a block below, still gets its own line. */
+      label {
+        font-weight: 600;
+        display: block;
+      }
+
+      .field-hint {
+        display: block;
+        margin-top: 0.35rem;
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+        align-items: start;
+      }
+
+      .input-with-unit {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0;
+      }
+
+      .input-with-unit input {
+        border-right: none;
+      }
+
+      .input-with-unit .unit-tag {
+        display: flex;
+        align-items: center;
+        padding: 0 0.7rem;
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      /* -------- mode banner: the derived buck/boost decision -------- */
+      .mode-banner {
+        border: 1px solid var(--accent);
+        background: var(--accent-soft);
+        padding: 0.7rem 0.85rem;
+        margin-bottom: 1rem;
+      }
+
+      .mode-banner.is-invalid {
+        border-color: var(--error-text);
+        background: transparent;
+      }
+
+      .mode-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+      }
+
+      .mode-detail {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      /* -------- validation messages -------- */
+      .msg-list {
+        display: grid;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .msg-list:empty {
+        display: none;
+      }
+
+      .msg {
+        border: 1px solid;
+        padding: 0.55rem 0.7rem;
+        font-size: 0.88rem;
+      }
+
+      .msg.error {
+        color: var(--error-text);
+        border-color: var(--error-text);
+      }
+
+      .msg.warning {
+        color: #8a6500;
+        border-color: #8a6500;
+      }
+
+      :root[data-theme="dark"] .msg.warning {
+        color: #f2cf70;
+        border-color: #f2cf70;
+      }
+
+      /* -------- status pills -------- */
+      .ok-pill,
+      .warn-pill,
+      .bad-pill {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid;
+        padding: 0.1rem 0.35rem;
+      }
+
+      .ok-pill {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .warn-pill {
+        color: #8a6500;
+        border-color: #8a6500;
+      }
+
+      :root[data-theme="dark"] .warn-pill {
+        color: #f2cf70;
+        border-color: #f2cf70;
+      }
+
+      .bad-pill {
+        color: var(--error-text);
+        border-color: var(--error-text);
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-eq {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-family: "Courier New", monospace;
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      .result-sub {
+        font-size: 0.85rem;
+        color: var(--muted);
+        text-align: right;
+        grid-column: 2;
+      }
+
+      .results-group[hidden] {
+        display: none !important;
+      }
+
+      /* -------- self-check vector table -------- */
+      .vec-panel[hidden] {
+        display: none !important;
+      }
+
+      .vec-table,
+      .sweep-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      .vec-table th,
+      .vec-table td,
+      .sweep-table th,
+      .sweep-table td {
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+
+      .vec-table th,
+      .sweep-table th {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      .vec-table td.num,
+      .sweep-table td.num {
+        font-family: "Courier New", monospace;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .vec-inputs {
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .vec-summary {
+        margin: 0 0 0.9rem;
+        font-size: 0.9rem;
+      }
+
+      /* -------- formulas / reference -------- */
+      .formula-note {
+        margin-top: 0.6rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .formula-note code,
+      .mono {
+        font-family: "Courier New", monospace;
+      }
+
+      .ref-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+      }
+
+      .ref-table th,
+      .ref-table td {
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border: 1px solid var(--border);
+      }
+
+      .ref-table th {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.78rem;
+      }
+
+      .caveat {
+        margin: 0.9rem 0 0;
+        padding: 0.7rem 0.85rem;
+        border-left: 3px solid var(--accent);
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .caveat strong {
+        color: var(--text);
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      @media (max-width: 900px) {
+        .calc-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .two-col-fields {
+          grid-template-columns: 1fr;
+        }
+
+        .calculator-picker {
+          grid-template-columns: 1fr;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value,
+        .result-sub {
+          text-align: left;
+        }
+      }
+
+      /* -------- calculation mode tabs (calculator-picker pattern, as in
+         Computing Units and the Unit Converter) -------- */
+      .calculator-picker {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(11rem, 15rem));
+        gap: 0.55rem;
+        margin-top: 1.25rem;
+      }
+
+      .calculator-picker-btn {
+        width: 100%;
+        text-align: center;
+        padding: 0.5rem 0.65rem;
+      }
+
+      .calculator-picker-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      [data-tabpanel][hidden] {
+        display: none !important;
+      }
+
+      /* -------- value sliders under the number fields.
+         The global input rule gives every input a box; a range input needs
+         that undone, and accent-color carries the theme into the native
+         track and thumb. -------- */
+      /* -------- selection chips (house .chip pattern). Selected fill uses
+         --chip-selected-text so it stays readable in both themes. -------- */
+      .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--chip-selected-text);
+      }
+
+      .chip.selected:hover {
+        border-color: var(--accent);
+        color: var(--chip-selected-text);
+      }
+
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-top: 0.4rem;
+      }
+
+      .field-slider {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        accent-color: var(--accent);
+        height: 1.15rem;
+        cursor: pointer;
+      }
+
+      /* Overrides the global label rule, which is a bold grid. */
+      .clamp-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex: 0 0 auto;
+        font-weight: 400;
+        font-size: 0.76rem;
+        color: var(--muted);
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .clamp-toggle:hover {
+        color: var(--accent);
+      }
+
+      .clamp-toggle input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+        padding: 0;
+        flex-shrink: 0;
+        accent-color: var(--accent);
+      }
+
+      .field-slider:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* -------- range sweep -------- */
+      .sweep-block + .sweep-block {
+        margin-top: 1.5rem;
+      }
+
+      .sweep-block h3 {
+        margin-top: 0;
+      }
+
+      .sweep-note {
+        margin: 0 0 0.9rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      /* Column maximum for a mode — the number that drives the part choice. */
+      .cell-max {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+    </style>  </head>
+  <body>
+    <main>
+      <header>
+        <h1>TPS55287 Design Calculator</h1>
+        <p class="subtitle">
+          Inductor, capacitor, current-limit and loop-compensation sizing for
+          the TI TPS55287 buck-boost converter, from &sect;7.2.2 of the
+          datasheet
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            Equations from Texas Instruments TPS55287 datasheet SLVSGW6
+            (August 2024), &sect;7.2.2 Detailed Design Procedure and &sect;6.3.8,
+            pages 19 and 35&ndash;39. Equation numbering follows the numbers
+            printed beside each equation, not TI's in-text cross-references.
+            This page is not affiliated with or endorsed by Texas Instruments.
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+            •
+            <a class="attribution-link" href="bq25798-design-calculator.html"
+              >BQ25798 calculator</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <div
+        id="mode-picker"
+        class="calculator-picker"
+        role="tablist"
+        aria-label="Calculation mode"
+      >
+        <button
+          id="tab-point"
+          class="action-btn calculator-picker-btn active"
+          type="button"
+          aria-pressed="true"
+        >
+          Operating point
+        </button>
+        <button
+          id="tab-comp"
+          class="action-btn calculator-picker-btn"
+          type="button"
+          aria-pressed="false"
+        >
+          Loop compensation
+        </button>
+        <button
+          id="tab-standard"
+          class="action-btn calculator-picker-btn"
+          type="button"
+          aria-pressed="false"
+        >
+          Standard values
+        </button>
+        <button
+          id="tab-sweep"
+          class="action-btn calculator-picker-btn"
+          type="button"
+          aria-pressed="false"
+        >
+          Range sweep
+        </button>
+      </div>
+
+      <div class="calc-grid">
+        <section>
+          <div class="section-header-row">
+            <h2>Inputs</h2>
+            <button
+              id="reset-btn"
+              class="action-btn"
+              type="button"
+              aria-label="Reset inputs to the datasheet design example"
+            >
+              Reset to datasheet example
+            </button>
+          </div>
+
+          <form id="calculator-form">
+            <div data-tabpanel="point comp standard">
+              <h3>Operating point</h3>
+              <p class="sweep-note">
+                Every result below is quoted at this operating point &mdash;
+                &ldquo;the ripple&rdquo; is not a single number for this part.
+              </p>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="input-vin">
+                    V<sub>IN</sub>
+                    <span class="field-hint">Input voltage, 3&ndash;36 V</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-vin" type="number" inputmode="decimal" step="any" value="9" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="input-vout">
+                    V<sub>OUT</sub>
+                    <span class="field-hint">Output voltage, 0.8&ndash;22 V</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-vout" type="number" inputmode="decimal" step="any" value="20" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-iout">
+                  I<sub>OUT</sub>
+                  <span class="field-hint">Output current at this operating point</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-iout" type="number" inputmode="decimal" step="any" value="2.25" />
+                  <span class="unit-tag">A</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div data-tabpanel="point">
+              <h3>Inductor sizing target</h3>
+              <p class="sweep-note">
+                Equations 9 and 10 pick L from a ripple budget at the design
+                extremes, which are separate inputs from the operating point
+                above.
+              </p>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="input-vinmax">
+                    V<sub>IN(MAX)</sub>
+                    <span class="field-hint">Design maximum, for equation 9</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-vinmax" type="number" inputmode="decimal" step="any" value="36" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="input-voutmax">
+                    V<sub>OUT(MAX)</sub>
+                    <span class="field-hint">Design maximum, for equation 10</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-voutmax" type="number" inputmode="decimal" step="any" value="20" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-ripple-target">
+                  &Delta;I<sub>L(P-P)</sub> target
+                  <span class="field-hint">Peak-to-peak ripple budget</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-ripple-target" type="number" inputmode="decimal" step="any" value="2.5" />
+                  <span class="unit-tag">A</span>
+                </div>
+              </div>
+
+              <h3>Output ripple budget</h3>
+              <p class="sweep-note">
+                &sect;7.2.2.5 says to work backwards from the ripple budget
+                through equations 16 and 17 to a minimum effective
+                C<sub>OUT</sub>. Boost mode only.
+              </p>
+
+              <div class="field">
+                <label for="input-ripple-budget">
+                  Output voltage ripple budget
+                  <span class="field-hint">Table 7-1 uses &plusmn;50 mV</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-ripple-budget" type="number" inputmode="decimal" step="any" value="50" />
+                  <span class="unit-tag">mV</span>
+                </div>
+              </div>
+
+              <h3>Output current limit</h3>
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="input-vsns">
+                    V<sub>SNS</sub>
+                    <span class="field-hint">Register 02h, 50 mV default, 63.5 mV max</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-vsns" type="number" inputmode="decimal" step="any" value="50" />
+                    <span class="unit-tag">mV</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="input-ioutlimit">
+                    I<sub>OUT_LIMIT</sub>
+                    <span class="field-hint">Desired limit</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-ioutlimit" type="number" inputmode="decimal" step="any" value="2.25" />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div data-tabpanel="comp standard" hidden>
+              <h3>Compensator</h3>
+              <p class="sweep-note">
+                &sect;7.2.2.7 gives compensation for boost mode only &mdash; it
+                states boost is the restrictive case, because of the
+                right-half-plane zero.
+              </p>
+
+              <div class="field">
+                <label for="select-vref">
+                  V<sub>REF</sub>
+                  <span class="field-hint">Set by the VOUT_FS register field (&sect;6.5)</span>
+                </label>
+                <select id="select-vref">
+                  <option value="1.129" selected>1.129 V</option>
+                  <option value="0.846">0.846 V</option>
+                  <option value="0.508">0.508 V</option>
+                  <option value="0.282">0.282 V</option>
+                </select>
+              </div>
+
+            </div>
+
+            <div data-tabpanel="comp" hidden>
+              <div class="field">
+                <label id="fc-picker-label">
+                  Crossover frequency f<sub>C</sub>
+                  <span class="field-hint" id="fc-picker-hint"
+                    >Using the &sect;7.2.2.7 bound, min(f_SW/10, f_RHPZ/5)</span
+                  >
+                </label>
+                <div
+                  class="chip-group"
+                  id="fc-picker"
+                  role="group"
+                  aria-labelledby="fc-picker-label"
+                >
+                  <button type="button" class="chip selected" aria-pressed="true" data-fc="bound">
+                    Use the bound
+                  </button>
+                  <button type="button" class="chip" aria-pressed="false" data-fc="custom">
+                    Custom
+                  </button>
+                </div>
+              </div>
+
+              <div class="field" id="fc-custom-field" hidden>
+                <label for="input-fc">
+                  f<sub>C</sub>
+                  <span class="field-hint">Checked against the bound</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-fc" type="number" inputmode="decimal" step="any" value="12.191" />
+                  <span class="unit-tag">kHz</span>
+                </div>
+              </div>
+            </div>
+
+            <div data-tabpanel="standard" hidden>
+              <h3>Chosen standard values</h3>
+              <p class="sweep-note">
+                Equations 24&ndash;26 rearranged, so a part you can actually buy
+                is the input. f<sub>C</sub> only splits R<sub>C</sub> against
+                C<sub>C</sub> &mdash; their product is fixed by the power stage.
+              </p>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="input-rc-chosen">
+                    R<sub>C</sub>
+                    <span class="field-hint">Sets the crossover</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-rc-chosen" type="number" inputmode="decimal" step="any" value="82" />
+                    <span class="unit-tag">k&Omega;</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="input-cc-chosen">
+                    C<sub>C</sub>
+                    <span class="field-hint">Sets the f_COMZ = f_P cancellation</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="input-cc-chosen" type="number" inputmode="decimal" step="any" value="5.6" />
+                    <span class="unit-tag">nF</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-cp-chosen">
+                  C<sub>P</sub>
+                  <span class="field-hint">Zero or blank if omitted, as equation 26 usually allows</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-cp-chosen" type="number" inputmode="decimal" step="any" value="0" />
+                  <span class="unit-tag">pF</span>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="select-r-series">
+                    R<sub>C</sub> series
+                    <span class="field-hint">For the candidate table below</span>
+                  </label>
+                  <select id="select-r-series">
+                    <option value="E6">E6</option>
+                    <option value="E12">E12</option>
+                    <option value="E24" selected>E24</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="select-c-series">
+                    C<sub>C</sub> series
+                    <span class="field-hint">Snapping C_C is the only detuning step</span>
+                  </label>
+                  <select id="select-c-series">
+                    <option value="E6">E6</option>
+                    <option value="E12" selected>E12</option>
+                    <option value="E24">E24</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div data-tabpanel="sweep" hidden>
+              <h3>Input ranges</h3>
+              <p class="sweep-note">
+                Every combination of these ranges is evaluated. Give a variable
+                the same min and max to pin it.
+              </p>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-vin-min">
+                    V<sub>IN</sub> min
+                    <span class="field-hint">Input voltage, 3&ndash;36 V</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="sweep-vin-min" type="number" inputmode="decimal" step="any" value="9" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="sweep-vin-max">
+                    V<sub>IN</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="sweep-vin-max" type="number" inputmode="decimal" step="any" value="36" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-vout-min">
+                    V<sub>OUT</sub> min
+                    <span class="field-hint">Output voltage, 0.8&ndash;22 V</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="sweep-vout-min" type="number" inputmode="decimal" step="any" value="3.3" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="sweep-vout-max">
+                    V<sub>OUT</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="sweep-vout-max" type="number" inputmode="decimal" step="any" value="20" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="sweep-iout-min">
+                    I<sub>OUT</sub> min
+                    <span class="field-hint">Output current</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="sweep-iout-min" type="number" inputmode="decimal" step="any" value="0.5" />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="sweep-iout-max">
+                    I<sub>OUT</sub> max
+                    <span class="field-hint">&nbsp;</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="sweep-iout-max" type="number" inputmode="decimal" step="any" value="2.25" />
+                    <span class="unit-tag">A</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="select-sweep-steps">
+                    Steps per range
+                    <span class="field-hint">Applied to each range that is not pinned</span>
+                  </label>
+                  <select id="select-sweep-steps">
+                    <option value="5">5</option>
+                    <option value="9" selected>9</option>
+                    <option value="11">11</option>
+                    <option value="21">21</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="select-sweep-axis">
+                    Table axis
+                    <span class="field-hint">Variable tabulated below</span>
+                  </label>
+                  <select id="select-sweep-axis">
+                    <option value="vin" selected>V_IN</option>
+                    <option value="vout">V_OUT</option>
+                    <option value="iout">I_OUT</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <h3>Power stage</h3>
+
+            <div class="field">
+              <label id="fsw-picker-label">
+                Switching frequency source
+                <span class="field-hint" id="fsw-picker-hint"
+                  >Equation 3 takes R<sub>FSW</sub> in ohms and returns
+                  MHz</span
+                >
+              </label>
+              <div
+                class="chip-group"
+                id="fsw-picker"
+                role="group"
+                aria-labelledby="fsw-picker-label"
+              >
+                <button type="button" class="chip selected" aria-pressed="true" data-fsw="resistor">
+                  Fit R_FSW
+                </button>
+                <button type="button" class="chip" aria-pressed="false" data-fsw="target">
+                  From a target f_SW
+                </button>
+              </div>
+            </div>
+
+            <div class="field" id="rfsw-field">
+              <label for="input-rfsw">
+                R<sub>FSW</sub>
+                <span class="field-hint" id="rfsw-hint"
+                  >8.4 k&Omega; to 100 k&Omega; &mdash; the only knob; equation 3
+                  turns it into f<sub>SW</sub></span
+                >
+              </label>
+              <div class="input-with-unit">
+                <input id="input-rfsw" type="number" inputmode="decimal" step="any" value="49900" />
+                <span class="unit-tag">&Omega;</span>
+              </div>
+            </div>
+
+            <div class="two-col-fields" id="fsw-field" hidden>
+              <div class="field">
+                <label for="input-fsw">
+                  Target f<sub>SW</sub>
+                  <span class="field-hint">200 kHz to 2.2 MHz</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-fsw" type="number" inputmode="decimal" step="any" value="400" />
+                  <span class="unit-tag">kHz</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="select-rfsw-series">
+                  R<sub>FSW</sub> series
+                  <span class="field-hint">The target snaps to a real resistor</span>
+                </label>
+                <select id="select-rfsw-series">
+                  <option value="E24">E24</option>
+                  <option value="E96" selected>E96</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-l">
+                  L
+                  <span class="field-hint">1&ndash;10 &micro;H, and above 1.2/f<sub>SW</sub></span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-l" type="number" inputmode="decimal" step="any" value="4.7" />
+                  <span class="unit-tag">&micro;H</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-isat">
+                  Inductor I<sub>SAT</sub>
+                  <span class="field-hint">Checked against I<sub>L(P)</sub></span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-isat" type="number" inputmode="decimal" step="any" value="10.5" />
+                  <span class="unit-tag">A</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-cin">
+                  C<sub>IN</sub>
+                  <span class="field-hint"
+                    >&sect;5.3 wants 4.7 &micro;F or more, 22 &micro;F nominal;
+                    &sect;7.2.2.4 suggests 20 &micro;F. No equation consumes the
+                    value &mdash; equation 14 only gives the current through
+                    it.</span
+                  >
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-cin" type="number" inputmode="decimal" step="any" value="20" />
+                  <span class="unit-tag">&micro;F</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-cout">
+                  C<sub>OUT</sub>
+                  <span class="field-hint">&sect;5.3: 10 to 1000 &micro;F, 100 &micro;F nominal</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-cout" type="number" inputmode="decimal" step="any" value="120" />
+                  <span class="unit-tag">&micro;F</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-rcout">
+                  R<sub>COUT</sub>
+                  <span class="field-hint">ESR of the output capacitance</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-rcout" type="number" inputmode="decimal" step="any" value="5" />
+                  <span class="unit-tag">m&Omega;</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="input-eta">
+                  &eta;
+                  <span class="field-hint">Efficiency, mandatory in equation 11</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="input-eta" type="number" inputmode="decimal" step="any" value="0.9" />
+                  <span class="unit-tag">&nbsp;</span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section data-tabpanel="point">
+          <h2>Results</h2>
+
+          <div id="mode-banner" class="mode-banner" role="status" aria-live="polite">
+            <span class="mode-name" id="mode-name">&mdash;</span>
+            <span class="mode-detail" id="mode-detail"></span>
+          </div>
+
+          <div id="msg-list" class="msg-list" role="alert"></div>
+
+          <div class="results" id="point-results"></div>
+
+          <p class="caveat">
+            Only the equations for the active mode are shown. Equation 9 returns
+            a negative inductance if fed boost conditions, and the datasheet
+            gives no buck-mode output-ripple or I<sub>L(DC)</sub> equation
+            &mdash; in buck, I<sub>L(DC)</sub> is simply I<sub>OUT</sub>.
+          </p>
+        </section>
+
+        <section data-tabpanel="comp" hidden>
+          <h2>Loop compensation</h2>
+
+          <div id="comp-banner" class="mode-banner" role="status" aria-live="polite">
+            <span class="mode-name" id="comp-name">&mdash;</span>
+            <span class="mode-detail" id="comp-detail"></span>
+          </div>
+
+          <div id="comp-msg-list" class="msg-list" role="alert"></div>
+
+          <div class="results" id="comp-results"></div>
+
+          <p class="caveat">
+            <strong>The closed-loop figures rest on two assumptions the
+            datasheet does not make.</strong> R<sub>EA</sub> is absent from
+            SLVSGW6 &mdash; the 10 M&Omega; used here is the figure TI give on
+            the E2E forum. And the datasheet gives no expressions for
+            f<sub>COMZ</sub>, f<sub>COMP1</sub> or f<sub>COMP2</sub>, so the
+            standard type-II mapping is assumed. The component values from
+            equations 24&ndash;26 need neither assumption and stand on their
+            own; the loop gain, crossover and phase margin need both.
+          </p>
+
+          <p class="caveat">
+            <strong>Equations 25 and 26 are cancellation conditions, not free
+            choices.</strong> Substituting them into that mapping makes
+            f<sub>COMZ</sub> land exactly on f<sub>P</sub> and
+            f<sub>COMP2</sub> land exactly on f<sub>ESRZ</sub> &mdash; the two
+            pills above check it numerically. What is left is a single dominant
+            pole at f<sub>COMP1</sub> plus the uncancellable right-half-plane
+            zero. Moving C_C or C_P away from equations 25 and 26 breaks that.
+          </p>
+
+          <p class="caveat">
+            <strong>R<sub>EA</sub> cancels out of the crossover.</strong> Above
+            f<sub>COMP1</sub> the control gain tends to G_EA &times; R_C &times;
+            V_REF / V_OUT, with no R<sub>EA</sub> in it. Swept from 1 M&Omega;
+            to 1 G&Omega; the DC loop gain moves 60 dB while the loop gain at
+            the designed crossover does not move at all. So R<sub>EA</sub> sets
+            the DC loop gain and the dominant pole &mdash; low-frequency
+            regulation accuracy &mdash; and has no effect on R_C, C_C or C_P.
+            That is very likely why TI could leave it out, and it is why the
+            crossover and phase margin above are insensitive to it while the DC
+            loop gain is not.
+          </p>
+
+          <p class="caveat">
+            <strong>Two different sense resistors.</strong>
+            R<sub>SENSE</sub> = 0.055 &Omega; is the <em>internal</em> resistor
+            used in equations 19 and 24. R<sub>SNS</sub> from equation 18 is the
+            <em>external</em> part you fit between ISP and ISN. They are
+            unrelated.
+          </p>
+        </section>
+
+        <section data-tabpanel="standard" hidden>
+          <h2>What these parts give you</h2>
+
+          <div id="std-banner" class="mode-banner" role="status" aria-live="polite">
+            <span class="mode-name" id="std-name">&mdash;</span>
+            <span class="mode-detail" id="std-detail"></span>
+          </div>
+
+          <div id="std-msg-list" class="msg-list" role="alert"></div>
+
+          <div class="results" id="std-results"></div>
+
+          <p class="caveat">
+            <strong>f<sub>C</sub> never moves the product.</strong> Substituting
+            the boost identity (1&nbsp;&minus;&nbsp;D) = V<sub>IN</sub>/V<sub>OUT</sub>
+            into equations 24 and 25 leaves
+            R<sub>C</sub>&nbsp;&times;&nbsp;C<sub>C</sub> =
+            R<sub>LOAD</sub>&nbsp;&times;&nbsp;C<sub>OUT</sub>/2, which is the
+            f_COMZ&nbsp;=&nbsp;f_P cancellation restated. Doubling
+            f<sub>C</sub> doubles R<sub>C</sub> and halves C<sub>C</sub>. So
+            pick R<sub>C</sub> for bandwidth and let C<sub>C</sub> follow from
+            the product &mdash; not from f<sub>C</sub>.
+          </p>
+
+          <p class="caveat">
+            Snapping R<sub>C</sub> <em>down</em> is always safe: it lowers
+            f<sub>C</sub>, moving further inside the &sect;7.2.2.7 bound.
+            Snapping C<sub>C</sub> is the only step that detunes the
+            cancellation, and it is tolerant &mdash; a 5% C<sub>C</sub> error
+            moves f_COMZ 5%, against a pole a few hundred hertz down and a
+            crossover roughly 30&times; higher.
+          </p>
+        </section>
+
+        <section data-tabpanel="sweep" hidden>
+          <h2>Worst case across the range</h2>
+
+          <div id="sweep-banner" class="mode-banner" role="status" aria-live="polite">
+            <span class="mode-name" id="sweep-coverage">&mdash;</span>
+            <span class="mode-detail" id="sweep-detail"></span>
+          </div>
+
+          <div id="sweep-msg-list" class="msg-list" role="alert"></div>
+
+          <div id="sweep-summary"></div>
+
+          <p class="caveat">
+            Buck and boost worst cases are computed separately, each from only
+            the operating points in that mode. Points where V<sub>IN</sub> =
+            V<sub>OUT</sub> are skipped &mdash; neither set of equations applies
+            in buck-boost transition.
+          </p>
+        </section>
+      </div>
+
+      <section data-tabpanel="standard" hidden>
+        <h2>Candidate standard values</h2>
+        <p class="sweep-note" id="std-table-note"></p>
+        <div class="table-scroll">
+          <table class="sweep-table">
+            <thead>
+              <tr>
+                <th scope="col">R_C</th>
+                <th scope="col">implied f_C</th>
+                <th scope="col">% of ceiling</th>
+                <th scope="col">C_C ideal</th>
+                <th scope="col">C_C snapped</th>
+                <th scope="col">f_COMZ</th>
+                <th scope="col">vs f_P</th>
+                <th scope="col">Use</th>
+              </tr>
+            </thead>
+            <tbody id="std-tbody"></tbody>
+          </table>
+        </div>
+        <p class="caveat">
+          Rows over 100% of the ceiling exceed the f_RHPZ/5 rule &mdash; the
+          loop may still work, but you are outside TI's stated bound and into
+          right-half-plane-zero phase erosion. The highlighted row is the
+          largest crossover still inside the bound.
+        </p>
+      </section>
+
+      <section data-tabpanel="sweep" hidden>
+        <h2>Sweep table</h2>
+        <p class="sweep-note" id="sweep-table-note"></p>
+        <div class="table-scroll">
+          <table class="sweep-table">
+            <thead>
+              <tr>
+                <th scope="col" id="sweep-axis-heading">V_IN</th>
+                <th scope="col">Mode</th>
+                <th scope="col">Inductor ripple max</th>
+                <th scope="col">I_L(DC) max</th>
+                <th scope="col">I_L(P) max</th>
+                <th scope="col">Cap RMS current max</th>
+                <th scope="col">Output ripple max</th>
+              </tr>
+            </thead>
+            <tbody id="sweep-tbody"></tbody>
+          </table>
+        </div>
+        <p class="caveat">
+          Each row is the worst case over every combination of the other two
+          ranges at that axis value. Buck rows use the input capacitor
+          (equation 14) and have no output-ripple equation; boost rows use the
+          output capacitor (15) and its ripple (16 + 17). An accent-coloured
+          cell is the column maximum for that mode.
+        </p>
+      </section>
+
+      <section>
+        <div class="section-header-row">
+          <h2>Self-check against the datasheet design example</h2>
+          <button
+            id="toggle-vectors-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+            aria-controls="vec-panel"
+          >
+            Show self-check
+          </button>
+        </div>
+        <div id="vec-panel" class="vec-panel" hidden>
+          <p class="vec-summary" id="vec-summary"></p>
+          <div class="table-scroll">
+            <table class="vec-table">
+              <thead>
+                <tr>
+                  <th scope="col">Eq</th>
+                  <th scope="col">Inputs</th>
+                  <th scope="col">Expected</th>
+                  <th scope="col">This page</th>
+                  <th scope="col">Result</th>
+                </tr>
+              </thead>
+              <tbody id="vec-tbody"></tbody>
+            </table>
+          </div>
+          <p class="caveat">
+            Rows marked &starf; are numeric answers printed in the datasheet.
+            The rest are self-consistency checks on the transcription. All are
+            taken from the Table 7-1 design (V<sub>IN</sub> 9&ndash;36 V,
+            V<sub>OUT</sub> 3.3&ndash;20 V, I<sub>OUT</sub> limit 2.25 A) with
+            &sect;7.2.2's own selections: L = 4.7 &micro;H, f<sub>SW</sub> =
+            400 kHz, C<sub>OUT</sub> = 120 &micro;F, R<sub>COUT</sub> = 5
+            m&Omega;.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Equations as printed</h2>
+
+        <div class="table-scroll">
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th scope="col">Eq</th>
+                <th scope="col">Mode</th>
+                <th scope="col">Formula</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>3</td>
+                <td>Either</td>
+                <td class="mono">f_SW = 1000 / (0.05 &times; R_FSW + 35)</td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <td>Buck</td>
+                <td class="mono">
+                  L = ( (V_IN(MAX) &minus; V_OUT) &times; V_OUT ) / (
+                  &Delta;I_L(P-P) &times; f_SW &times; V_IN(MAX) )
+                </td>
+              </tr>
+              <tr>
+                <td>9r</td>
+                <td>Buck</td>
+                <td class="mono">
+                  &Delta;I_L(P-P) = ( (V_IN(MAX) &minus; V_OUT) &times; V_OUT )
+                  / ( L &times; f_SW &times; V_IN(MAX) ) &nbsp;&mdash; not
+                  printed, equation 9 rearranged
+                </td>
+              </tr>
+              <tr>
+                <td>10</td>
+                <td>Boost</td>
+                <td class="mono">
+                  L = ( V_IN &times; (V_OUT(MAX) &minus; V_IN) ) / (
+                  &Delta;I_L(P-P) &times; f_SW &times; V_OUT(MAX) )
+                </td>
+              </tr>
+              <tr>
+                <td>11</td>
+                <td>Boost</td>
+                <td class="mono">
+                  I_L(DC) = ( V_OUT &times; I_OUT ) / ( V_IN &times; &eta; )
+                  &nbsp;&mdash; buck: I_L(DC) = I_OUT, no equation given
+                </td>
+              </tr>
+              <tr>
+                <td>12</td>
+                <td>Boost</td>
+                <td class="mono">
+                  &Delta;I_L(P-P) = ( V_IN &times; (V_OUT &minus; V_IN) ) / ( L
+                  &times; f_SW &times; V_OUT )
+                </td>
+              </tr>
+              <tr>
+                <td>13</td>
+                <td>Either</td>
+                <td class="mono">I_L(P) = I_L(DC) + &Delta;I_L(P-P) / 2</td>
+              </tr>
+              <tr>
+                <td>14</td>
+                <td>Buck</td>
+                <td class="mono">
+                  I_CIN(RMS) = I_OUT &times; &radic;( ( V_OUT &times; (V_IN
+                  &minus; V_OUT) ) / ( V_IN &times; V_IN ) )
+                </td>
+              </tr>
+              <tr>
+                <td>15</td>
+                <td>Boost</td>
+                <td class="mono">
+                  I_COUT(RMS) = I_OUT &times; &radic;( V_OUT / V_IN &minus; 1 )
+                </td>
+              </tr>
+              <tr>
+                <td>16</td>
+                <td>Boost</td>
+                <td class="mono">
+                  V_RIPPLE(ESR) = ( I_OUT &times; V_OUT / V_IN ) &times; R_COUT
+                </td>
+              </tr>
+              <tr>
+                <td>17</td>
+                <td>Boost</td>
+                <td class="mono">
+                  V_RIPPLE(CAP) = ( I_OUT &times; (1 &minus; V_IN / V_OUT) ) / (
+                  C_OUT &times; f_SW )
+                </td>
+              </tr>
+              <tr>
+                <td>18</td>
+                <td>Either</td>
+                <td class="mono">R_SNS = V_SNS / I_OUT_LIMIT</td>
+              </tr>
+              <tr>
+                <td>19</td>
+                <td>Boost</td>
+                <td class="mono">
+                  G_PS(s) = ( R_LOAD &times; (1 &minus; D) / (2 &times; R_SENSE)
+                  ) &times; (1 + s/(2&pi;f_ESRZ))(1 &minus; s/(2&pi;f_RHPZ)) / (1
+                  + s/(2&pi;f_P)) &nbsp;&mdash; not evaluable here
+                </td>
+              </tr>
+              <tr>
+                <td>20</td>
+                <td>Boost</td>
+                <td class="mono">f_P = 2 / ( 2&pi; &times; R_LOAD &times; C_OUT )</td>
+              </tr>
+              <tr>
+                <td>21</td>
+                <td>Boost</td>
+                <td class="mono">
+                  f_ESRZ = 1 / ( 2&pi; &times; R_COUT &times; C_OUT )
+                </td>
+              </tr>
+              <tr>
+                <td>22</td>
+                <td>Boost</td>
+                <td class="mono">
+                  f_RHPZ = ( R_LOAD &times; (1 &minus; D)&sup2; ) / ( 2&pi;
+                  &times; L )
+                </td>
+              </tr>
+              <tr>
+                <td>23</td>
+                <td>Boost</td>
+                <td class="mono">
+                  G_C(s) = ( G_EA &times; R_EA &times; V_REF / V_OUT ) &times; (1
+                  + s/(2&pi;f_COMZ)) / ((1 + s/(2&pi;f_COMP1))(1 +
+                  s/(2&pi;f_COMP2))) &nbsp;&mdash; DC term only; R_EA from the
+                  TI forum
+                </td>
+              </tr>
+              <tr>
+                <td>&mdash;</td>
+                <td>Boost</td>
+                <td class="mono">f_C &le; min( f_SW / 10 , f_RHPZ / 5 )</td>
+              </tr>
+              <tr>
+                <td>24</td>
+                <td>Boost</td>
+                <td class="mono">
+                  R_C = ( 2&pi; &times; V_OUT &times; R_SENSE &times; C_OUT
+                  &times; f_C ) / ( (1 &minus; D) &times; V_REF &times; G_EA )
+                </td>
+              </tr>
+              <tr>
+                <td>25</td>
+                <td>Boost</td>
+                <td class="mono">C_C = ( R_LOAD &times; C_OUT ) / ( 2 &times; R_C )</td>
+              </tr>
+              <tr>
+                <td>26</td>
+                <td>Boost</td>
+                <td class="mono">
+                  C_P = ( R_COUT &times; C_OUT ) / R_C &nbsp;&mdash; below 10 pF
+                  it can be left open
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="caveat">
+          <strong>Equation 11 loses its efficiency term in the PDF text
+          layer.</strong> Extracted as text it reads V_OUT &times; I_OUT / V_IN,
+          silently dropping the &eta; divisor &mdash; which understates inductor
+          DC current by about 10% and undersizes the inductor. &eta; is
+          mandatory, and the datasheet gives no efficiency model, so you supply
+          it.
+        </p>
+
+        <p class="caveat">
+          <strong>V_IN(MAX) in equation 9 is not the design's maximum
+          input.</strong> TI's claim that 4.7 &micro;H gives &ldquo;~50% of the
+          highest average inductor current in buck mode&rdquo; only reproduces
+          if V_IN(MAX) is fed 9 V &mdash; the design's operating
+          <em>minimum</em>. The actual 36 V maximum at the same V_OUT = 3.3 V
+          gives 70.9%, and the genuine worst case V_OUT = V_IN(MAX)/2 = 18 V
+          gives 213% of I_OUT. Three defensible readings of one equation span
+          49% &rarr; 71% &rarr; 213%, which is why this page takes the operating
+          point as an explicit input and prints it beside every answer.
+        </p>
+
+        <p class="caveat">
+          <strong>TI's own cross-reference is wrong.</strong> &sect;7.2.2.7 says
+          the boost power stage is modelled by &ldquo;Equation 18&rdquo;. It is
+          equation 19 &mdash; equation 18 is the unrelated current-sense
+          resistor. The same off-by-one runs through the BQ25798 datasheet, so
+          the number printed beside an equation is authoritative and every
+          in-text citation is suspect.
+        </p>
+
+        <p class="caveat">
+          <strong>&sect;6.3.8 never states the units for equation 3.</strong>
+          They are R<sub>FSW</sub> in ohms and f<sub>SW</sub> in MHz, derived
+          from the datasheet's own three anchors: 49.9 k&Omega; &rarr; 0.3953
+          MHz against a stated 400 kHz, 100 k&Omega; &rarr; 0.1986 against a
+          200 kHz floor, and 8.4 k&Omega; &rarr; 2.198 against a 2.2 MHz
+          ceiling. Reading R<sub>FSW</sub> as k&Omega; returns 25&ndash;28 for
+          every input, matching nothing.
+        </p>
+
+        <p class="caveat">
+          <strong>R<sub>FSW</sub> is the only frequency knob.</strong> The part
+          has no frequency input of its own &mdash; you fit one resistor on the
+          FSW pin and equation 3 tells you what you got. So a target frequency
+          on this page only ever picks a resistor, and the frequency reported is
+          whatever that resistor actually gives. TI's own worked example is a
+          case in point: 49.9 k&Omega; is labelled 400 kHz throughout
+          &sect;7.2.2, but equation 3 puts it at 395.3 kHz, 1.2% low.
+        </p>
+
+        <h3>Constants and where they come from</h3>
+        <p class="formula-note">
+          <span
+            ><strong>R_SENSE = 0.055 &Omega;</strong> &mdash; &sect;7.2.2.7, the
+            equivalent <em>internal</em> current sense resistor. Not the
+            external R_SNS of equation 18.</span
+          >
+          <span
+            ><strong>G_EA = 190 &micro;A/V</strong> &mdash; &sect;6.5, error
+            amplifier transconductance.</span
+          >
+          <span
+            ><strong>V_REF = 1.129 / 0.846 / 0.508 / 0.282 V</strong> &mdash;
+            &sect;6.5, selected by the VOUT_FS register field.</span
+          >
+          <span
+            ><strong>R_EA = 10 M&Omega;</strong> &mdash; the error amplifier
+            output resistance, needed for equation 23's DC gain. Absent from the
+            datasheet entirely; this value comes from the TI E2E forum, so it is
+            on weaker footing than the constants above.</span
+          >
+        </p>
+
+        <h3>What this page does not cover</h3>
+        <p class="formula-note">
+          <span
+            >Buck-mode ripple and I_L(DC) equations are absent by design
+            &mdash; in buck, I_L(DC) is I_OUT, and the buck ripple shown here is
+            equation 9 rearranged, marked as derived.</span
+          >
+          <span
+            >Buck-mode compensation: &sect;7.2.2.7 states boost is the
+            restrictive case and gives boost only.</span
+          >
+          <span
+            >Gain margin: with this pole-zero set the loop phase never reaches
+            &minus;180&deg;, so there is no finite gain margin to compare
+            against the &gt; 10 dB target. Phase margin is computed.</span
+          >
+          <span
+            >Recommended 4.7 &micro;H inductors from Table 7-2: Coilcraft
+            XAL7070-472ME (14.3 m&Omega;, 15.2/10.5 A), Cyntec VCHA085D-4R7MS6
+            (15.6 m&Omega;, 16.0/8.8 A), Vishay IHLP4040DZER4R7M01 (16.5
+            m&Omega;, 17/9.5 A).</span
+          >
+        </p>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-09-04">4 September 2026</time>
+    </footer>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+          if (shouldPersist) localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") applyThemeMode("auto", false);
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== CONSTANTS ====================
+        // R_SENSE is the equivalent INTERNAL sense resistor of §7.2.2.7, used
+        // by equations 19 and 24. It is not the external R_SNS of equation 18.
+        var R_SENSE = 0.055;
+        var G_EA = 190e-6;
+        // The error amplifier output resistance. It is NOT in the datasheet —
+        // 10 MΩ is the figure TI give on the E2E forum. Equation 23's DC gain
+        // needs it; equations 24 to 26 do not.
+        var R_EA = 10e6;
+        var TWO_PI = 2 * Math.PI;
+
+        // ==================== EQUATIONS ====================
+        // SI base units throughout — V, A, F, H, Hz, ohm. Equation 3 is the
+        // documented exception: ohms in, MHz out.
+
+        // (3) switching frequency from the FSW resistor. §6.3.8 never states
+        // the units; they are derived from the datasheet's own three anchors.
+        function fswMhzFromRfsw(rFsw) {
+          return 1000 / (0.05 * rFsw + 35);
+        }
+
+        // (3) solved for the resistor. R_FSW is the only physical knob on the
+        // FSW pin, so a target frequency is only ever a way of arriving at one.
+        function rfswFromFswMhz(fSwMhz) {
+          return (1000 / fSwMhz - 35) / 0.05;
+        }
+
+        // (9) inductance for a target ripple, buck
+        function inductanceBuck(vInMax, vOut, rippleTarget, fSw) {
+          return ((vInMax - vOut) * vOut) / (rippleTarget * fSw * vInMax);
+        }
+
+        // (10) inductance for a target ripple, boost
+        function inductanceBoost(vIn, vOutMax, rippleTarget, fSw) {
+          return (vIn * (vOutMax - vIn)) / (rippleTarget * fSw * vOutMax);
+        }
+
+        // (9 rearranged) buck ripple current. NOT PRINTED in the datasheet —
+        // there is no buck counterpart to equation 12, so this is equation 9
+        // solved for the ripple instead of for L.
+        function rippleBuck(vIn, vOut, l, fSw) {
+          return ((vIn - vOut) * vOut) / (l * fSw * vIn);
+        }
+
+        // (12) boost ripple current
+        function rippleBoost(vIn, vOut, l, fSw) {
+          return (vIn * (vOut - vIn)) / (l * fSw * vOut);
+        }
+
+        // (11) inductor DC current, boost. The efficiency divisor is mandatory
+        // — it is the term the PDF's text layer silently drops, and without it
+        // the inductor is undersized by about 10%. Buck mode has no equation:
+        // I_L(DC) is simply I_OUT.
+        function ilDcBoost(vOut, iOut, vIn, eta) {
+          return (vOut * iOut) / (vIn * eta);
+        }
+
+        // (13) inductor peak current
+        function ilPeak(ilDc, ripple) {
+          return ilDc + ripple / 2;
+        }
+
+        // (14) input capacitor RMS ripple current, buck
+        function cinRmsBuck(iOut, vIn, vOut) {
+          return iOut * Math.sqrt((vOut * (vIn - vOut)) / (vIn * vIn));
+        }
+
+        // (15) output capacitor RMS ripple current, boost
+        function coutRmsBoost(iOut, vIn, vOut) {
+          return iOut * Math.sqrt(vOut / vIn - 1);
+        }
+
+        // (16) output voltage ripple from ESR, boost
+        function vRippleEsr(iOut, vOut, vIn, rCout) {
+          return ((iOut * vOut) / vIn) * rCout;
+        }
+
+        // (17) output voltage ripple from capacitance, boost
+        function vRippleCap(iOut, vIn, vOut, cOut, fSw) {
+          return (iOut * (1 - vIn / vOut)) / (cOut * fSw);
+        }
+
+        // §7.2.2.5 worked backwards. The ESR term of equation 16 does not
+        // depend on C_OUT at all, so it is a floor: if it alone exceeds the
+        // budget, no amount of capacitance will meet it.
+        function minCoutForRipple(iOut, vIn, vOut, fSw, budget, rCout) {
+          var allowance = budget - vRippleEsr(iOut, vOut, vIn, rCout);
+          if (!(allowance > 0)) return Infinity;
+          return (iOut * (1 - vIn / vOut)) / (allowance * fSw);
+        }
+
+        // The same budget read the other way: how good the capacitors have to
+        // be for the C_OUT already chosen.
+        function maxRcoutForRipple(iOut, vIn, vOut, fSw, budget, cOut) {
+          var allowance = budget - vRippleCap(iOut, vIn, vOut, cOut, fSw);
+          if (!(allowance > 0)) return 0;
+          return allowance / ((iOut * vOut) / vIn);
+        }
+
+        // (18) external current-sense resistor
+        function senseResistor(vSns, iOutLimit) {
+          return vSns / iOutLimit;
+        }
+
+        // (20) output pole
+        function fPole(rLoad, cOut) {
+          return 2 / (TWO_PI * rLoad * cOut);
+        }
+
+        // (21) ESR zero
+        function fEsrZero(rCout, cOut) {
+          return 1 / (TWO_PI * rCout * cOut);
+        }
+
+        // (22) right-half-plane zero — the reason boost is the restrictive
+        // case for compensation.
+        function fRhpz(rLoad, dBoost, l) {
+          return (rLoad * (1 - dBoost) * (1 - dBoost)) / (TWO_PI * l);
+        }
+
+        // (19) DC gain of the boost power stage. Only the DC term is
+        // computable here — the pole and zero factors need a frequency sweep,
+        // which the page does not attempt.
+        function powerStageDcGain(rLoad, dBoost) {
+          return (rLoad * (1 - dBoost)) / (2 * R_SENSE);
+        }
+
+        // (23) DC gain of the control portion, using the forum's R_EA.
+        function controlDcGain(vRef, vOut) {
+          return (G_EA * R_EA * vRef) / vOut;
+        }
+
+        function toDecibels(gain) {
+          return 20 * Math.log10(gain);
+        }
+
+        // The compensator's own pole and zero frequencies. The datasheet gives
+        // no expressions for these; this is the standard type-II mapping, and
+        // substituting equations 25 and 26 into it produces two exact
+        // cancellations — f_COMZ lands on f_P and f_COMP2 lands on f_ESRZ.
+        // Equations 25 and 26 are therefore cancellation conditions, not free
+        // choices: moving C_C or C_P away from them breaks the intent.
+        function fComZero(rC, cC) {
+          return 1 / (TWO_PI * rC * cC);
+        }
+        function fComPole1(cC, cP) {
+          return 1 / (TWO_PI * R_EA * (cC + cP));
+        }
+        function fComPole2(rC, cP) {
+          return 1 / (TWO_PI * rC * cP);
+        }
+
+        // Minimal complex arithmetic for evaluating the loop on the jw axis.
+        // Each factor is written as its ratio f/f0, so no explicit s is needed.
+        function cMul(a, b) {
+          return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]];
+        }
+        function cDiv(a, b) {
+          var den = b[0] * b[0] + b[1] * b[1];
+          return [
+            (a[0] * b[0] + a[1] * b[1]) / den,
+            (a[1] * b[0] - a[0] * b[1]) / den,
+          ];
+        }
+        function cAbs(a) {
+          return Math.sqrt(a[0] * a[0] + a[1] * a[1]);
+        }
+        function cArgDegrees(a) {
+          return (Math.atan2(a[1], a[0]) * 180) / Math.PI;
+        }
+
+        // (19) x (23) on the jw axis. The RHPZ factor is (1 - jf/f_RHPZ): it
+        // subtracts phase without shedding gain, which is what constrains the
+        // crossover.
+        function loopGainAt(f, p) {
+          var gPs = cMul(
+            [p.gPs0, 0],
+            cDiv(cMul([1, f / p.fEsrz], [1, -f / p.fRhpz]), [1, f / p.fP]),
+          );
+          var gC = cMul(
+            [p.gC0, 0],
+            cDiv([1, f / p.fComz], cMul([1, f / p.fComp1], [1, f / p.fComp2])),
+          );
+          return cMul(gPs, gC);
+        }
+
+        // Geometric bisection for the unity-gain crossing.
+        function findUnityCrossover(p, fStart) {
+          var gainAt = function (f) {
+            return cAbs(loopGainAt(f, p));
+          };
+          var lo = fStart;
+          var hi = fStart;
+          var guard = 0;
+          if (gainAt(fStart) > 1) {
+            while (gainAt(hi) > 1 && guard < 400) {
+              hi *= 1.5;
+              guard += 1;
+            }
+            if (gainAt(hi) > 1) return NaN;
+          } else {
+            while (gainAt(lo) < 1 && guard < 400) {
+              lo /= 1.5;
+              guard += 1;
+            }
+            if (gainAt(lo) < 1) return NaN;
+          }
+          for (var i = 0; i < 200; i++) {
+            var mid = Math.sqrt(lo * hi);
+            if (gainAt(mid) > 1) lo = mid;
+            else hi = mid;
+          }
+          return Math.sqrt(lo * hi);
+        }
+
+        // Gain margin needs a -180 degree phase crossing. This loop has as many
+        // zeros as poles, so its phase only approaches ±180 asymptotically and
+        // floating point noise will "cross" it somewhere absurd. The search is
+        // therefore capped at the ceiling given, which the caller sets to where
+        // the averaged small-signal model stops being valid.
+        function findPhaseCrossover(p, fStart, fCeiling) {
+          var phaseAt = function (f) {
+            return cArgDegrees(loopGainAt(f, p));
+          };
+          if (!(fCeiling > fStart)) return NaN;
+          if (phaseAt(fCeiling) > -180) return NaN;
+          var lo = fStart;
+          var hi = fCeiling;
+          for (var i = 0; i < 200; i++) {
+            var mid = Math.sqrt(lo * hi);
+            if (phaseAt(mid) > -180) lo = mid;
+            else hi = mid;
+          }
+          return Math.sqrt(lo * hi);
+        }
+
+        // (24) compensation resistor
+        function compResistor(vOut, cOut, fC, dBoost, vRef) {
+          return (
+            (TWO_PI * vOut * R_SENSE * cOut * fC) /
+            ((1 - dBoost) * vRef * G_EA)
+          );
+        }
+
+        // (25) compensation capacitor
+        function compCapacitor(rLoad, cOut, rC) {
+          return (rLoad * cOut) / (2 * rC);
+        }
+
+        // (26) high-frequency pole capacitor. Below 10 pF it can be left open.
+        function poleCapacitor(rCout, cOut, rC) {
+          return (rCout * cOut) / rC;
+        }
+
+        // ==================== FORMATTING ====================
+        var SI_PREFIXES = [
+          { factor: 1e9, suffix: "G" },
+          { factor: 1e6, suffix: "M" },
+          { factor: 1e3, suffix: "k" },
+          { factor: 1, suffix: "" },
+          { factor: 1e-3, suffix: "m" },
+          { factor: 1e-6, suffix: "µ" },
+          { factor: 1e-9, suffix: "n" },
+          { factor: 1e-12, suffix: "p" },
+        ];
+
+        // The prefix is chosen from the rounded number, so a value just under a
+        // decade boundary does not render as "1000 m".
+        function formatSi(value, unit, digits) {
+          if (!isFinite(value)) return "—";
+          var places = digits === undefined ? 4 : digits;
+          if (value === 0) return (0).toFixed(places) + " " + unit;
+
+          var abs = Math.abs(value);
+          var index = SI_PREFIXES.length - 1;
+          for (var i = 0; i < SI_PREFIXES.length; i++) {
+            if (abs >= SI_PREFIXES[i].factor) {
+              index = i;
+              break;
+            }
+          }
+
+          var text = (value / SI_PREFIXES[index].factor).toFixed(places);
+          if (Math.abs(Number(text)) >= 1000 && index > 0) {
+            index -= 1;
+            text = (value / SI_PREFIXES[index].factor).toFixed(places);
+          }
+          return text + " " + SI_PREFIXES[index].suffix + unit;
+        }
+
+        // Standard values are exact, so trailing zeros are noise: 82 kΩ, not
+        // 82.000 kΩ. Trims the mantissa but leaves the SI prefix alone.
+        function formatSiTrim(value, unit) {
+          var text = formatSi(value, unit, 4);
+          return text.replace(/(\.\d*?)0+(\s)/, "$1$2").replace(/\.(\s)/, "$1");
+        }
+
+        function formatPlain(value) {
+          return String(parseFloat(value.toFixed(4)));
+        }
+
+        function formatPercent(value) {
+          return (value * 100).toFixed(1) + "%";
+        }
+
+        // ==================== INPUT PLUMBING ====================
+        function el(id) {
+          return document.getElementById(id);
+        }
+
+        function readNumber(input) {
+          var raw = input.value.trim();
+          if (raw === "") return NaN;
+          var value = Number(raw);
+          return isFinite(value) ? value : NaN;
+        }
+
+        function addMessage(list, severity, text) {
+          list.push({ severity: severity, text: text });
+        }
+
+        function renderMessages(messages, target) {
+          target.textContent = "";
+          messages.forEach(function (message) {
+            var div = document.createElement("div");
+            div.className = "msg " + message.severity;
+            div.textContent =
+              (message.severity === "error" ? "Error: " : "Warning: ") +
+              message.text;
+            target.appendChild(div);
+          });
+        }
+
+        function appendResultRow(container, label, equation, value, subNodes) {
+          var row = document.createElement("div");
+          row.className = "result";
+
+          var labelCell = document.createElement("span");
+          labelCell.className = "result-label";
+          labelCell.appendChild(document.createTextNode(label + " "));
+          var eqLabel = document.createElement("span");
+          eqLabel.className = "result-eq";
+          eqLabel.textContent = equation;
+          labelCell.appendChild(eqLabel);
+          row.appendChild(labelCell);
+
+          var valueCell = document.createElement("span");
+          valueCell.className = "result-value";
+          valueCell.textContent = value;
+          row.appendChild(valueCell);
+
+          var subCell = document.createElement("span");
+          subCell.className = "result-sub";
+          (subNodes || []).forEach(function (node) {
+            subCell.appendChild(node);
+          });
+          row.appendChild(subCell);
+
+          container.appendChild(row);
+        }
+
+        function textNode(value) {
+          return document.createTextNode(value);
+        }
+
+        function pillNode(ok, okText, badText) {
+          var pill = document.createElement("span");
+          pill.className = ok ? "ok-pill" : "bad-pill";
+          pill.textContent = ok ? okText : badText;
+          return pill;
+        }
+
+        // ==================== VALUE SLIDERS ====================
+        // Same two-span model as the BQ25798 page: the slider bounds are how
+        // far the handle drags, clampMin/clampMax are the datasheet envelope
+        // the tick box holds the value to. Where the datasheet gives no limit
+        // the two are the same.
+        var SLIDERS = [
+          { id: "input-vin", label: "V_IN", min: 0, max: 40, step: 0.1, clampMin: 3, clampMax: 36 },
+          { id: "input-vout", label: "V_OUT", min: 0, max: 26, step: 0.1, clampMin: 0.8, clampMax: 22 },
+          { id: "input-iout", label: "I_OUT", min: 0, max: 10, step: 0.05 },
+          { id: "input-vinmax", label: "V_IN(MAX)", min: 0, max: 40, step: 0.1, clampMin: 3, clampMax: 36 },
+          { id: "input-voutmax", label: "V_OUT(MAX)", min: 0, max: 26, step: 0.1, clampMin: 0.8, clampMax: 22 },
+          { id: "input-ripple-target", label: "Ripple target", min: 0.05, max: 10, step: 0.05 },
+          { id: "input-vsns", label: "V_SNS", min: 0, max: 80, step: 0.5, clampMax: 63.5 },
+          { id: "input-ioutlimit", label: "I_OUT_LIMIT", min: 0.05, max: 10, step: 0.05 },
+          { id: "input-fc", label: "f_C", min: 0.1, max: 220, step: 0.1 },
+          { id: "input-rc-chosen", label: "R_C", min: 1, max: 1000, step: 1 },
+          { id: "input-cc-chosen", label: "C_C", min: 0.1, max: 100, step: 0.1 },
+          { id: "input-cp-chosen", label: "C_P", min: 0, max: 200, step: 0.1 },
+          { id: "input-rfsw", label: "R_FSW", min: 5000, max: 120000, step: 100, clampMin: 8400, clampMax: 100000 },
+          { id: "input-fsw", label: "f_SW", min: 100, max: 2500, step: 10, clampMin: 200, clampMax: 2200 },
+          { id: "input-l", label: "L", min: 0.5, max: 12, step: 0.1, clampMin: 1, clampMax: 10 },
+          { id: "input-isat", label: "Inductor I_SAT", min: 0, max: 30, step: 0.1 },
+          // §5.3 Recommended Operating Conditions: C_IN 4.7 µF minimum with no
+          // maximum stated, C_OUT 10 µF to 1000 µF.
+          { id: "input-cin", label: "C_IN", min: 1, max: 500, step: 1, clampMin: 4.7 },
+          { id: "input-cout", label: "C_OUT", min: 5, max: 1200, step: 1, clampMin: 10, clampMax: 1000 },
+          { id: "input-ripple-budget", label: "Ripple budget", min: 1, max: 500, step: 1 },
+          { id: "input-rcout", label: "R_COUT", min: 0, max: 100, step: 0.5 },
+          { id: "input-eta", label: "η", min: 0.5, max: 1, step: 0.01 },
+          { id: "sweep-vin-min", label: "V_IN min", min: 0, max: 40, step: 0.1, clampMin: 3, clampMax: 36, partnerId: "sweep-vin-max", pairRole: "min" },
+          { id: "sweep-vin-max", label: "V_IN max", min: 0, max: 40, step: 0.1, clampMin: 3, clampMax: 36, partnerId: "sweep-vin-min", pairRole: "max" },
+          { id: "sweep-vout-min", label: "V_OUT min", min: 0, max: 26, step: 0.1, clampMin: 0.8, clampMax: 22, partnerId: "sweep-vout-max", pairRole: "min" },
+          { id: "sweep-vout-max", label: "V_OUT max", min: 0, max: 26, step: 0.1, clampMin: 0.8, clampMax: 22, partnerId: "sweep-vout-min", pairRole: "max" },
+          { id: "sweep-iout-min", label: "I_OUT min", min: 0, max: 10, step: 0.05, partnerId: "sweep-iout-max", pairRole: "min" },
+          { id: "sweep-iout-max", label: "I_OUT max", min: 0, max: 10, step: 0.05, partnerId: "sweep-iout-min", pairRole: "max" },
+        ];
+
+        var sliderPairs = [];
+
+        function syncSlider(input, slider) {
+          var value = readNumber(input);
+          if (!isFinite(value)) return;
+          slider.value = String(
+            Math.min(Math.max(value, Number(slider.min)), Number(slider.max)),
+          );
+        }
+
+        function clampBounds(pair) {
+          var lo = pair.clampMin;
+          var hi = pair.clampMax;
+          if (pair.partnerId) {
+            var partnerValue = readNumber(el(pair.partnerId));
+            if (isFinite(partnerValue)) {
+              if (pair.pairRole === "min") hi = Math.min(hi, partnerValue);
+              else lo = Math.max(lo, partnerValue);
+            }
+          }
+          if (lo > hi) return { lo: pair.clampMin, hi: pair.clampMax };
+          return { lo: lo, hi: hi };
+        }
+
+        function clampValue(pair) {
+          var value = readNumber(pair.input);
+          if (!isFinite(value)) return;
+          var bounds = clampBounds(pair);
+          var clamped = Math.min(Math.max(value, bounds.lo), bounds.hi);
+          if (clamped !== value) pair.input.value = String(clamped);
+        }
+
+        function updateClampTitle(pair) {
+          pair.toggle.title =
+            "Clamp to range: hold " +
+            pair.label +
+            " between " +
+            pair.clampMin +
+            " and " +
+            pair.clampMax +
+            ". Untick to go outside it.";
+        }
+
+        function syncAllSliders() {
+          sliderPairs.forEach(function (pair) {
+            if (pair.clamp.checked) clampValue(pair);
+            syncSlider(pair.input, pair.slider);
+          });
+        }
+
+        function buildSliders() {
+          SLIDERS.forEach(function (config) {
+            var input = el(config.id);
+            if (!input) return;
+
+            var slider = document.createElement("input");
+            slider.type = "range";
+            slider.className = "field-slider";
+            slider.id = config.id + "-slider";
+            slider.min = String(config.min);
+            slider.max = String(config.max);
+            slider.step = String(config.step);
+            slider.setAttribute("aria-label", config.label + " slider");
+
+            var clamp = document.createElement("input");
+            clamp.type = "checkbox";
+            clamp.id = config.id + "-clamp";
+            clamp.checked = true;
+            clamp.setAttribute("aria-label", "Clamp to range: " + config.label);
+
+            var clampToggle = document.createElement("label");
+            clampToggle.className = "clamp-toggle";
+            clampToggle.appendChild(clamp);
+            clampToggle.appendChild(textNode("Clamp to range"));
+
+            var row = document.createElement("div");
+            row.className = "slider-row";
+            row.appendChild(slider);
+            row.appendChild(clampToggle);
+
+            var host = input.closest(".input-with-unit") || input;
+            host.parentNode.insertBefore(row, host.nextSibling);
+
+            var pair = {
+              input: input,
+              slider: slider,
+              clamp: clamp,
+              toggle: clampToggle,
+              label: config.label,
+              clampMin: config.clampMin === undefined ? config.min : config.clampMin,
+              clampMax: config.clampMax === undefined ? config.max : config.clampMax,
+              partnerId: config.partnerId || null,
+              pairRole: config.pairRole || null,
+            };
+
+            slider.addEventListener("input", function () {
+              input.value = slider.value;
+              if (clamp.checked) {
+                clampValue(pair);
+                syncSlider(input, slider);
+              }
+            });
+
+            input.addEventListener("input", function () {
+              if (clamp.checked) clampValue(pair);
+              syncSlider(input, slider);
+            });
+
+            clamp.addEventListener("change", function () {
+              if (clamp.checked) clampValue(pair);
+              syncSlider(input, slider);
+            });
+
+            syncSlider(input, slider);
+            updateClampTitle(pair);
+            sliderPairs.push(pair);
+          });
+        }
+
+        // ==================== SHARED READS AND CHECKS ====================
+        var fswSource = "resistor";
+        var crossoverSource = "bound";
+
+        // Equation 3 returns MHz; everything downstream wants Hz. The frequency
+        // is ALWAYS derived from the fitted resistor — there is no independent
+        // f_SW to set, because the part has no such input.
+        function currentFswHz() {
+          var rFsw = readNumber(el("input-rfsw"));
+          if (!isFinite(rFsw)) return NaN;
+          return fswMhzFromRfsw(rFsw) * 1e6;
+        }
+
+        // Target mode writes the snapped resistor into the R_FSW field, so the
+        // rest of the page keeps reading exactly one value.
+        function applyTargetFrequency() {
+          if (fswSource !== "target") return;
+          var targetHz = readNumber(el("input-fsw")) * 1e3;
+          if (!isFinite(targetHz) || targetHz <= 0) return;
+          var ideal = rfswFromFswMhz(targetHz / 1e6);
+          if (!isFinite(ideal) || ideal <= 0) return;
+          var snapped = nearestStandard(ideal, el("select-rfsw-series").value);
+          if (!isFinite(snapped)) return;
+          el("input-rfsw").value = String(snapped);
+          syncAllSliders();
+        }
+
+        function readPowerStage(messages) {
+          var stage = {
+            fSw: currentFswHz(),
+            l: readNumber(el("input-l")) * 1e-6,
+            cIn: readNumber(el("input-cin")) * 1e-6,
+            cOut: readNumber(el("input-cout")) * 1e-6,
+            rCout: readNumber(el("input-rcout")) * 1e-3,
+            eta: readNumber(el("input-eta")),
+            isat: readNumber(el("input-isat")),
+            ok: true,
+          };
+
+          if (fswSource === "resistor") {
+            var rFsw = readNumber(el("input-rfsw"));
+            if (!isFinite(rFsw)) {
+              addMessage(messages, "error", "Enter R_FSW.");
+              stage.ok = false;
+            } else if (rFsw < 8400 || rFsw > 100000) {
+              addMessage(
+                messages,
+                "error",
+                "§6.3.8: R_FSW runs from 8.4 kΩ to 100 kΩ, giving 2.2 MHz down to 200 kHz.",
+              );
+            }
+          } else if (!isFinite(stage.fSw)) {
+            addMessage(messages, "error", "Enter a switching frequency.");
+            stage.ok = false;
+          } else if (stage.fSw < 200e3 || stage.fSw > 2.2e6) {
+            addMessage(
+              messages,
+              "error",
+              "§6.3.8: the switching frequency range is 200 kHz to 2.2 MHz.",
+            );
+          }
+
+          if (!isFinite(stage.l)) {
+            addMessage(messages, "error", "Enter an inductance.");
+            stage.ok = false;
+          } else {
+            if (stage.l < 1e-6 || stage.l > 10e-6) {
+              addMessage(
+                messages,
+                "error",
+                "§7.2.2.3: the part is designed for inductors between 1 µH and 10 µH.",
+              );
+            }
+            // §7.2.2.7: the inner current loop needs L above 1.2/fSW —
+            // 3 µH at 400 kHz.
+            if (isFinite(stage.fSw) && stage.fSw > 0 && stage.l <= 1.2 / stage.fSw) {
+              addMessage(
+                messages,
+                "error",
+                "§7.2.2.7: the inner current loop requires L above 1.2/f_SW, which is " +
+                  formatSi(1.2 / stage.fSw, "H", 2) +
+                  " at this frequency.",
+              );
+            }
+          }
+
+          // §7.1 advisory, not a limit.
+          if (isFinite(stage.fSw) && stage.fSw > 500e3) {
+            addMessage(
+              messages,
+              "warning",
+              "§7.1: to reduce switching power loss in high power conditions, set the switching frequency below 500 kHz.",
+            );
+          }
+
+          if (!isFinite(stage.eta) || stage.eta <= 0 || stage.eta > 1) {
+            addMessage(
+              messages,
+              "error",
+              "Efficiency must be greater than 0 and no more than 1. It is mandatory in equation 11.",
+            );
+            stage.ok = false;
+          }
+
+          return stage;
+        }
+
+        function checkOperatingRange(messages, vIn, vOut) {
+          if (isFinite(vIn) && (vIn < 3 || vIn > 36)) {
+            addMessage(
+              messages,
+              "warning",
+              "V_IN is outside the 3 V to 36 V operating input range.",
+            );
+          }
+          if (isFinite(vOut) && (vOut < 0.8 || vOut > 22)) {
+            addMessage(
+              messages,
+              "warning",
+              "V_OUT is outside the 0.8 V to 22 V output range.",
+            );
+          }
+        }
+
+        // ==================== OPERATING POINT ====================
+        var modeBanner = el("mode-banner");
+        var modeName = el("mode-name");
+        var modeDetail = el("mode-detail");
+        var msgList = el("msg-list");
+        var pointResults = el("point-results");
+
+        function blankPoint(name, detail) {
+          modeBanner.classList.add("is-invalid");
+          modeName.textContent = name;
+          modeDetail.textContent = detail;
+          pointResults.textContent = "";
+        }
+
+        // Mode is the first decision. Equation 9 returns a negative inductance
+        // if fed boost conditions, so the inactive set is never computed.
+        function solveOperatingPoint(vIn, vOut, iOut, stage) {
+          var isBuck = vIn > vOut;
+          var point = { isBuck: isBuck };
+
+          if (isBuck) {
+            point.ripple = rippleBuck(vIn, vOut, stage.l, stage.fSw);
+            // Buck has no I_L(DC) equation — it is simply I_OUT.
+            point.ilDc = iOut;
+            point.capRms = cinRmsBuck(iOut, vIn, vOut);
+            point.outRipple = NaN; // §7.2.2.5 gives no buck output ripple
+          } else {
+            point.d = 1 - vIn / vOut;
+            point.ripple = rippleBoost(vIn, vOut, stage.l, stage.fSw);
+            point.ilDc = ilDcBoost(vOut, iOut, vIn, stage.eta);
+            point.capRms = coutRmsBoost(iOut, vIn, vOut);
+            point.rippleEsr = vRippleEsr(iOut, vOut, vIn, stage.rCout);
+            point.rippleCap = vRippleCap(iOut, vIn, vOut, stage.cOut, stage.fSw);
+            point.outRipple = point.rippleEsr + point.rippleCap;
+          }
+
+          point.ilPeak = ilPeak(point.ilDc, point.ripple);
+          point.rippleFraction = point.ripple / point.ilDc;
+          return point;
+        }
+
+        function calculatePoint() {
+          var messages = [];
+          var stage = readPowerStage(messages);
+
+          var vIn = readNumber(el("input-vin"));
+          var vOut = readNumber(el("input-vout"));
+          var iOut = readNumber(el("input-iout"));
+          var vInMax = readNumber(el("input-vinmax"));
+          var vOutMax = readNumber(el("input-voutmax"));
+          var rippleTarget = readNumber(el("input-ripple-target"));
+          var rippleBudget = readNumber(el("input-ripple-budget")) * 1e-3;
+          var vSns = readNumber(el("input-vsns")) * 1e-3;
+          var iOutLimit = readNumber(el("input-ioutlimit"));
+
+          checkOperatingRange(messages, vIn, vOut);
+
+          if (isFinite(vSns) && vSns > 0.0635) {
+            addMessage(
+              messages,
+              "error",
+              "§7.2.2.6: the maximum ISP-ISN limit voltage is 63.5 mV.",
+            );
+          }
+
+          if (
+            !stage.ok ||
+            !isFinite(vIn) ||
+            !isFinite(vOut) ||
+            !isFinite(iOut)
+          ) {
+            if (!isFinite(vIn) || !isFinite(vOut) || !isFinite(iOut)) {
+              addMessage(messages, "error", "Fill in the operating point.");
+            }
+            renderMessages(messages, msgList);
+            blankPoint("No result", "Inputs incomplete");
+            return;
+          }
+
+          if (vIn <= 0 || vOut <= 0) {
+            addMessage(
+              messages,
+              "error",
+              "V_IN and V_OUT must both be greater than zero.",
+            );
+            renderMessages(messages, msgList);
+            blankPoint("No result", "Voltages must be positive");
+            return;
+          }
+
+          if (vIn === vOut) {
+            addMessage(
+              messages,
+              "warning",
+              "Neither the buck nor the boost equations apply at V_IN = V_OUT; the part is in buck-boost transition.",
+            );
+            renderMessages(messages, msgList);
+            blankPoint(
+              "Buck-boost transition",
+              "V_IN = V_OUT — no equation applies",
+            );
+            return;
+          }
+
+          var point = solveOperatingPoint(vIn, vOut, iOut, stage);
+          var operatingAt =
+            "at V_IN " + formatPlain(vIn) + " V, V_OUT " + formatPlain(vOut) +
+            " V, I_OUT " + formatPlain(iOut) + " A";
+
+          modeBanner.classList.remove("is-invalid");
+          modeName.textContent = point.isBuck ? "Buck mode" : "Boost mode";
+          modeDetail.textContent = point.isBuck
+            ? "V_IN > V_OUT — equations 9, 13, 14, 18"
+            : "V_IN < V_OUT — equations 10, 11, 12, 13, 15, 16, 17, 18";
+
+          pointResults.textContent = "";
+
+          if (!point.isBuck) {
+            appendResultRow(
+              pointResults,
+              "Duty cycle",
+              "D = 1 − V_IN / V_OUT",
+              point.d.toFixed(4),
+              [textNode(operatingAt)],
+            );
+          }
+
+          appendResultRow(
+            pointResults,
+            "Inductor ripple current",
+            point.isBuck ? "(9 rearranged)" : "(12)",
+            formatSi(point.ripple, "A"),
+            [
+              textNode(
+                operatingAt +
+                  (point.isBuck
+                    ? " · derived, no buck ripple equation is printed"
+                    : ""),
+              ),
+            ],
+          );
+
+          appendResultRow(
+            pointResults,
+            "Inductor DC current",
+            point.isBuck ? "= I_OUT, no equation" : "(11)",
+            formatSi(point.ilDc, "A"),
+            [
+              textNode(
+                point.isBuck
+                  ? "Buck: I_L(DC) is the output current"
+                  : "η = " + formatPlain(stage.eta) + ", mandatory in equation 11",
+              ),
+            ],
+          );
+
+          var rippleOk = point.rippleFraction <= 0.4;
+          appendResultRow(
+            pointResults,
+            "Ripple as a fraction of I_L(DC)",
+            "§7.2.2.3 advises under 40%",
+            formatPercent(point.rippleFraction),
+            [
+              pillNode(rippleOk, "Under 40%", "Over 40%"),
+              textNode(
+                " advice, not a gate — TI's own example sits near 50%",
+              ),
+            ],
+          );
+
+          var isatOk = !isFinite(stage.isat) || stage.isat > point.ilPeak;
+          appendResultRow(
+            pointResults,
+            "Inductor peak current",
+            "(13)",
+            formatSi(point.ilPeak, "A"),
+            isFinite(stage.isat)
+              ? [
+                  pillNode(isatOk, "OK", "Under-rated"),
+                  textNode(
+                    " " + formatPlain(stage.isat) + " A saturation rating",
+                  ),
+                ]
+              : [textNode("Enter a saturation rating to check it")],
+          );
+          if (isFinite(stage.isat) && !isatOk) {
+            addMessage(
+              messages,
+              "error",
+              "§7.2.2.3: the selected inductor must have a higher saturation current than the calculated peak.",
+            );
+          }
+
+          if (point.isBuck) {
+            appendResultRow(
+              pointResults,
+              "Input capacitor RMS ripple current",
+              "(14)",
+              formatSi(point.capRms, "A"),
+              [
+                textNode(
+                  "Maximum at V_OUT = V_IN/2, where it is I_OUT/2 · your C_IN must be rated to carry it",
+                ),
+              ],
+            );
+
+            // No equation consumes C_IN's value, so the only thing to do with
+            // it is check it against the two figures the datasheet does give.
+            if (isFinite(stage.cIn)) {
+              var cInMicro = stage.cIn * 1e6;
+              appendResultRow(
+                pointResults,
+                "Input capacitance",
+                "§5.3 ≥ 4.7 µF · §7.2.2.4 suggests 20 µF",
+                formatSi(stage.cIn, "F", 1),
+                [
+                  pillNode(cInMicro >= 4.7, "Meets §5.3", "Below §5.3"),
+                  textNode(
+                    cInMicro >= 20
+                      ? " and at or above the §7.2.2.4 starting point"
+                      : " but below the 20 µF §7.2.2.4 starting point",
+                  ),
+                ],
+              );
+            }
+            appendResultRow(
+              pointResults,
+              "Output voltage ripple",
+              "no buck equation",
+              "—",
+              [textNode("§7.2.2.5 gives output ripple for boost mode only")],
+            );
+          } else {
+            appendResultRow(
+              pointResults,
+              "Output capacitor RMS ripple current",
+              "(15)",
+              formatSi(point.capRms, "A"),
+              [textNode("Maximum at minimum V_IN with maximum V_OUT")],
+            );
+            appendResultRow(
+              pointResults,
+              "Output ripple from ESR",
+              "(16)",
+              formatSi(point.rippleEsr, "V"),
+              [textNode("R_COUT = " + formatSi(stage.rCout, "Ω", 1))],
+            );
+            appendResultRow(
+              pointResults,
+              "Output ripple from capacitance",
+              "(17)",
+              formatSi(point.rippleCap, "V"),
+              [textNode("C_OUT = " + formatSi(stage.cOut, "F", 1))],
+            );
+            appendResultRow(
+              pointResults,
+              "Total output voltage ripple",
+              "(16) + (17)",
+              formatSi(point.outRipple, "V"),
+              [
+                pillNode(
+                  !isFinite(rippleBudget) || point.outRipple <= rippleBudget,
+                  "Within budget",
+                  "Over budget",
+                ),
+                textNode(
+                  isFinite(rippleBudget)
+                    ? " budget " + formatSi(rippleBudget, "V", 1)
+                    : " neither term alone is the answer",
+                ),
+              ],
+            );
+
+            // §7.2.2.5's own instruction, run backwards from the budget.
+            if (isFinite(rippleBudget) && rippleBudget > 0) {
+              var esrFits = point.rippleEsr < rippleBudget;
+              appendResultRow(
+                pointResults,
+                "ESR floor",
+                "(16) alone, independent of C_OUT",
+                formatSi(point.rippleEsr, "V"),
+                [
+                  pillNode(esrFits, "Leaves headroom", "Exceeds the budget alone"),
+                  textNode(
+                    esrFits
+                      ? " " + formatSi(rippleBudget - point.rippleEsr, "V", 1) + " left for the capacitance"
+                      : " no capacitance can meet the budget at this R_COUT",
+                  ),
+                ],
+              );
+
+              var minCout = minCoutForRipple(
+                iOut, vIn, vOut, stage.fSw, rippleBudget, stage.rCout,
+              );
+              appendResultRow(
+                pointResults,
+                "Minimum effective C_OUT for the budget",
+                "(16) + (17) solved for C_OUT",
+                isFinite(minCout) ? formatSi(minCout, "F") : "—",
+                isFinite(minCout)
+                  ? [
+                      pillNode(
+                        stage.cOut >= minCout,
+                        "Your C_OUT is enough",
+                        "Your C_OUT is short",
+                      ),
+                      textNode(" you entered " + formatSi(stage.cOut, "F", 1)),
+                    ]
+                  : [textNode("Lower R_COUT first — the ESR term alone is over budget")],
+              );
+
+              var maxRcout = maxRcoutForRipple(
+                iOut, vIn, vOut, stage.fSw, rippleBudget, stage.cOut,
+              );
+              appendResultRow(
+                pointResults,
+                "Maximum R_COUT at the entered C_OUT",
+                "(16) + (17) solved for R_COUT",
+                maxRcout > 0 ? formatSi(maxRcout, "Ω") : "—",
+                maxRcout > 0
+                  ? [
+                      pillNode(
+                        stage.rCout <= maxRcout,
+                        "Your ESR is low enough",
+                        "Your ESR is too high",
+                      ),
+                      textNode(" you entered " + formatSi(stage.rCout, "Ω", 1)),
+                    ]
+                  : [textNode("The capacitive term alone is already over budget")],
+              );
+            }
+          }
+
+          // Inductor sizing from the ripple budget, at the design extremes —
+          // deliberately separate inputs from the operating point above.
+          if (isFinite(rippleTarget) && rippleTarget > 0) {
+            if (point.isBuck && isFinite(vInMax)) {
+              appendResultRow(
+                pointResults,
+                "Inductance for the ripple target",
+                "(9)",
+                formatSi(inductanceBuck(vInMax, vOut, rippleTarget, stage.fSw), "H"),
+                [
+                  textNode(
+                    "at V_IN(MAX) " + formatPlain(vInMax) + " V, V_OUT " +
+                      formatPlain(vOut) + " V, target " +
+                      formatPlain(rippleTarget) + " A",
+                  ),
+                ],
+              );
+            } else if (!point.isBuck && isFinite(vOutMax)) {
+              appendResultRow(
+                pointResults,
+                "Inductance for the ripple target",
+                "(10)",
+                formatSi(inductanceBoost(vIn, vOutMax, rippleTarget, stage.fSw), "H"),
+                [
+                  textNode(
+                    "at V_IN " + formatPlain(vIn) + " V, V_OUT(MAX) " +
+                      formatPlain(vOutMax) + " V, target " +
+                      formatPlain(rippleTarget) + " A",
+                  ),
+                ],
+              );
+            }
+          }
+
+          if (isFinite(vSns) && isFinite(iOutLimit) && iOutLimit > 0) {
+            appendResultRow(
+              pointResults,
+              "External sense resistor",
+              "(18)",
+              formatSi(senseResistor(vSns, iOutLimit), "Ω"),
+              [
+                textNode(
+                  "R_SNS between ISP and ISN — not the internal 0.055 Ω R_SENSE",
+                ),
+              ],
+            );
+          }
+
+          var rFswNow = readNumber(el("input-rfsw"));
+          var freqSub = "from R_FSW " + formatSiTrim(rFswNow, "Ω");
+          if (fswSource === "target") {
+            var targetHz = readNumber(el("input-fsw")) * 1e3;
+            if (isFinite(targetHz) && targetHz > 0) {
+              freqSub =
+                "target " + formatSi(targetHz, "Hz", 3) + " → nearest " +
+                el("select-rfsw-series").value + " resistor " +
+                formatSiTrim(rFswNow, "Ω") + " → " + formatSi(stage.fSw, "Hz", 3) +
+                " (" + ((100 * stage.fSw) / targetHz).toFixed(1) + "% of target)";
+            }
+          }
+          appendResultRow(
+            pointResults,
+            "Switching frequency",
+            "(3)",
+            formatSi(stage.fSw, "Hz", 3),
+            [textNode(freqSub)],
+          );
+
+          renderMessages(messages, msgList);
+        }
+
+        // ==================== LOOP COMPENSATION ====================
+        var compBanner = el("comp-banner");
+        var compName = el("comp-name");
+        var compDetail = el("comp-detail");
+        var compMsgList = el("comp-msg-list");
+        var compResults = el("comp-results");
+
+        function blankComp(name, detail) {
+          compBanner.classList.add("is-invalid");
+          compName.textContent = name;
+          compDetail.textContent = detail;
+          compResults.textContent = "";
+        }
+
+        function calculateCompensation() {
+          var messages = [];
+          var stage = readPowerStage(messages);
+
+          var vIn = readNumber(el("input-vin"));
+          var vOut = readNumber(el("input-vout"));
+          var iOut = readNumber(el("input-iout"));
+          var vRef = Number(el("select-vref").value);
+
+          checkOperatingRange(messages, vIn, vOut);
+
+          if (!stage.ok || !isFinite(vIn) || !isFinite(vOut) || !isFinite(iOut)) {
+            addMessage(messages, "error", "Fill in the operating point.");
+            renderMessages(messages, compMsgList);
+            blankComp("No result", "Inputs incomplete");
+            return;
+          }
+
+          if (vIn <= 0 || vOut <= 0 || iOut <= 0) {
+            addMessage(
+              messages,
+              "error",
+              "V_IN, V_OUT and I_OUT must all be greater than zero.",
+            );
+            renderMessages(messages, compMsgList);
+            blankComp("No result", "Inputs must be positive");
+            return;
+          }
+
+          // §7.2.2.7 gives boost only, stating it is the restrictive case.
+          if (vOut <= vIn) {
+            renderMessages(messages, compMsgList);
+            blankComp(
+              vIn === vOut ? "Buck-boost transition" : "Buck mode",
+              "§7.2.2.7 gives compensation for boost only — set V_OUT above V_IN",
+            );
+            return;
+          }
+
+          var d = 1 - vIn / vOut;
+          var rLoad = vOut / iOut;
+          var pole = fPole(rLoad, stage.cOut);
+          var esrZero = fEsrZero(stage.rCout, stage.cOut);
+          var rhpz = fRhpz(rLoad, d, stage.l);
+
+          var fswBound = stage.fSw / 10;
+          var rhpzBound = rhpz / 5;
+          var bound = Math.min(fswBound, rhpzBound);
+          var boundName = rhpzBound < fswBound ? "f_RHPZ/5" : "f_SW/10";
+
+          var fC = bound;
+          if (crossoverSource === "custom") {
+            fC = readNumber(el("input-fc")) * 1e3;
+            if (!isFinite(fC) || fC <= 0) {
+              addMessage(messages, "error", "Enter a crossover frequency.");
+              renderMessages(messages, compMsgList);
+              blankComp("No result", "Crossover frequency missing");
+              return;
+            }
+            if (fC > bound) {
+              addMessage(
+                messages,
+                "error",
+                "§7.2.2.7: crossover must be no higher than the lower of f_SW/10 and f_RHPZ/5, which is " +
+                  formatSi(bound, "Hz", 3) + " here.",
+              );
+            }
+          }
+
+          var rC = compResistor(vOut, stage.cOut, fC, d, vRef);
+          var cC = compCapacitor(rLoad, stage.cOut, rC);
+          var cP = poleCapacitor(stage.rCout, stage.cOut, rC);
+
+          compBanner.classList.remove("is-invalid");
+          compName.textContent = "Boost mode";
+          compDetail.textContent =
+            "Crossover set by " + boundName + " — equations 20 to 26";
+
+          compResults.textContent = "";
+
+          appendResultRow(compResults, "Duty cycle", "D = 1 − V_IN / V_OUT", d.toFixed(4), [
+            textNode("at V_IN " + formatPlain(vIn) + " V, V_OUT " + formatPlain(vOut) + " V"),
+          ]);
+          appendResultRow(compResults, "Load resistance", "R_LOAD = V_OUT / I_OUT", formatSi(rLoad, "Ω"), [
+            textNode("at I_OUT " + formatPlain(iOut) + " A"),
+          ]);
+          appendResultRow(compResults, "Output pole", "(20)", formatSi(pole, "Hz", 3), []);
+          appendResultRow(compResults, "ESR zero", "(21)", formatSi(esrZero, "Hz", 3), []);
+          appendResultRow(compResults, "Right-half-plane zero", "(22)", formatSi(rhpz, "Hz", 3), [
+            textNode("The reason boost is the restrictive case"),
+          ]);
+
+          appendResultRow(
+            compResults,
+            "Crossover bound",
+            "f_C ≤ min(f_SW/10, f_RHPZ/5)",
+            formatSi(bound, "Hz", 3),
+            [
+              textNode(
+                "f_SW/10 = " + formatSi(fswBound, "Hz", 3) +
+                  ", f_RHPZ/5 = " + formatSi(rhpzBound, "Hz", 3) +
+                  " · bound by " + boundName,
+              ),
+            ],
+          );
+
+          appendResultRow(
+            compResults,
+            "Crossover frequency used",
+            crossoverSource === "custom" ? "entered" : "the bound",
+            formatSi(fC, "Hz", 3),
+            crossoverSource === "custom"
+              ? [
+                  pillNode(fC <= bound, "Within the bound", "Above the bound"),
+                  textNode(" bound is " + formatSi(bound, "Hz", 3)),
+                ]
+              : [textNode("Switch to Custom to override")],
+          );
+
+          var gPs = powerStageDcGain(rLoad, d);
+          var gC = controlDcGain(vRef, vOut);
+          var loopGain = gPs * gC;
+
+          appendResultRow(
+            compResults,
+            "Power stage DC gain",
+            "(19) at s = 0",
+            gPs.toFixed(4) + " V/V",
+            [textNode(toDecibels(gPs).toFixed(2) + " dB · R_SENSE 0.055 Ω")],
+          );
+          appendResultRow(
+            compResults,
+            "Control DC gain",
+            "(23) at s = 0",
+            gC.toFixed(4) + " V/V",
+            [
+              textNode(
+                toDecibels(gC).toFixed(2) + " dB · R_EA 10 MΩ, from the TI forum, not the datasheet",
+              ),
+            ],
+          );
+          appendResultRow(
+            compResults,
+            "DC loop gain",
+            "(19) × (23) at s = 0",
+            loopGain.toFixed(2) + " V/V",
+            [textNode(toDecibels(loopGain).toFixed(2) + " dB")],
+          );
+
+          appendResultRow(compResults, "Compensation resistor", "(24)", formatSi(rC, "Ω"), [
+            textNode("V_REF " + vRef + " V, R_SENSE 0.055 Ω, G_EA 190 µA/V"),
+          ]);
+          appendResultRow(compResults, "Compensation capacitor", "(25)", formatSi(cC, "F"), []);
+
+          var cpOpen = cP < 10e-12;
+          appendResultRow(compResults, "High-frequency pole capacitor", "(26)", formatSi(cP, "F"), [
+            pillNode(cpOpen, "Leave open", "Fit it"),
+            textNode(cpOpen ? " below 10 pF" : " 10 pF or above"),
+          ]);
+
+          // The two cancellations that equations 25 and 26 encode.
+          var fComz = fComZero(rC, cC);
+          var fComp1 = fComPole1(cC, cP);
+          var fComp2 = fComPole2(rC, cP);
+          var zeroCancels = Math.abs(fComz - pole) / pole < 1e-9;
+          var poleCancels = Math.abs(fComp2 - esrZero) / esrZero < 1e-9;
+
+          appendResultRow(
+            compResults,
+            "Compensator zero",
+            "f_COMZ = 1/(2π·R_C·C_C)",
+            formatSi(fComz, "Hz", 3),
+            [
+              pillNode(zeroCancels, "Cancels f_P", "Does not cancel f_P"),
+              textNode(" equation 25 is a cancellation condition"),
+            ],
+          );
+          appendResultRow(
+            compResults,
+            "Compensator dominant pole",
+            "f_COMP1 = 1/(2π·R_EA·(C_C+C_P))",
+            formatSi(fComp1, "Hz", 4),
+            [textNode("Set by R_EA — the only place it matters")],
+          );
+          appendResultRow(
+            compResults,
+            "Compensator second pole",
+            "f_COMP2 = 1/(2π·R_C·C_P)",
+            formatSi(fComp2, "Hz", 3),
+            [
+              pillNode(poleCancels, "Cancels f_ESRZ", "Does not cancel f_ESRZ"),
+              textNode(" equation 26 is a cancellation condition"),
+            ],
+          );
+
+          // Closed loop. The pole-zero mapping above is not printed in the
+          // datasheet, so these are a check on the transcription rather than a
+          // datasheet result.
+          var loopParams = {
+            gPs0: gPs, gC0: gC, fP: pole, fEsrz: esrZero, fRhpz: rhpz,
+            fComz: fComz, fComp1: fComp1, fComp2: fComp2,
+          };
+          var tAtFc = cAbs(loopGainAt(fC, loopParams));
+          var crossover = findUnityCrossover(loopParams, fC);
+          var phaseMargin = isFinite(crossover)
+            ? 180 + cArgDegrees(loopGainAt(crossover, loopParams))
+            : NaN;
+
+          appendResultRow(
+            compResults,
+            "Loop gain at the designed f_C",
+            "|T| at f_C",
+            toDecibels(tAtFc).toFixed(3) + " dB",
+            [textNode("Equation 24 solves for 0 dB here")],
+          );
+
+          if (isFinite(crossover)) {
+            appendResultRow(
+              compResults,
+              "Actual 0 dB crossover",
+              "|T| = 1",
+              formatSi(crossover, "Hz", 3),
+              [textNode(((100 * crossover) / fC).toFixed(1) + "% of the designed f_C")],
+            );
+            var pmOk = phaseMargin > 45;
+            appendResultRow(
+              compResults,
+              "Phase margin",
+              "§7.2.2.7 targets > 45°",
+              phaseMargin.toFixed(1) + "°",
+              [pillNode(pmOk, "Meets the target", "Below the target")],
+            );
+            if (!pmOk) {
+              addMessage(
+                messages,
+                "warning",
+                "§7.2.2.7 targets a phase margin above 45° to eliminate output ringing on line and load transients.",
+              );
+            }
+
+            // The averaged model is meaningless above about half the switching
+            // frequency, so that is where the search stops.
+            var modelCeiling = stage.fSw / 2;
+            var phaseCrossing = findPhaseCrossover(loopParams, crossover, modelCeiling);
+            appendResultRow(
+              compResults,
+              "Gain margin",
+              "§7.2.2.7 targets > 10 dB",
+              isFinite(phaseCrossing)
+                ? (-toDecibels(cAbs(loopGainAt(phaseCrossing, loopParams)))).toFixed(2) + " dB"
+                : "—",
+              [
+                textNode(
+                  isFinite(phaseCrossing)
+                    ? "phase reaches −180° at " + formatSi(phaseCrossing, "Hz", 3)
+                    : "phase does not reach −180° below f_SW/2 (" +
+                      formatSi(modelCeiling, "Hz", 3) +
+                      "), where the averaged model stops being valid",
+                ),
+              ],
+            );
+          }
+
+          renderMessages(messages, compMsgList);
+        }
+
+        // ==================== BACK-CALCULATION ====================
+        // Equations 24 and 25 with the boost identity (1 - D) = V_IN/V_OUT
+        // substituted in. That removes R_LOAD, D and C_OUT from where they look
+        // like they matter, and leaves two coefficients fixed by the silicon.
+        var RC_COEFF = (TWO_PI * R_SENSE) / G_EA; // 1818.8
+        var CC_COEFF = 2 * RC_COEFF; // 3637.6
+
+        function rcFromFc(vOut, cOut, fC, vIn, vRef) {
+          return (RC_COEFF * vOut * vOut * cOut * fC) / (vIn * vRef);
+        }
+
+        // Equation 24 solved the other way: the crossover a chosen R_C lands on.
+        function fcFromRc(rC, vIn, vRef, vOut, cOut) {
+          return (rC * vIn * vRef) / (RC_COEFF * vOut * vOut * cOut);
+        }
+
+        function ccFromFc(vIn, vRef, iOut, vOut, fC) {
+          return (vIn * vRef) / (CC_COEFF * iOut * vOut * fC);
+        }
+
+        // The invariant behind the whole tab: f_C splits R_C against C_C but
+        // never moves their product, which is the f_COMZ = f_P cancellation.
+        function rcCcProduct(rLoad, cOut) {
+          return (rLoad * cOut) / 2;
+        }
+
+        var E_SERIES = {
+          E6: [1.0, 1.5, 2.2, 3.3, 4.7, 6.8],
+          E12: [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2],
+          E24: [
+            1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.3,
+            3.6, 3.9, 4.3, 4.7, 5.1, 5.6, 6.2, 6.8, 7.5, 8.2, 9.1,
+          ],
+          // E96 as printed, in hundredths — TI's own 49.9 kΩ is an E96 value.
+          E96: [
+            100, 102, 105, 107, 110, 113, 115, 118, 121, 124, 127, 130, 133,
+            137, 140, 143, 147, 150, 154, 158, 162, 165, 169, 174, 178, 182,
+            187, 191, 196, 200, 205, 210, 215, 221, 226, 232, 237, 243, 249,
+            255, 261, 267, 274, 280, 287, 294, 301, 309, 316, 324, 332, 340,
+            348, 357, 365, 374, 383, 392, 402, 412, 422, 432, 442, 453, 464,
+            475, 487, 499, 511, 523, 536, 549, 562, 576, 590, 604, 619, 634,
+            649, 665, 681, 698, 715, 732, 750, 768, 787, 806, 825, 845, 866,
+            887, 909, 931, 953, 976,
+          ].map(function (value) {
+            return value / 100;
+          }),
+        };
+
+        function roundSignificant(value, digits) {
+          if (!isFinite(value) || value === 0) return value;
+          var factor = Math.pow(
+            10,
+            digits - 1 - Math.floor(Math.log10(Math.abs(value))),
+          );
+          return Math.round(value * factor) / factor;
+        }
+
+        // Nearest on a log scale, which is what "nearest preferred value" means.
+        function nearestStandard(value, seriesName) {
+          var base = E_SERIES[seriesName] || E_SERIES.E12;
+          if (!(value > 0) || !isFinite(value)) return NaN;
+          var decade = Math.floor(Math.log10(value));
+          var best = NaN;
+          var bestError = Infinity;
+          for (var d = decade - 1; d <= decade + 1; d++) {
+            var scale = Math.pow(10, d);
+            for (var i = 0; i < base.length; i++) {
+              var candidate = base[i] * scale;
+              var error = Math.abs(Math.log(candidate / value));
+              if (error < bestError) {
+                bestError = error;
+                best = candidate;
+              }
+            }
+          }
+          return roundSignificant(best, 3);
+        }
+
+        function standardValuesBetween(seriesName, low, high) {
+          var base = E_SERIES[seriesName] || E_SERIES.E24;
+          var values = [];
+          var lowDecade = Math.floor(Math.log10(low));
+          var highDecade = Math.floor(Math.log10(high));
+          for (var d = lowDecade; d <= highDecade + 1; d++) {
+            var scale = Math.pow(10, d);
+            for (var i = 0; i < base.length; i++) {
+              var candidate = roundSignificant(base[i] * scale, 3);
+              if (candidate >= low && candidate <= high) values.push(candidate);
+            }
+          }
+          return values;
+        }
+
+        // ==================== RANGE SWEEP ====================
+        // Buck and boost points are accumulated separately: the modes use
+        // different equations, so a worst case pooled across both is meaningless.
+        var SWEEP_VARS = [
+          { key: "vin", label: "V_IN", unit: "V" },
+          { key: "vout", label: "V_OUT", unit: "V" },
+          { key: "iout", label: "I_OUT", unit: "A" },
+        ];
+        var SWEEP_VAR_BY_KEY = {};
+        SWEEP_VARS.forEach(function (item) {
+          SWEEP_VAR_BY_KEY[item.key] = item;
+        });
+
+        // outRipple exists in boost only — §7.2.2.5 gives no buck equation.
+        var SWEEP_METRICS = ["ripple", "ilDc", "ilPeak", "capRms", "outRipple"];
+        var MAX_GRID_POINTS = 250000;
+
+        var sweepBanner = el("sweep-banner");
+        var sweepCoverage = el("sweep-coverage");
+        var sweepDetail = el("sweep-detail");
+        var sweepMsgList = el("sweep-msg-list");
+        var sweepSummary = el("sweep-summary");
+        var sweepTbody = el("sweep-tbody");
+        var sweepTableNote = el("sweep-table-note");
+        var sweepAxisHeading = el("sweep-axis-heading");
+
+        function sweepField(key, end) {
+          return el("sweep-" + key + "-" + end);
+        }
+
+        function linspace(min, max, steps) {
+          if (!(max > min)) return [min];
+          var values = [];
+          for (var i = 0; i < steps; i++) {
+            values.push(min + ((max - min) * i) / (steps - 1));
+          }
+          return values;
+        }
+
+        function newAccumulator() {
+          return { count: 0, ripple: null, ilDc: null, ilPeak: null, capRms: null, outRipple: null };
+        }
+
+        function recordMax(acc, name, value, vIn, vOut, iOut) {
+          if (!isFinite(value)) return;
+          var slot = acc[name];
+          if (!slot || value >= slot.value) {
+            acc[name] = { value: value, vIn: vIn, vOut: vOut, iOut: iOut };
+          }
+        }
+
+        function runSweep(grid) {
+          var totals = { buck: newAccumulator(), boost: newAccumulator() };
+          var axisVals = grid[grid.axisKey];
+          var stepAccs = [];
+          for (var a = 0; a < axisVals.length; a++) {
+            stepAccs.push({
+              value: axisVals[a],
+              buck: newAccumulator(),
+              boost: newAccumulator(),
+            });
+          }
+          var skipped = 0;
+
+          for (var i = 0; i < grid.vin.length; i++) {
+            for (var j = 0; j < grid.vout.length; j++) {
+              for (var k = 0; k < grid.iout.length; k++) {
+                var vIn = grid.vin[i];
+                var vOut = grid.vout[j];
+                var iOut = grid.iout[k];
+
+                if (vIn === vOut) {
+                  skipped += 1;
+                  continue;
+                }
+
+                var point = solveOperatingPoint(vIn, vOut, iOut, grid.stage);
+                var modeKey = point.isBuck ? "buck" : "boost";
+                var axisIndex =
+                  grid.axisKey === "vin" ? i : grid.axisKey === "vout" ? j : k;
+
+                var targets = [totals[modeKey], stepAccs[axisIndex][modeKey]];
+                for (var t = 0; t < targets.length; t++) {
+                  var acc = targets[t];
+                  acc.count += 1;
+                  recordMax(acc, "ripple", point.ripple, vIn, vOut, iOut);
+                  recordMax(acc, "ilDc", point.ilDc, vIn, vOut, iOut);
+                  recordMax(acc, "ilPeak", point.ilPeak, vIn, vOut, iOut);
+                  recordMax(acc, "capRms", point.capRms, vIn, vOut, iOut);
+                  recordMax(acc, "outRipple", point.outRipple, vIn, vOut, iOut);
+                }
+              }
+            }
+          }
+
+          return { totals: totals, stepAccs: stepAccs, skipped: skipped };
+        }
+
+        function cornerText(slot) {
+          return (
+            "at V_IN " + formatPlain(slot.vIn) +
+            " V, V_OUT " + formatPlain(slot.vOut) +
+            " V, I_OUT " + formatPlain(slot.iOut) + " A"
+          );
+        }
+
+        function renderModeBlock(modeKey, acc, isat) {
+          var isBuck = modeKey === "buck";
+          var block = document.createElement("div");
+          block.className = "sweep-block";
+          block.setAttribute("data-mode", modeKey);
+
+          var heading = document.createElement("h3");
+          heading.textContent =
+            (isBuck ? "Buck mode" : "Boost mode") + " — " + acc.count + " points";
+          block.appendChild(heading);
+
+          var results = document.createElement("div");
+          results.className = "results";
+
+          appendResultRow(
+            results,
+            "Max inductor ripple current",
+            isBuck ? "(9 rearranged)" : "(12)",
+            formatSi(acc.ripple.value, "A"),
+            [textNode(cornerText(acc.ripple))],
+          );
+          appendResultRow(
+            results,
+            "Max inductor DC current",
+            isBuck ? "= I_OUT" : "(11)",
+            formatSi(acc.ilDc.value, "A"),
+            [textNode(cornerText(acc.ilDc))],
+          );
+
+          var peakOk = !isFinite(isat) || isat > acc.ilPeak.value;
+          appendResultRow(
+            results,
+            "Max inductor peak current",
+            "(13)",
+            formatSi(acc.ilPeak.value, "A"),
+            isFinite(isat)
+              ? [
+                  pillNode(peakOk, "OK", "Under-rated"),
+                  textNode(" " + formatPlain(isat) + " A rating · " + cornerText(acc.ilPeak)),
+                ]
+              : [textNode(cornerText(acc.ilPeak))],
+          );
+
+          appendResultRow(
+            results,
+            isBuck
+              ? "Max input capacitor RMS ripple current"
+              : "Max output capacitor RMS ripple current",
+            isBuck ? "(14)" : "(15)",
+            formatSi(acc.capRms.value, "A"),
+            [textNode(cornerText(acc.capRms))],
+          );
+
+          if (isBuck) {
+            appendResultRow(results, "Max output voltage ripple", "no buck equation", "—", [
+              textNode("§7.2.2.5 gives output ripple for boost mode only"),
+            ]);
+          } else {
+            appendResultRow(
+              results,
+              "Max total output voltage ripple",
+              "(16) + (17)",
+              formatSi(acc.outRipple.value, "V"),
+              [textNode(cornerText(acc.outRipple))],
+            );
+          }
+
+          block.appendChild(results);
+          return block;
+        }
+
+        function renderSweepTable(stepAccs, axisVar) {
+          sweepTbody.textContent = "";
+          var rows = [];
+          stepAccs.forEach(function (step) {
+            ["buck", "boost"].forEach(function (modeKey) {
+              if (step[modeKey].count > 0) {
+                rows.push({ value: step.value, modeKey: modeKey, acc: step[modeKey] });
+              }
+            });
+          });
+
+          var maxima = { buck: {}, boost: {} };
+          SWEEP_METRICS.forEach(function (metric) {
+            ["buck", "boost"].forEach(function (modeKey) {
+              var best = -Infinity;
+              rows.forEach(function (row) {
+                var slot = row.acc[metric];
+                if (row.modeKey === modeKey && slot && slot.value > best) {
+                  best = slot.value;
+                }
+              });
+              maxima[modeKey][metric] = best;
+            });
+          });
+
+          rows.forEach(function (row) {
+            var isBuck = row.modeKey === "buck";
+            var tr = document.createElement("tr");
+            tr.setAttribute("data-mode", row.modeKey);
+
+            var axisCell = document.createElement("td");
+            axisCell.className = "num";
+            axisCell.textContent = formatPlain(row.value) + " " + axisVar.unit;
+            tr.appendChild(axisCell);
+
+            var modeCell = document.createElement("td");
+            modeCell.textContent = isBuck ? "Buck (9, 13, 14)" : "Boost (11, 12, 13, 15, 16, 17)";
+            tr.appendChild(modeCell);
+
+            SWEEP_METRICS.forEach(function (metric) {
+              var slot = row.acc[metric];
+              var cell = document.createElement("td");
+              if (!slot) {
+                cell.className = "num";
+                cell.textContent = "—";
+              } else {
+                cell.className =
+                  slot.value === maxima[row.modeKey][metric] ? "num cell-max" : "num";
+                cell.textContent = formatSi(slot.value, metric === "outRipple" ? "V" : "A");
+              }
+              tr.appendChild(cell);
+            });
+
+            sweepTbody.appendChild(tr);
+          });
+
+          return rows.length;
+        }
+
+        function blankSweep(note) {
+          sweepBanner.classList.add("is-invalid");
+          sweepCoverage.textContent = "No result";
+          sweepDetail.textContent = "";
+          sweepSummary.textContent = "";
+          sweepTbody.textContent = "";
+          sweepTableNote.textContent = note;
+        }
+
+        function calculateSweep() {
+          var messages = [];
+          var stage = readPowerStage(messages);
+          var ranges = {};
+          var blanks = false;
+          var invalid = !stage.ok;
+
+          SWEEP_VARS.forEach(function (item) {
+            var min = readNumber(sweepField(item.key, "min"));
+            var max = readNumber(sweepField(item.key, "max"));
+            if (!isFinite(min) || !isFinite(max)) {
+              blanks = true;
+              return;
+            }
+            if (max < min) {
+              addMessage(
+                messages,
+                "error",
+                item.label + " max is below " + item.label + " min.",
+              );
+              invalid = true;
+              return;
+            }
+            ranges[item.key] = { min: min, max: max };
+          });
+
+          if (blanks) {
+            addMessage(messages, "error", "Fill in both ends of every input range.");
+            invalid = true;
+          }
+
+          if (!invalid) {
+            if (ranges.vin.min <= 0 || ranges.vout.min <= 0) {
+              addMessage(
+                messages,
+                "error",
+                "V_IN and V_OUT must both be greater than zero.",
+              );
+              invalid = true;
+            }
+          }
+
+          if (!invalid) {
+            if (ranges.vin.min < 3 || ranges.vin.max > 36) {
+              addMessage(
+                messages,
+                "warning",
+                "V_IN range goes outside the 3 V to 36 V operating input range.",
+              );
+            }
+            if (ranges.vout.min < 0.8 || ranges.vout.max > 22) {
+              addMessage(
+                messages,
+                "warning",
+                "V_OUT range goes outside the 0.8 V to 22 V output range.",
+              );
+            }
+          }
+
+          if (invalid) {
+            renderMessages(messages, sweepMsgList);
+            blankSweep("Fix the input ranges to see the sweep.");
+            return;
+          }
+
+          var steps = Number(el("select-sweep-steps").value);
+          var grid = {
+            vin: linspace(ranges.vin.min, ranges.vin.max, steps),
+            vout: linspace(ranges.vout.min, ranges.vout.max, steps),
+            iout: linspace(ranges.iout.min, ranges.iout.max, steps),
+            stage: stage,
+            axisKey: el("select-sweep-axis").value,
+          };
+
+          var total = grid.vin.length * grid.vout.length * grid.iout.length;
+          if (total > MAX_GRID_POINTS) {
+            addMessage(
+              messages,
+              "error",
+              "That grid is " + total + " points. Reduce the steps per range.",
+            );
+            renderMessages(messages, sweepMsgList);
+            blankSweep("Grid too large to evaluate.");
+            return;
+          }
+
+          var result = runSweep(grid);
+          var buck = result.totals.buck;
+          var boost = result.totals.boost;
+
+          if (buck.count === 0 && boost.count === 0) {
+            addMessage(
+              messages,
+              "error",
+              "Every point in the range sits at V_IN = V_OUT, where neither set of equations applies.",
+            );
+            renderMessages(messages, sweepMsgList);
+            blankSweep("No usable operating points in this range.");
+            return;
+          }
+
+          sweepBanner.classList.remove("is-invalid");
+          sweepCoverage.textContent =
+            buck.count > 0 && boost.count > 0
+              ? "Buck and boost"
+              : buck.count > 0
+                ? "Buck mode only"
+                : "Boost mode only";
+
+          var detail =
+            total + " operating points · " + buck.count + " buck · " + boost.count + " boost";
+          if (result.skipped > 0) {
+            detail += " · " + result.skipped + " skipped at V_IN = V_OUT";
+          }
+          sweepDetail.textContent = detail;
+
+          sweepSummary.textContent = "";
+          if (buck.count > 0) {
+            sweepSummary.appendChild(renderModeBlock("buck", buck, stage.isat));
+          }
+          if (boost.count > 0) {
+            sweepSummary.appendChild(renderModeBlock("boost", boost, stage.isat));
+          }
+
+          var axisVar = SWEEP_VAR_BY_KEY[grid.axisKey];
+          var axisLength = grid[grid.axisKey].length;
+          sweepAxisHeading.textContent = axisVar.label;
+          var rowCount = renderSweepTable(result.stepAccs, axisVar);
+          sweepTableNote.textContent =
+            axisLength + " " + axisVar.label + " values × " +
+            total / axisLength + " combinations of the other two ranges · " +
+            rowCount + " rows";
+
+          renderMessages(messages, sweepMsgList);
+        }
+
+        // ==================== STANDARD VALUES TAB ====================
+        var stdBanner = el("std-banner");
+        var stdName = el("std-name");
+        var stdDetail = el("std-detail");
+        var stdMsgList = el("std-msg-list");
+        var stdResults = el("std-results");
+        var stdTbody = el("std-tbody");
+        var stdTableNote = el("std-table-note");
+
+        function blankStandard(name, detail, note) {
+          stdBanner.classList.add("is-invalid");
+          stdName.textContent = name;
+          stdDetail.textContent = detail;
+          stdResults.textContent = "";
+          stdTbody.textContent = "";
+          stdTableNote.textContent = note;
+        }
+
+        // Everything the chosen parts imply, given the operating point.
+        function backCalculate(chosen, ctx) {
+          var out = {};
+          out.fC = fcFromRc(chosen.rC, ctx.vIn, ctx.vRef, ctx.vOut, ctx.cOut);
+          out.fractionOfCeiling = out.fC / ctx.ceiling;
+          out.product = chosen.rC * chosen.cC;
+          out.requiredProduct = rcCcProduct(ctx.rLoad, ctx.cOut);
+          out.ccIdeal = out.requiredProduct / chosen.rC;
+          out.fComz = fComZero(chosen.rC, chosen.cC);
+          out.fComzRatio = out.fComz / ctx.fP;
+
+          // The product pins R_LOAD x C_OUT, so each of those can be read back
+          // out given the other. This is the "what do these parts require" half.
+          out.impliedLoadTimesCout = 2 * out.product;
+          out.impliedRLoad = out.impliedLoadTimesCout / ctx.cOut;
+          out.impliedIOut = ctx.vOut / out.impliedRLoad;
+          out.impliedCOut = out.impliedLoadTimesCout / ctx.rLoad;
+
+          out.cpIdeal = poleCapacitor(ctx.rCout, ctx.cOut, chosen.rC);
+          if (chosen.cP > 0) {
+            out.fComp2 = fComPole2(chosen.rC, chosen.cP);
+            out.fComp2Ratio = out.fComp2 / ctx.fEsrz;
+            out.impliedRCout = (chosen.cP * chosen.rC) / ctx.cOut;
+          } else {
+            out.fComp2 = Infinity;
+          }
+          out.fComp1 = fComPole1(chosen.cC, chosen.cP);
+          return out;
+        }
+
+        function calculateStandard() {
+          var messages = [];
+          var stage = readPowerStage(messages);
+
+          var vIn = readNumber(el("input-vin"));
+          var vOut = readNumber(el("input-vout"));
+          var iOut = readNumber(el("input-iout"));
+          var vRef = Number(el("select-vref").value);
+          var rC = readNumber(el("input-rc-chosen")) * 1e3;
+          var cC = readNumber(el("input-cc-chosen")) * 1e-9;
+          var cPRaw = readNumber(el("input-cp-chosen"));
+          var cP = isFinite(cPRaw) ? cPRaw * 1e-12 : 0;
+
+          if (!stage.ok || !isFinite(vIn) || !isFinite(vOut) || !isFinite(iOut)) {
+            addMessage(messages, "error", "Fill in the operating point.");
+            renderMessages(messages, stdMsgList);
+            blankStandard("No result", "Inputs incomplete", "Fill in the operating point.");
+            return;
+          }
+
+          if (vIn <= 0 || vOut <= 0 || iOut <= 0) {
+            addMessage(messages, "error", "V_IN, V_OUT and I_OUT must all be greater than zero.");
+            renderMessages(messages, stdMsgList);
+            blankStandard("No result", "Inputs must be positive", "Inputs must be positive.");
+            return;
+          }
+
+          // The closed forms are the boost equations rearranged, so like the
+          // compensation tab this is boost only.
+          if (vOut <= vIn) {
+            renderMessages(messages, stdMsgList);
+            blankStandard(
+              vIn === vOut ? "Buck-boost transition" : "Buck mode",
+              "§7.2.2.7 gives compensation for boost only — set V_OUT above V_IN",
+              "Set V_OUT above V_IN to size the compensator.",
+            );
+            return;
+          }
+
+          if (!isFinite(rC) || rC <= 0 || !isFinite(cC) || cC <= 0) {
+            addMessage(messages, "error", "Enter a positive R_C and C_C.");
+            renderMessages(messages, stdMsgList);
+            blankStandard("No result", "Component values missing", "Enter R_C and C_C.");
+            return;
+          }
+
+          var d = 1 - vIn / vOut;
+          var rLoad = vOut / iOut;
+          var ctx = {
+            vIn: vIn, vOut: vOut, iOut: iOut, vRef: vRef, rLoad: rLoad, d: d,
+            cOut: stage.cOut, rCout: stage.rCout,
+            fP: fPole(rLoad, stage.cOut),
+            fEsrz: fEsrZero(stage.rCout, stage.cOut),
+            fRhpz: fRhpz(rLoad, d, stage.l),
+          };
+          ctx.fswBound = stage.fSw / 10;
+          ctx.rhpzBound = ctx.fRhpz / 5;
+          ctx.ceiling = Math.min(ctx.fswBound, ctx.rhpzBound);
+          ctx.boundName = ctx.rhpzBound < ctx.fswBound ? "f_RHPZ/5" : "f_SW/10";
+          ctx.idealRc = rcFromFc(vOut, stage.cOut, ctx.ceiling, vIn, vRef);
+
+          var chosen = { rC: rC, cC: cC, cP: cP };
+          var back = backCalculate(chosen, ctx);
+
+          stdBanner.classList.remove("is-invalid");
+          stdName.textContent = "Boost mode";
+          stdDetail.textContent =
+            "Ceiling " + formatSi(ctx.ceiling, "Hz", 3) + " (" + ctx.boundName +
+            ") · ideal R_C " + formatSi(ctx.idealRc, "Ω", 2);
+
+          stdResults.textContent = "";
+
+          var withinBound = back.fractionOfCeiling <= 1;
+          appendResultRow(
+            stdResults,
+            "Crossover from the chosen R_C",
+            "(24) solved for f_C",
+            formatSi(back.fC, "Hz", 3),
+            [
+              pillNode(withinBound, "Inside the bound", "Over the bound"),
+              textNode(" " + (100 * back.fractionOfCeiling).toFixed(1) + "% of the " + formatSi(ctx.ceiling, "Hz", 3) + " ceiling"),
+            ],
+          );
+          if (!withinBound) {
+            addMessage(
+              messages,
+              "error",
+              "§7.2.2.7: this R_C puts the crossover above min(f_SW/10, f_RHPZ/5). Snap R_C down to come back inside the bound.",
+            );
+          }
+
+          appendResultRow(
+            stdResults,
+            "Ideal R_C at the ceiling",
+            "(24) at f_C = ceiling",
+            formatSi(ctx.idealRc, "Ω"),
+            [textNode("Snapping down from here is always safe — it lowers f_C")],
+          );
+
+          appendResultRow(
+            stdResults,
+            "Ideal C_C for the chosen R_C",
+            "from the product, not from f_C",
+            formatSi(back.ccIdeal, "F"),
+            [textNode("R_LOAD × C_OUT / 2 ÷ R_C")],
+          );
+
+          var cancelError = Math.abs(back.fComzRatio - 1);
+          appendResultRow(
+            stdResults,
+            "Compensator zero from the chosen C_C",
+            "f_COMZ = 1/(2π·R_C·C_C)",
+            formatSi(back.fComz, "Hz", 3),
+            [
+              pillNode(cancelError <= 0.05, "Within 5% of f_P", "Off f_P"),
+              textNode(
+                " " + (100 * back.fComzRatio).toFixed(1) + "% of f_P = " +
+                  formatSi(ctx.fP, "Hz", 3),
+              ),
+            ],
+          );
+
+          appendResultRow(
+            stdResults,
+            "R_C × C_C time constant",
+            "= R_LOAD × C_OUT / 2",
+            formatSi(back.product, "s", 4),
+            [
+              textNode(
+                "required " + formatSi(back.requiredProduct, "s", 4) + " · " +
+                  (100 * (back.product / back.requiredProduct)).toFixed(1) + "% of it",
+              ),
+            ],
+          );
+
+          // The requirement half: what power stage would make these parts exact.
+          appendResultRow(
+            stdResults,
+            "Load these parts are tuned for",
+            "I_OUT = V_OUT ÷ (2·R_C·C_C/C_OUT)",
+            formatSi(back.impliedIOut, "A"),
+            [
+              textNode(
+                "R_LOAD " + formatSi(back.impliedRLoad, "Ω", 3) +
+                  " at the entered C_OUT " + formatSi(ctx.cOut, "F", 1) +
+                  " · you entered " + formatPlain(iOut) + " A",
+              ),
+            ],
+          );
+
+          appendResultRow(
+            stdResults,
+            "C_OUT these parts are tuned for",
+            "C_OUT = 2·R_C·C_C / R_LOAD",
+            formatSi(back.impliedCOut, "F"),
+            [
+              textNode(
+                "at the entered load " + formatSi(rLoad, "Ω", 3) +
+                  " · you entered " + formatSi(ctx.cOut, "F", 1),
+              ),
+            ],
+          );
+
+          var cpOmitted = !(cP > 0);
+          var cpCanOmit = back.cpIdeal < 10e-12;
+          appendResultRow(
+            stdResults,
+            "Ideal C_P for the chosen R_C",
+            "(26)",
+            formatSi(back.cpIdeal, "F"),
+            [
+              pillNode(cpCanOmit, "Leave open", "Fit it"),
+              textNode(
+                cpCanOmit ? " below 10 pF" : " 10 pF or above",
+              ),
+            ],
+          );
+          if (!cpOmitted) {
+            appendResultRow(
+              stdResults,
+              "Second pole from the chosen C_P",
+              "f_COMP2 = 1/(2π·R_C·C_P)",
+              formatSi(back.fComp2, "Hz", 3),
+              [
+                pillNode(Math.abs(back.fComp2Ratio - 1) <= 0.05, "Within 5% of f_ESRZ", "Off f_ESRZ"),
+                textNode(
+                  " " + (100 * back.fComp2Ratio).toFixed(1) + "% of f_ESRZ · implies R_COUT " +
+                    formatSi(back.impliedRCout, "Ω", 3),
+                ),
+              ],
+            );
+          } else if (!cpCanOmit) {
+            addMessage(
+              messages,
+              "warning",
+              "Equation 26 wants " + formatSi(back.cpIdeal, "F") +
+                " here, which is 10 pF or more, so C_P should not be omitted.",
+            );
+          }
+
+          // Closed loop with exactly the parts entered.
+          var loopParams = {
+            gPs0: powerStageDcGain(rLoad, d),
+            gC0: controlDcGain(vRef, vOut),
+            fP: ctx.fP,
+            fEsrz: ctx.fEsrz,
+            fRhpz: ctx.fRhpz,
+            fComz: back.fComz,
+            fComp1: back.fComp1,
+            fComp2: back.fComp2,
+          };
+          var crossover = findUnityCrossover(loopParams, back.fC);
+          if (isFinite(crossover)) {
+            var phaseMargin = 180 + cArgDegrees(loopGainAt(crossover, loopParams));
+            appendResultRow(
+              stdResults,
+              "Actual 0 dB crossover with these parts",
+              "|T| = 1",
+              formatSi(crossover, "Hz", 3),
+              [textNode(((100 * crossover) / back.fC).toFixed(1) + "% of the R_C crossover")],
+            );
+            var pmOk = phaseMargin > 45;
+            appendResultRow(
+              stdResults,
+              "Phase margin with these parts",
+              "§7.2.2.7 targets > 45°",
+              phaseMargin.toFixed(1) + "°",
+              [pillNode(pmOk, "Meets the target", "Below the target")],
+            );
+            if (!pmOk) {
+              addMessage(
+                messages,
+                "warning",
+                "§7.2.2.7 targets a phase margin above 45° to eliminate output ringing on line and load transients.",
+              );
+            }
+          }
+
+          renderCandidateTable(ctx);
+          renderMessages(messages, stdMsgList);
+        }
+
+        // The note's worked table, generated for whatever operating point is
+        // entered: snap R_C, recover f_C, take C_C from the product.
+        function renderCandidateTable(ctx) {
+          var rSeries = el("select-r-series").value;
+          var cSeries = el("select-c-series").value;
+          var candidates = standardValuesBetween(
+            rSeries,
+            ctx.idealRc * 0.4,
+            ctx.idealRc * 2,
+          );
+
+          var rows = candidates.map(function (rC) {
+            var fC = fcFromRc(rC, ctx.vIn, ctx.vRef, ctx.vOut, ctx.cOut);
+            var ccIdeal = rcCcProduct(ctx.rLoad, ctx.cOut) / rC;
+            var ccSnapped = nearestStandard(ccIdeal, cSeries);
+            var fComz = fComZero(rC, ccSnapped);
+            return {
+              rC: rC, fC: fC, fraction: fC / ctx.ceiling,
+              ccIdeal: ccIdeal, ccSnapped: ccSnapped,
+              fComz: fComz, fComzRatio: fComz / ctx.fP,
+            };
+          });
+
+          // The pick: the most bandwidth still inside TI's bound.
+          var pick = null;
+          rows.forEach(function (row) {
+            if (row.fraction <= 1 && (!pick || row.fC > pick.fC)) pick = row;
+          });
+
+          stdTbody.textContent = "";
+          rows.forEach(function (row) {
+            var tr = document.createElement("tr");
+            if (pick && row === pick) tr.setAttribute("data-pick", "true");
+
+            function cell(text, className) {
+              var td = document.createElement("td");
+              td.className = className || "";
+              td.textContent = text;
+              tr.appendChild(td);
+              return td;
+            }
+
+            cell(formatSiTrim(row.rC, "Ω"), pick && row === pick ? "num cell-max" : "num");
+            cell(formatSi(row.fC, "Hz", 3), "num");
+            var pctCell = cell((100 * row.fraction).toFixed(0) + "%", "num");
+            if (row.fraction > 1) {
+              pctCell.textContent = "";
+              pctCell.appendChild(pillNode(false, "", (100 * row.fraction).toFixed(0) + "% over"));
+            }
+            cell(formatSi(row.ccIdeal, "F", 3), "num");
+            cell(formatSiTrim(row.ccSnapped, "F"), "num");
+            cell(formatSi(row.fComz, "Hz", 3), "num");
+            cell((100 * row.fComzRatio).toFixed(0) + "%", "num");
+
+            var useCell = document.createElement("td");
+            var useButton = document.createElement("button");
+            useButton.type = "button";
+            useButton.className = "action-btn";
+            useButton.textContent = "Use";
+            useButton.setAttribute(
+              "aria-label",
+              "Use " + formatSiTrim(row.rC, "Ω") + " and " + formatSiTrim(row.ccSnapped, "F"),
+            );
+            useButton.addEventListener("click", function () {
+              el("input-rc-chosen").value = String(roundSignificant(row.rC / 1e3, 4));
+              el("input-cc-chosen").value = String(roundSignificant(row.ccSnapped * 1e9, 4));
+              syncAllSliders();
+              recalculate();
+            });
+            useCell.appendChild(useButton);
+            tr.appendChild(useCell);
+
+            stdTbody.appendChild(tr);
+          });
+
+          stdTableNote.textContent =
+            rows.length + " " + rSeries + " values from " +
+            formatSi(ctx.idealRc * 0.4, "Ω", 2) + " to " + formatSi(ctx.idealRc * 2, "Ω", 2) +
+            " · C_C snapped to " + cSeries +
+            (pick ? " · pick " + formatSiTrim(pick.rC, "Ω") + " with " + formatSiTrim(pick.ccSnapped, "F") : "");
+        }
+
+        // ==================== TABS ====================
+        var activeTab = "point";
+        var tabButtons = {
+          point: el("tab-point"),
+          comp: el("tab-comp"),
+          standard: el("tab-standard"),
+          sweep: el("tab-sweep"),
+        };
+
+        function recalculate() {
+          if (activeTab === "comp") calculateCompensation();
+          else if (activeTab === "standard") calculateStandard();
+          else if (activeTab === "sweep") calculateSweep();
+          else calculatePoint();
+        }
+
+        function setTab(tab) {
+          activeTab = tabButtons[tab] ? tab : "point";
+
+          Object.keys(tabButtons).forEach(function (key) {
+            var isActive = key === activeTab;
+            tabButtons[key].classList.toggle("active", isActive);
+            tabButtons[key].setAttribute("aria-pressed", isActive ? "true" : "false");
+          });
+
+          // A panel may list several tabs — the operating point is shared by
+          // the point and compensation tabs.
+          var panels = document.querySelectorAll("[data-tabpanel]");
+          Array.prototype.forEach.call(panels, function (panel) {
+            var tabs = panel.getAttribute("data-tabpanel").split(" ");
+            if (tabs.indexOf(activeTab) >= 0) panel.removeAttribute("hidden");
+            else panel.setAttribute("hidden", "hidden");
+          });
+
+          recalculate();
+        }
+
+        Object.keys(tabButtons).forEach(function (key) {
+          tabButtons[key].addEventListener("click", function () {
+            setTab(key);
+          });
+        });
+
+        // ==================== CHIP PICKERS ====================
+        function wirePicker(pickerId, attribute, onSelect) {
+          var picker = el(pickerId);
+          var chips = Array.prototype.slice.call(picker.querySelectorAll(".chip"));
+          chips.forEach(function (chip) {
+            chip.addEventListener("click", function () {
+              var value = chip.getAttribute(attribute);
+              chips.forEach(function (other) {
+                var isOn = other === chip;
+                other.classList.toggle("selected", isOn);
+                other.setAttribute("aria-pressed", isOn ? "true" : "false");
+              });
+              onSelect(value);
+              recalculate();
+            });
+          });
+        }
+
+        wirePicker("fsw-picker", "data-fsw", function (value) {
+          fswSource = value;
+          var byResistor = value === "resistor";
+          // R_FSW stays visible either way — in target mode it is the answer,
+          // so it is shown read-only rather than hidden.
+          el("fsw-field").hidden = byResistor;
+          el("input-rfsw").readOnly = !byResistor;
+          el("rfsw-hint").innerHTML = byResistor
+            ? "8.4 k&Omega; to 100 k&Omega; &mdash; the only knob; equation 3 turns it into f<sub>SW</sub>"
+            : "Filled in from the target below &mdash; this is the part you fit";
+          el("fsw-picker-hint").textContent = byResistor
+            ? "Equation 3 takes R_FSW in ohms and returns MHz"
+            : "A target only picks a resistor; the frequency you get is whatever equation 3 gives for it";
+          applyTargetFrequency();
+        });
+
+        wirePicker("fc-picker", "data-fc", function (value) {
+          crossoverSource = value;
+          el("fc-custom-field").hidden = value !== "custom";
+          el("fc-picker-hint").textContent =
+            value === "custom"
+              ? "Custom crossover, checked against the §7.2.2.7 bound"
+              : "Using the §7.2.2.7 bound, min(f_SW/10, f_RHPZ/5)";
+        });
+
+        // ==================== SELF-CHECK VECTORS ====================
+        // Rows marked star are numeric answers printed in the datasheet; the
+        // rest are self-consistency checks on the transcription.
+        var VEC_L = 4.7e-6;
+        var VEC_FSW = 400e3;
+        var VEC_COUT = 120e-6;
+        var VEC_RCOUT = 0.005;
+        var VEC_IOUT = 2.25;
+
+        function vecRhpz() {
+          return fRhpz(20 / VEC_IOUT, 1 - 9 / 20, VEC_L);
+        }
+        function vecFc() {
+          return Math.min(VEC_FSW / 10, vecRhpz() / 5);
+        }
+        function vecRc() {
+          return compResistor(20, VEC_COUT, vecFc(), 1 - 9 / 20, 1.129);
+        }
+        function vecCeiling100() {
+          return Math.min(400e3 / 10, fRhpz(20 / VEC_IOUT, 1 - 9 / 20, VEC_L) / 5);
+        }
+        function vecLoop() {
+          var rLoad = 20 / VEC_IOUT;
+          var d = 1 - 9 / 20;
+          var rC = vecRc();
+          var cC = compCapacitor(rLoad, VEC_COUT, rC);
+          var cP = poleCapacitor(VEC_RCOUT, VEC_COUT, rC);
+          return {
+            gPs0: powerStageDcGain(rLoad, d),
+            gC0: controlDcGain(1.129, 20),
+            fP: fPole(rLoad, VEC_COUT),
+            fEsrz: fEsrZero(VEC_RCOUT, VEC_COUT),
+            fRhpz: fRhpz(rLoad, d, VEC_L),
+            fComz: fComZero(rC, cC),
+            fComp1: fComPole1(cC, cP),
+            fComp2: fComPole2(rC, cP),
+          };
+        }
+
+        var VECTORS = [
+          { eq: "3", star: true, inputs: "R_FSW = 49900 Ω", expected: 0.3953, unit: "MHz", digits: 4,
+            compute: function () { return fswMhzFromRfsw(49900); } },
+          { eq: "3", star: true, inputs: "R_FSW = 100000 Ω (stated 200 kHz floor)", expected: 0.1986, unit: "MHz", digits: 4,
+            compute: function () { return fswMhzFromRfsw(100000); } },
+          { eq: "3", star: true, inputs: "R_FSW = 8400 Ω (stated 2.2 MHz ceiling)", expected: 2.198, unit: "MHz", digits: 4,
+            compute: function () { return fswMhzFromRfsw(8400); } },
+          { eq: "9r", inputs: "V_IN(MAX)=9, V_OUT=3.3", expected: 1.1117, unit: "A",
+            compute: function () { return rippleBuck(9, 3.3, VEC_L, VEC_FSW); } },
+          { eq: "9r", inputs: "V_IN(MAX)=36, V_OUT=3.3", expected: 1.5944, unit: "A",
+            compute: function () { return rippleBuck(36, 3.3, VEC_L, VEC_FSW); } },
+          { eq: "9r", inputs: "V_IN(MAX)=36, V_OUT=18 (true worst case)", expected: 4.7872, unit: "A",
+            compute: function () { return rippleBuck(36, 18, VEC_L, VEC_FSW); } },
+          { eq: "11", inputs: "V_OUT=20, I_OUT=2.25, V_IN=9, η=0.9", expected: 5.5556, unit: "A",
+            compute: function () { return ilDcBoost(20, VEC_IOUT, 9, 0.9); } },
+          { eq: "12", inputs: "V_IN=9, V_OUT=20", expected: 2.633, unit: "A",
+            compute: function () { return rippleBoost(9, 20, VEC_L, VEC_FSW); } },
+          { eq: "13", inputs: "I_L(DC)=5.5556, ΔI=2.6330", expected: 6.872, unit: "A",
+            compute: function () { return ilPeak(ilDcBoost(20, VEC_IOUT, 9, 0.9), rippleBoost(9, 20, VEC_L, VEC_FSW)); } },
+          { eq: "14", star: true, inputs: "V_IN=36, V_OUT=18 (= V_IN/2), I_OUT=2.25", expected: 1.125, unit: "A",
+            compute: function () { return cinRmsBuck(VEC_IOUT, 36, 18); } },
+          { eq: "15", star: true, inputs: "V_IN=9, V_OUT=20, I_OUT=2.25", expected: 2.4875, unit: "A",
+            compute: function () { return coutRmsBoost(VEC_IOUT, 9, 20); } },
+          { eq: "16", inputs: "R_COUT=5 mΩ, V_IN=9, V_OUT=20", expected: 0.025, unit: "V",
+            compute: function () { return vRippleEsr(VEC_IOUT, 20, 9, VEC_RCOUT); } },
+          { eq: "17", inputs: "C_OUT=120 µF, V_IN=9, V_OUT=20", expected: 0.025781, unit: "V",
+            compute: function () { return vRippleCap(VEC_IOUT, 9, 20, VEC_COUT, VEC_FSW); } },
+          { eq: "16+17 inv", inputs: "±50 mV budget, R_COUT=5 mΩ, V_IN=9, V_OUT=20 → min C_OUT", expected: 123.75e-6, unit: "F",
+            compute: function () { return minCoutForRipple(VEC_IOUT, 9, 20, VEC_FSW, 0.05, VEC_RCOUT); } },
+          { eq: "16+17 inv", inputs: "±50 mV budget with the schematic 88 µF → max R_COUT", expected: 2.96875e-3, unit: "Ω",
+            compute: function () { return maxRcoutForRipple(VEC_IOUT, 9, 20, VEC_FSW, 0.05, 88e-6); } },
+          { eq: "16 floor", inputs: "ESR term alone at R_COUT=25 mΩ exceeds a ±50 mV budget", expected: Infinity, unit: "F",
+            compute: function () { return minCoutForRipple(VEC_IOUT, 9, 20, VEC_FSW, 0.05, 0.025); } },
+          { eq: "18", inputs: "V_SNS=50 mV, I_OUT_LIMIT=2.25 A", expected: 0.022222, unit: "Ω",
+            compute: function () { return senseResistor(0.05, VEC_IOUT); } },
+          { eq: "D", inputs: "V_IN=9, V_OUT=20", expected: 0.55, unit: "", digits: 4,
+            compute: function () { return 1 - 9 / 20; } },
+          { eq: "R_LOAD", inputs: "V_OUT=20, I_OUT=2.25", expected: 8.8889, unit: "Ω",
+            compute: function () { return 20 / VEC_IOUT; } },
+          { eq: "20", inputs: "R_LOAD=8.8889 Ω, C_OUT=120 µF", expected: 298.42, unit: "Hz", digits: 2,
+            compute: function () { return fPole(20 / VEC_IOUT, VEC_COUT); } },
+          { eq: "21", inputs: "R_COUT=5 mΩ, C_OUT=120 µF", expected: 265260, unit: "Hz", digits: 2,
+            compute: function () { return fEsrZero(VEC_RCOUT, VEC_COUT); } },
+          { eq: "22", inputs: "R_LOAD=8.8889 Ω, D=0.55, L=4.7 µH", expected: 60953, unit: "Hz", digits: 2,
+            compute: vecRhpz },
+          { eq: "f_C", inputs: "min(f_SW/10, f_RHPZ/5) — RHPZ-limited", expected: 12191, unit: "Hz", digits: 2,
+            compute: vecFc },
+          { eq: "24", inputs: "V_OUT=20, C_OUT=120 µF, D=0.55, V_REF=1.129", expected: 104740, unit: "Ω", digits: 2,
+            compute: vecRc },
+          { eq: "19", inputs: "R_LOAD=8.8889 Ω, D=0.55, R_SENSE=0.055 Ω — DC term only", expected: 36.3636, unit: "", digits: 4,
+            compute: function () { return powerStageDcGain(20 / VEC_IOUT, 1 - 9 / 20); } },
+          { eq: "23", inputs: "G_EA=190 µA/V, R_EA=10 MΩ, V_REF=1.129, V_OUT=20 — DC term only", expected: 107.255, unit: "", digits: 4,
+            compute: function () { return controlDcGain(1.129, 20); } },
+          { eq: "19×23", inputs: "DC loop gain at the worked operating point", expected: 3900.18, unit: "", digits: 4,
+            compute: function () { return powerStageDcGain(20 / VEC_IOUT, 1 - 9 / 20) * controlDcGain(1.129, 20); } },
+          { eq: "f_COMZ", inputs: "1/(2π·R_C·C_C) — must land on f_P", expected: 298.42, unit: "Hz", digits: 2,
+            compute: function () { return fComZero(vecRc(), compCapacitor(20 / VEC_IOUT, VEC_COUT, vecRc())); } },
+          { eq: "f_COMP1", inputs: "1/(2π·R_EA·(C_C+C_P)) with R_EA = 10 MΩ", expected: 3.1221, unit: "Hz", digits: 4,
+            compute: function () {
+              var rC = vecRc();
+              return fComPole1(compCapacitor(20 / VEC_IOUT, VEC_COUT, rC), poleCapacitor(VEC_RCOUT, VEC_COUT, rC));
+            } },
+          { eq: "f_COMP2", inputs: "1/(2π·R_C·C_P) — must land on f_ESRZ", expected: 265258.2, unit: "Hz", digits: 1,
+            compute: function () { return fComPole2(vecRc(), poleCapacitor(VEC_RCOUT, VEC_COUT, vecRc())); } },
+          { eq: "|T|", inputs: "loop gain at the designed f_C — eq 24 targets 0 dB", expected: 0.161, unit: "", digits: 3, absTol: 0.001,
+            compute: function () { return toDecibels(cAbs(loopGainAt(vecFc(), vecLoop()))); } },
+          { eq: "f_0dB", inputs: "actual unity-gain crossover", expected: 12427.4, unit: "Hz", digits: 1,
+            compute: function () { return findUnityCrossover(vecLoop(), vecFc()); } },
+          { eq: "PM", inputs: "phase margin at the crossover — §7.2.2.7 targets > 45°", expected: 78.5, unit: "", digits: 1, absTol: 0.05,
+            compute: function () {
+              var p = vecLoop();
+              return 180 + cArgDegrees(loopGainAt(findUnityCrossover(p, vecFc()), p));
+            } },
+          { eq: "24 inv", inputs: "coefficient 2π·R_SENSE/G_EA", expected: 1818.8, unit: "", digits: 1,
+            compute: function () { return RC_COEFF; } },
+          { eq: "25 inv", inputs: "coefficient 4π·R_SENSE/G_EA", expected: 3637.6, unit: "", digits: 1,
+            compute: function () { return CC_COEFF; } },
+          { eq: "24 inv", inputs: "ideal R_C at the ceiling, C_OUT=100 µF", expected: 87280, unit: "Ω", digits: 2,
+            compute: function () { return rcFromFc(20, 100e-6, vecCeiling100(), 9, 1.129); } },
+          { eq: "24 inv", inputs: "R_C=82 kΩ → implied f_C, C_OUT=100 µF", expected: 11452.6, unit: "Hz", digits: 1,
+            compute: function () { return fcFromRc(82e3, 9, 1.129, 20, 100e-6); } },
+          { eq: "25 inv", inputs: "R_C=82 kΩ → ideal C_C from the product", expected: 5.4200e-9, unit: "F",
+            compute: function () { return rcCcProduct(20 / VEC_IOUT, 100e-6) / 82e3; } },
+          { eq: "f_COMZ", inputs: "R_C=82 kΩ with E12 C_C=5.6 nF", expected: 346.6, unit: "Hz", digits: 1,
+            compute: function () { return fComZero(82e3, 5.6e-9); } },
+          { eq: "f_P", inputs: "R_LOAD=8.8889 Ω, C_OUT=100 µF", expected: 358.1, unit: "Hz", digits: 1,
+            compute: function () { return fPole(20 / VEC_IOUT, 100e-6); } },
+          { eq: "E12", inputs: "nearest E12 to the 5.420 nF ideal", expected: 5.6e-9, unit: "F",
+            compute: function () { return nearestStandard(5.42e-9, "E12"); } },
+          { eq: "25", inputs: "R_LOAD=8.8889 Ω, C_OUT=120 µF", expected: 5.0919e-9, unit: "F",
+            compute: function () { return compCapacitor(20 / VEC_IOUT, VEC_COUT, vecRc()); } },
+          { eq: "26", inputs: "R_COUT=5 mΩ, C_OUT=120 µF — below 10 pF, leave open", expected: 5.7284e-12, unit: "F",
+            compute: function () { return poleCapacitor(VEC_RCOUT, VEC_COUT, vecRc()); } },
+        ];
+
+        var toggleVectorsButton = el("toggle-vectors-btn");
+        var vecPanel = el("vec-panel");
+        var vecTbody = el("vec-tbody");
+        var vecSummary = el("vec-summary");
+        var vectorsRendered = false;
+
+        function formatVector(vector, value) {
+          if (vector.unit === "MHz") return value.toFixed(4) + " MHz";
+          if (vector.unit === "") return value.toFixed(4);
+          return formatSi(value, vector.unit, vector.digits);
+        }
+
+        function renderVectors() {
+          var passed = 0;
+          vecTbody.textContent = "";
+
+          VECTORS.forEach(function (vector) {
+            var actual = vector.compute();
+            // Expected values are quoted to 4-5 significant figures, so the
+            // default test is relative. Quantities already in dB or degrees sit
+            // near zero and are themselves logarithmic, so relative error is
+            // the wrong measure for them — those carry an absolute tolerance.
+            var ok =
+              vector.absTol === undefined
+                ? Math.abs(actual - vector.expected) / Math.abs(vector.expected) < 1e-3
+                : Math.abs(actual - vector.expected) <= vector.absTol;
+            // An ESR floor over budget is unmeetable at any capacitance, so
+            // Infinity is the correct answer and compares exactly.
+            if (!isFinite(vector.expected)) ok = actual === vector.expected;
+            if (ok) passed += 1;
+
+            var row = document.createElement("tr");
+
+            var cellEq = document.createElement("td");
+            cellEq.textContent = "(" + vector.eq + ")" + (vector.star ? " ★" : "");
+            row.appendChild(cellEq);
+
+            var cellInputs = document.createElement("td");
+            cellInputs.className = "vec-inputs";
+            cellInputs.textContent = vector.inputs;
+            row.appendChild(cellInputs);
+
+            var cellExpected = document.createElement("td");
+            cellExpected.className = "num";
+            cellExpected.textContent = formatVector(vector, vector.expected);
+            row.appendChild(cellExpected);
+
+            var cellActual = document.createElement("td");
+            cellActual.className = "num";
+            cellActual.textContent = formatVector(vector, actual);
+            row.appendChild(cellActual);
+
+            var cellResult = document.createElement("td");
+            cellResult.appendChild(pillNode(ok, "Pass", "Fail"));
+            row.appendChild(cellResult);
+
+            vecTbody.appendChild(row);
+          });
+
+          vecSummary.textContent =
+            passed + " of " + VECTORS.length + " vectors reproduced.";
+          vectorsRendered = true;
+        }
+
+        function setVectorPanelVisibility(visible) {
+          if (visible) {
+            if (!vectorsRendered) renderVectors();
+            vecPanel.removeAttribute("hidden");
+            toggleVectorsButton.setAttribute("aria-expanded", "true");
+            toggleVectorsButton.textContent = "Hide self-check";
+          } else {
+            vecPanel.setAttribute("hidden", "hidden");
+            toggleVectorsButton.setAttribute("aria-expanded", "false");
+            toggleVectorsButton.textContent = "Show self-check";
+          }
+        }
+
+        toggleVectorsButton.addEventListener("click", function () {
+          setVectorPanelVisibility(vecPanel.hasAttribute("hidden"));
+        });
+
+        // ==================== WIRING ====================
+        var DEFAULTS = {
+          "input-vin": "9",
+          "input-vout": "20",
+          "input-iout": "2.25",
+          "input-vinmax": "36",
+          "input-voutmax": "20",
+          "input-ripple-target": "2.5",
+          "input-ripple-budget": "50",
+          "input-vsns": "50",
+          "input-ioutlimit": "2.25",
+          "input-fc": "12.191",
+          "input-rc-chosen": "82",
+          "input-cc-chosen": "5.6",
+          "input-cp-chosen": "0",
+          "select-r-series": "E24",
+          "select-c-series": "E12",
+          "input-rfsw": "49900",
+          "input-fsw": "400",
+          "select-rfsw-series": "E96",
+          "input-l": "4.7",
+          "input-isat": "10.5",
+          "input-cin": "20",
+          "input-cout": "120",
+          "input-rcout": "5",
+          "input-eta": "0.9",
+          "select-vref": "1.129",
+          "sweep-vin-min": "9",
+          "sweep-vin-max": "36",
+          "sweep-vout-min": "3.3",
+          "sweep-vout-max": "20",
+          "sweep-iout-min": "0.5",
+          "sweep-iout-max": "2.25",
+          "select-sweep-steps": "9",
+          "select-sweep-axis": "vin",
+        };
+
+        var form = el("calculator-form");
+        // Runs before the form listener below, so the resistor is already
+        // updated by the time anything recalculates.
+        el("input-fsw").addEventListener("input", applyTargetFrequency);
+        el("select-rfsw-series").addEventListener("change", applyTargetFrequency);
+        form.addEventListener("input", recalculate);
+        form.addEventListener("change", recalculate);
+        form.addEventListener("submit", function (event) {
+          event.preventDefault();
+        });
+
+        el("reset-btn").addEventListener("click", function () {
+          Object.keys(DEFAULTS).forEach(function (id) {
+            el(id).value = DEFAULTS[id];
+          });
+          syncAllSliders();
+          applyTargetFrequency();
+          recalculate();
+        });
+
+        // ==================== INITIALIZATION ====================
+        applyThemeMode(getStoredThemeMode(), false);
+
+        var loc = window.location;
+        var isLocal =
+          loc.protocol === "file:" ||
+          loc.hostname === "localhost" ||
+          loc.hostname === "127.0.0.1" ||
+          loc.hostname === "::1";
+        if (isLocal) {
+          var hostedNote = el("hosted-note");
+          if (hostedNote) hostedNote.hidden = true;
+        }
+
+        setVectorPanelVisibility(false);
+        buildSliders();
+        setTab("point");
+      })();
+    </script>
+  </body>
+</html>
