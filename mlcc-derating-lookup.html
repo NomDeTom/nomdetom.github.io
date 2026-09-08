@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Agentic tools: theme system, attribution system, curve data scrapers (scripts/fetch-{mlcc,murata,yageo}-curves.mjs) -->
 <!-- LLMs: Claude Opus 5 (via Claude Code) -->
-<html lang="en">
+<html lang="en" data-tab="single">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,6 +20,15 @@
         --accent-soft: #eef6ef;
         --chip-selected-text: #ffffff;
         --error-text: #8c1d1d;
+        /* Categorical series slots, in fixed order, validated for this
+           surface: OKLCH lightness band, chroma floor, protan/deutan
+           separation and normal-vision separation all pass. Contrast against
+           white warns on slots 3 and 4, so every series also carries a dash
+           pattern, a legend entry and a direct label. */
+        --series-1: #2a78d6;
+        --series-2: #eb6834;
+        --series-3: #1baf7a;
+        --series-4: #eda100;
       }
 
       :root[data-theme="dark"] {
@@ -34,6 +43,11 @@
         --accent-soft: #23362a;
         --chip-selected-text: #0f1b13;
         --error-text: #ffb4b4;
+        /* The same four hues re-stepped for the dark surface, not flipped. */
+        --series-1: #3987e5;
+        --series-2: #d95926;
+        --series-3: #199e70;
+        --series-4: #c98500;
       }
 
       * {
@@ -91,6 +105,13 @@
       .action-btn:hover {
         border-color: var(--accent);
         color: var(--accent);
+      }
+
+      .action-btn:disabled {
+        color: var(--disabled);
+        border-color: var(--border);
+        cursor: not-allowed;
+        opacity: 0.7;
       }
 
       a.action-btn {
@@ -204,7 +225,9 @@
 
       .results {
         display: grid;
-        gap: 0.75rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 1.75rem;
+        row-gap: 0;
       }
 
       .result {
@@ -216,7 +239,7 @@
         border-top: 1px solid var(--border);
       }
 
-      .result:first-child {
+      .result:nth-child(-n + 2) {
         border-top: 0;
         padding-top: 0;
       }
@@ -289,6 +312,60 @@
         flex-wrap: wrap;
         gap: 0.45rem;
         margin-bottom: 0.9rem;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .tab {
+        border: 1px solid var(--border);
+        border-bottom: 0;
+        background: var(--page-bg);
+        color: var(--muted);
+        font: inherit;
+        font-weight: 600;
+        padding: 0.55rem 1rem;
+        margin-bottom: -1px;
+        cursor: pointer;
+      }
+
+      .tab:hover {
+        color: var(--accent);
+      }
+
+      .tab[aria-selected="true"] {
+        background: var(--panel-bg);
+        color: var(--accent);
+        border-color: var(--border);
+        border-bottom: 1px solid var(--panel-bg);
+      }
+
+      /* The first section of a panel butts against the tab strip. */
+      [role="tabpanel"] > div:first-child > section:first-child,
+      [role="tabpanel"] > section:first-child {
+        margin-top: 0;
+      }
+
+      /* Adding to the bank belongs to the bank tab, and naming the one
+         selected part belongs to the single part tab. */
+      [data-tab="single"] .add-col,
+      [data-tab="single"] .add-cell,
+      [data-tab="single"] #add-selection-btn,
+      [data-tab="bank"] #selected-part {
+        display: none;
+      }
+
+      /* The filter groups run two abreast where the card is wide enough, and
+         fall back to one column below that. */
+      .filter-columns {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+        gap: 0 1.5rem;
+        align-items: start;
       }
 
       .filter-chip {
@@ -412,6 +489,32 @@
         color: var(--accent);
       }
 
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      #parts-body .add-btn,
+      #selection-body .action-btn {
+        padding: 0.2rem 0.45rem;
+        font-size: 0.8rem;
+      }
+
+      #selection-body .qty-cell {
+        white-space: nowrap;
+      }
+
+      #selection-body .qty-value {
+        display: inline-block;
+        min-width: 1.6rem;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+
       .chart-wrap {
         margin-top: 0.4rem;
         border: 1px solid var(--border);
@@ -438,15 +541,34 @@
 
       svg.curve .trace {
         fill: none;
-        stroke: var(--accent);
         stroke-width: 2;
+        stroke-linejoin: round;
+        stroke-linecap: round;
       }
 
-      svg.curve .trace-alt {
-        fill: none;
-        stroke: var(--muted);
-        stroke-width: 1.5;
-        stroke-dasharray: 5 3;
+      /* Colour and dash together, so a series is never told apart by hue
+         alone — CVD, print and forced-colours all keep working. */
+      svg.curve .series-1 {
+        stroke: var(--series-1);
+      }
+
+      svg.curve .series-2 {
+        stroke: var(--series-2);
+        stroke-dasharray: 7 4;
+      }
+
+      svg.curve .series-3 {
+        stroke: var(--series-3);
+        stroke-dasharray: 2 3;
+      }
+
+      svg.curve .series-4 {
+        stroke: var(--series-4);
+        stroke-dasharray: 9 3 2 3;
+      }
+
+      svg.curve text.trace-label {
+        font-weight: 600;
       }
 
       svg.curve .marker {
@@ -465,10 +587,48 @@
         font-family: "Segoe UI", Helvetica, Arial, sans-serif;
       }
 
+      svg.curve .fp-court {
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 1;
+        stroke-dasharray: 3 2;
+      }
+
+      svg.curve .fp-land {
+        fill: var(--accent-soft);
+        stroke: var(--border);
+        stroke-width: 1;
+      }
+
+      svg.curve .fp-body {
+        fill: var(--accent);
+      }
+
+      svg.curve .fp-body-dim {
+        fill: var(--muted);
+      }
+
+      svg.curve .fp-court-active {
+        stroke: var(--accent);
+        stroke-width: 1.6;
+        stroke-dasharray: none;
+      }
+
+      svg.curve text.fp-label {
+        fill: var(--text);
+        font-weight: 600;
+      }
+
       .status {
         margin-top: 0.75rem;
         color: var(--muted);
         font-size: 0.88rem;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
       }
 
       .panel-actions {
@@ -492,10 +652,13 @@
         font-size: 0.9rem;
       }
 
+      /* Paired cards run to the height of the taller of the two, so the
+         operating point sits level with its result and the footprints with
+         their curves. */
       .calculator-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-        align-items: start;
+        align-items: stretch;
         gap: 1rem;
       }
 
@@ -511,6 +674,74 @@
       @media (max-width: 768px) {
         .calculator-grid {
           grid-template-columns: 1fr;
+        }
+      }
+
+      /* The selection table wraps each line into a block rather than scrolling
+         sideways: the column headings move into each cell as a label. */
+      @media (max-width: 700px) {
+        #selection-table-wrap {
+          overflow-x: visible;
+        }
+
+        #selection-table-wrap table,
+        #selection-table-wrap tbody,
+        #selection-body tr {
+          display: block;
+          width: auto;
+        }
+
+        #selection-table-wrap thead {
+          display: none;
+        }
+
+        #selection-body tr {
+          border-top: 1px solid var(--border);
+          padding: 0.35rem 0;
+        }
+
+        #selection-body tr:first-child {
+          border-top: 0;
+        }
+
+        /* Flex, not grid, so a cell's own contents — the − value + stepper,
+           a value and its share — stay on one line beside the label. */
+        #selection-body td {
+          border-bottom: 0;
+          padding: 0.2rem 0;
+          white-space: normal;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          text-align: left;
+        }
+
+        #selection-body td::before {
+          content: attr(data-label);
+          flex: 0 0 7rem;
+          color: var(--muted);
+          font-size: 0.78rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        #selection-body td.remove-cell {
+          padding-top: 0.4rem;
+        }
+
+        #selection-body td.remove-cell::before {
+          display: none;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .results {
+          grid-template-columns: 1fr;
+        }
+
+        .result:nth-child(2) {
+          border-top: 1px solid var(--border);
+          padding-top: 0.85rem;
         }
       }
     </style>
@@ -559,7 +790,8 @@
           <p class="hosted-note">
             Curve data © their respective manufacturers, read from published
             datasheet pages for reference only — confirm against the datasheet
-            before committing a design.
+            before committing a design. Land patterns from the KiCad official
+            footprint library, CC BY-SA 4.0 with the KiCad library exception.
           </p>
           <p class="hosted-note">
             CC BY-SA 4.0 • By NomDeTom •
@@ -576,275 +808,518 @@
         </div>
       </header>
 
-      <div class="calculator-grid">
-        <section>
-          <div class="section-header">
-            <h2>Operating Point</h2>
-            <button type="button" class="action-btn" id="reset-btn">
-              Reset
-            </button>
-          </div>
+      <div class="tabs" role="tablist" aria-label="Calculator view">
+        <button
+          type="button"
+          class="tab"
+          id="tab-single"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-single"
+        >
+          Single Part
+        </button>
+        <button
+          type="button"
+          class="tab"
+          id="tab-bank"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-bank"
+        >
+          Part Bank
+        </button>
+      </div>
 
-          <div class="two-col-fields">
-            <div class="field">
-              <label>
-                DC bias
-                <input
-                  id="input-vdc"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value="3.3"
-                />
-                <span class="field-hint">Volts across the part in circuit</span>
-              </label>
-              <div class="filter-chips" id="bias-presets">
-                <button type="button" class="filter-chip" data-vdc="3.3">
-                  3.3 V
+      <div id="panel-single" role="tabpanel" aria-labelledby="tab-single">
+        <div class="calculator-grid" id="row-op-result">
+          <section id="card-op">
+            <div class="section-header">
+              <h2>Operating Point</h2>
+              <div class="header-actions">
+                <button type="button" class="action-btn" id="add-selection-btn">
+                  Add to selection
                 </button>
-                <button type="button" class="filter-chip" data-vdc="5">
-                  5 V
-                </button>
-                <button type="button" class="filter-chip" data-vdc="max">
-                  Max
+                <button type="button" class="action-btn" id="reset-btn">
+                  Reset
                 </button>
               </div>
             </div>
-            <div class="field">
-              <label>
-                Temperature
-                <input
-                  id="input-temp"
-                  type="number"
-                  min="-55"
-                  max="125"
-                  step="1"
-                  value="25"
-                />
-                <span class="field-hint">°C at the capacitor body</span>
-              </label>
-            </div>
-            <div class="field">
-              <label>
-                Parts in parallel
-                <input id="input-qty" type="number" min="1" step="1" value="1" />
-                <span class="field-hint">Bank size for the totals below</span>
-              </label>
-            </div>
-            <div class="field">
-              <label>
-                Frequency
-                <input
-                  id="input-freq"
-                  type="number"
-                  min="0.1"
-                  step="1"
-                  value="500"
-                />
-                <span class="field-hint">kHz, for ESR and ripple current</span>
-              </label>
-            </div>
-          </div>
 
-          <div class="field">
-            <span class="field-hint">Land pattern density</span>
-            <div class="filter-chips" id="density-chips">
-              <button type="button" class="filter-chip" data-density="least">
-                Least (C)
-              </button>
+            <div class="two-col-fields">
+              <div class="field">
+                <label>
+                  DC bias
+                  <input
+                    id="input-vdc"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value="3.3"
+                  />
+                  <span class="field-hint"
+                    >Volts across the part in circuit</span
+                  >
+                </label>
+              </div>
+              <div class="field">
+                <label>
+                  Temperature
+                  <input
+                    id="input-temp"
+                    type="number"
+                    min="-55"
+                    max="125"
+                    step="1"
+                    value="25"
+                  />
+                  <span class="field-hint">°C at the capacitor body</span>
+                </label>
+              </div>
+              <div class="field">
+                <label>
+                  Parts in parallel
+                  <input
+                    id="input-qty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="1"
+                  />
+                  <span class="field-hint">Bank size for the totals below</span>
+                </label>
+              </div>
+              <div class="field">
+                <label>
+                  Frequency
+                  <input
+                    id="input-freq"
+                    type="number"
+                    min="0.1"
+                    step="1"
+                    value="500"
+                  />
+                  <span class="field-hint"
+                    >kHz, for ESR and ripple current</span
+                  >
+                </label>
+              </div>
+            </div>
+
+            <div class="two-col-fields">
+              <div class="field">
+                <span class="field-hint">DC bias presets</span>
+                <div class="filter-chips" id="bias-presets">
+                  <button type="button" class="filter-chip" data-vdc="3.3">
+                    3.3 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="5">
+                    5 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="9">
+                    9 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="12">
+                    12 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="18">
+                    18 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="24">
+                    24 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="30">
+                    30 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="36">
+                    36 V
+                  </button>
+                  <button type="button" class="filter-chip" data-vdc="max">
+                    Max
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <span class="field-hint">Land pattern density</span>
+                <div class="filter-chips" id="density-chips">
+                  <button
+                    type="button"
+                    class="filter-chip"
+                    data-density="least"
+                  >
+                    Least (C)
+                  </button>
+                  <button
+                    type="button"
+                    class="filter-chip active"
+                    data-density="nominal"
+                  >
+                    Nominal (B)
+                  </button>
+                  <button type="button" class="filter-chip" data-density="most">
+                    Most (A)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p class="status" id="selected-part">
+              Click a part in the table below to load it here.
+            </p>
+
+            <div class="warnings" id="warnings"></div>
+          </section>
+
+          <section id="card-result">
+            <div class="section-header">
+              <h2>Result</h2>
+              <span id="part-badges"></span>
+            </div>
+
+            <div class="results">
+              <div class="result result-primary">
+                <span class="result-label"
+                  >Effective capacitance
+                  <span class="optional">(one part)</span></span
+                >
+                <span class="result-value" id="out-ceff">—</span>
+              </div>
+              <div class="result result-primary">
+                <span class="result-label"
+                  >Bank total <span class="optional" id="out-qty-label"></span
+                ></span>
+                <span class="result-value" id="out-bank">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Nominal capacitance</span>
+                <span class="result-value" id="out-nominal">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Retained</span>
+                <span class="result-value" id="out-retained">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Loss to DC bias
+                  <span class="optional" id="out-bias-at"></span
+                ></span>
+                <span class="result-value" id="out-bias">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Loss to temperature
+                  <span class="optional" id="out-temp-at"></span
+                ></span>
+                <span class="result-value" id="out-tcc">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >ESR <span class="optional" id="out-esr-at"></span
+                ></span>
+                <span class="result-value" id="out-esr">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Bank ESR <span class="optional" id="out-esr-bank-at"></span
+                ></span>
+                <span class="result-value" id="out-esr-bank">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Impedance <span class="optional">(|Z|)</span></span
+                >
+                <span class="result-value" id="out-z">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Ripple current
+                  <span class="optional">(for 20 °C rise)</span></span
+                >
+                <span class="result-value" id="out-ripple">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Board area <span class="optional" id="out-area-note"></span
+                ></span>
+                <span class="result-value" id="out-area">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Capacitance density
+                  <span class="optional">(effective µF per mm²)</span></span
+                >
+                <span class="result-value" id="out-density">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >JLCPCB <span class="optional">(library, stock)</span></span
+                >
+                <span class="result-value" id="out-jlc">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Cost per effective µF
+                  <span class="optional">(at this operating point)</span></span
+                >
+                <span class="result-value" id="out-cost">—</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="calculator-grid" id="row-curves-size">
+          <section id="card-curves">
+            <div class="section-header">
+              <h2>Curves</h2>
+              <div class="filter-chips" id="chart-modes">
+                <button
+                  type="button"
+                  class="filter-chip active"
+                  data-mode="dcbias"
+                >
+                  DC bias
+                </button>
+                <button type="button" class="filter-chip" data-mode="tcc">
+                  Temperature
+                </button>
+                <button type="button" class="filter-chip" data-mode="esr">
+                  ESR and |Z|
+                </button>
+                <button type="button" class="filter-chip" data-mode="ripple">
+                  Ripple current
+                </button>
+              </div>
+            </div>
+            <p class="status" id="chart-part"></p>
+            <div class="chart-wrap" id="chart-wrap"></div>
+            <p class="status" id="chart-note"></p>
+          </section>
+
+          <section id="card-size">
+            <div class="section-header">
+              <h2>Relative Size</h2>
+            </div>
+            <p class="status">
+              The selected part at the selected quantity, drawn to scale with
+              the land pattern and courtyard behind each body.
+            </p>
+            <div class="chart-wrap" id="scale-wrap"></div>
+            <p class="status" id="scale-note"></p>
+          </section>
+        </div>
+
+        <div id="slot-parts-single">
+          <section id="card-parts">
+            <div class="section-header">
+              <h2>All Parts at This Operating Point</h2>
+              <span class="status" id="table-count"></span>
               <button
                 type="button"
-                class="filter-chip active"
-                data-density="nominal"
+                class="action-btn"
+                id="toggle-parts-btn"
+                aria-expanded="true"
+                aria-controls="parts-panel"
               >
-                Nominal (B)
+                Hide parts
               </button>
-              <button type="button" class="filter-chip" data-density="most">
-                Most (A)
-              </button>
             </div>
-          </div>
 
-          <p class="status" id="selected-part">
-            Click a part in the table below to load it here.
-          </p>
+            <div id="parts-panel">
+              <div class="filter-columns">
+                <div class="filter-chips" id="data-filters">
+                  <button
+                    type="button"
+                    class="filter-chip active"
+                    data-data=""
+                    aria-pressed="true"
+                  >
+                    All parts
+                  </button>
+                  <button
+                    type="button"
+                    class="filter-chip"
+                    data-data="curves"
+                    aria-pressed="false"
+                  >
+                    Derating data
+                  </button>
+                  <button
+                    type="button"
+                    class="filter-chip"
+                    data-data="specs"
+                    aria-pressed="false"
+                  >
+                    No data
+                  </button>
+                </div>
+                <div class="filter-chips" id="size-filters"></div>
+                <div class="filter-chips" id="tcc-filters"></div>
+                <div class="filter-chips" id="vdc-filters"></div>
+                <div class="filter-chips" id="vendor-filters"></div>
+              </div>
 
-          <div class="warnings" id="warnings"></div>
-        </section>
+              <div class="field">
+                <label>
+                  Filter
+                  <input
+                    id="input-filter"
+                    type="text"
+                    placeholder="Part number, value, package"
+                  />
+                </label>
+              </div>
 
-        <section>
-          <div class="section-header">
-            <h2>Result</h2>
-            <span id="part-badges"></span>
-          </div>
-
-          <div class="results">
-            <div class="result result-primary">
-              <span class="result-label"
-                >Effective capacitance
-                <span class="optional">(one part)</span></span
-              >
-              <span class="result-value" id="out-ceff">—</span>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr id="parts-head">
+                      <th class="add-col">
+                        <span class="sr-only">Add to selection</span>
+                      </th>
+                      <th class="sortable" data-key="pn" data-type="text">
+                        Part
+                      </th>
+                      <th class="sortable" data-key="lcsc" data-type="text">
+                        LCSC
+                      </th>
+                      <th class="sortable" data-key="package" data-type="text">
+                        Package
+                      </th>
+                      <th class="sortable" data-key="tcc" data-type="text">
+                        Dielectric
+                      </th>
+                      <th class="sortable num" data-key="nominal">Nominal</th>
+                      <th class="sortable num" data-key="vdc">Rated</th>
+                      <th class="sortable num" data-key="ceff">C effective</th>
+                      <th class="sortable num" data-key="retained">Retained</th>
+                      <th class="sortable num" data-key="bank">Bank</th>
+                      <th class="sortable num" data-key="esr">ESR</th>
+                      <th class="sortable num" data-key="area">Area</th>
+                      <th class="sortable num" data-key="density">µF / mm²</th>
+                      <th class="sortable num" data-key="cost">
+                        Cost / eff µF
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="parts-body"></tbody>
+                </table>
+              </div>
+              <p class="status">
+                Click a row to load that part into the result panel, + to add it
+                straight to the selection at the quantity in the operating point
+                card, or a column heading to sort by it.
+              </p>
             </div>
-            <div class="result result-primary">
-              <span class="result-label"
-                >Bank total <span class="optional" id="out-qty-label"></span
-              ></span>
-              <span class="result-value" id="out-bank">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label">Nominal capacitance</span>
-              <span class="result-value" id="out-nominal">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label">Retained</span>
-              <span class="result-value" id="out-retained">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Loss to DC bias
-                <span class="optional" id="out-bias-at"></span
-              ></span>
-              <span class="result-value" id="out-bias">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Loss to temperature
-                <span class="optional" id="out-temp-at"></span
-              ></span>
-              <span class="result-value" id="out-tcc">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >ESR <span class="optional" id="out-esr-at"></span
-              ></span>
-              <span class="result-value" id="out-esr">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Bank ESR <span class="optional" id="out-esr-bank-at"></span
-              ></span>
-              <span class="result-value" id="out-esr-bank">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Impedance <span class="optional">(|Z|)</span></span
-              >
-              <span class="result-value" id="out-z">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Ripple current
-                <span class="optional">(for 20 °C rise)</span></span
-              >
-              <span class="result-value" id="out-ripple">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Board area
-                <span class="optional" id="out-area-note"></span></span
-              >
-              <span class="result-value" id="out-area">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Capacitance density
-                <span class="optional">(effective µF per mm²)</span></span
-              >
-              <span class="result-value" id="out-density">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >JLCPCB <span class="optional">(library, stock)</span></span
-              >
-              <span class="result-value" id="out-jlc">—</span>
-            </div>
-            <div class="result">
-              <span class="result-label"
-                >Cost per effective µF
-                <span class="optional">(at this operating point)</span></span
-              >
-              <span class="result-value" id="out-cost">—</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
 
-      <section>
-        <div class="section-header">
-          <h2>Curves</h2>
-          <div class="filter-chips" id="chart-modes">
-            <button type="button" class="filter-chip active" data-mode="dcbias">
-              DC bias
-            </button>
-            <button type="button" class="filter-chip" data-mode="tcc">
-              Temperature
-            </button>
-            <button type="button" class="filter-chip" data-mode="esr">
-              ESR and |Z|
-            </button>
-            <button type="button" class="filter-chip" data-mode="ripple">
-              Ripple current
-            </button>
-          </div>
-        </div>
-        <div class="chart-wrap" id="chart-wrap"></div>
-        <p class="status" id="chart-note"></p>
-      </section>
+      <div id="panel-bank" role="tabpanel" aria-labelledby="tab-bank" hidden>
+        <div id="slot-op-bank"></div>
 
-      <section>
-        <div class="section-header">
-          <h2>All Parts at This Operating Point</h2>
-          <span class="status" id="table-count"></span>
+        <div id="slot-parts-bank"></div>
+
+        <div id="slot-selection">
+          <section id="card-selection">
+            <div class="section-header">
+              <h2>Selected Parts</h2>
+              <span class="status" id="selection-count"></span>
+              <button
+                type="button"
+                class="action-btn"
+                id="clear-selection-btn"
+                hidden
+              >
+                Clear selection
+              </button>
+            </div>
+            <p class="status" id="selection-empty">
+              Nothing selected yet. Load a part into the Operating Point card,
+              set the quantity, then Add to selection.
+            </p>
+            <p class="status" id="selection-hint" hidden>
+              Click a line to pick it out in the layout below, and + or − to
+              change how many of it are in the bank.
+            </p>
+            <div class="table-wrap" id="selection-table-wrap" hidden>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Part</th>
+                    <th>Package</th>
+                    <th class="num">Qty</th>
+                    <th class="num">Capacitance</th>
+                    <th class="num">ESR</th>
+                    <th class="num">Price</th>
+                    <th class="num">Area</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="selection-body"></tbody>
+              </table>
+            </div>
+            <div class="results" id="selection-totals" hidden>
+              <div class="result result-primary">
+                <span class="result-label"
+                  >Total capacitance
+                  <span class="optional" id="selection-c-at"></span
+                ></span>
+                <span class="result-value" id="selection-c">—</span>
+              </div>
+              <div class="result result-primary">
+                <span class="result-label"
+                  >Combined ESR
+                  <span class="optional" id="selection-esr-at"></span
+                ></span>
+                <span class="result-value" id="selection-esr">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Parts <span class="optional">(lines × quantity)</span></span
+                >
+                <span class="result-value" id="selection-qty">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Total price
+                  <span class="optional">(JLCPCB snapshot)</span></span
+                >
+                <span class="result-value" id="selection-price">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Total board area
+                  <span class="optional" id="selection-area-at"></span
+                ></span>
+                <span class="result-value" id="selection-area">—</span>
+              </div>
+              <div class="result">
+                <span class="result-label"
+                  >Cost per effective µF
+                  <span class="optional">(whole selection)</span></span
+                >
+                <span class="result-value" id="selection-cost">—</span>
+              </div>
+            </div>
+            <div class="warnings" id="selection-warnings"></div>
+          </section>
         </div>
 
-        <div class="filter-chips" id="size-filters"></div>
-        <div class="filter-chips" id="tcc-filters"></div>
-        <div class="filter-chips" id="vdc-filters"></div>
-        <div class="filter-chips" id="vendor-filters"></div>
-
-        <div class="field">
-          <label>
-            Filter
-            <input
-              id="input-filter"
-              type="text"
-              placeholder="Part number, value, package"
-            />
-          </label>
+        <div class="calculator-grid" id="row-curves-layout">
+          <section id="card-layout">
+            <div class="section-header">
+              <h2>Selection Layout</h2>
+              <span class="status" id="layout-count"></span>
+            </div>
+            <p class="status">
+              Everything in the selection, to one scale, courtyards touching at
+              the land pattern density chosen above.
+            </p>
+            <div class="chart-wrap" id="layout-wrap"></div>
+            <p class="status" id="layout-note"></p>
+          </section>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr id="parts-head">
-                <th class="sortable" data-key="pn" data-type="text">Part</th>
-                <th class="sortable" data-key="lcsc" data-type="text">LCSC</th>
-                <th class="sortable" data-key="package" data-type="text">
-                  Package
-                </th>
-                <th class="sortable" data-key="tcc" data-type="text">
-                  Dielectric
-                </th>
-                <th class="sortable num" data-key="nominal">Nominal</th>
-                <th class="sortable num" data-key="vdc">Rated</th>
-                <th class="sortable num" data-key="ceff">C effective</th>
-                <th class="sortable num" data-key="retained">Retained</th>
-                <th class="sortable num" data-key="bank">Bank</th>
-                <th class="sortable num" data-key="esr">ESR</th>
-                <th class="sortable num" data-key="area">Area</th>
-                <th class="sortable num" data-key="density">µF / mm²</th>
-                <th class="sortable num" data-key="cost">Cost / eff µF</th>
-              </tr>
-            </thead>
-            <tbody id="parts-body"></tbody>
-          </table>
-        </div>
-        <p class="status">
-          Click a row to load that part into the result panel, or a column
-          heading to sort by it.
-        </p>
-      </section>
+      </div>
 
       <section class="export-panel" id="export-section" hidden>
         <div class="section-header">
@@ -887,9 +1362,9 @@
           <span
             >Where a manufacturer publishes two temperature curves, one unbiased
             and one at half rated voltage, this tool blends between them in
-            proportion to the applied bias, up to the biased curve's own voltage.
-            Where only the unbiased curve is published it is used at every
-            bias.</span
+            proportion to the applied bias, up to the biased curve's own
+            voltage. Where only the unbiased curve is published it is used at
+            every bias.</span
           >
           <span
             >ESR, impedance and ripple current come from the same datasheet
@@ -908,17 +1383,59 @@
             <code>scripts/fetch-mlcc-curves.mjs</code> for Samsung,
             <code>scripts/fetch-murata-curves.mjs</code> for Murata and
             <code>scripts/fetch-yageo-curves.mjs</code> for YAGEO. Parts whose
-            vendor does not publish machine-readable curves are listed with specs
-            only and marked as having no derating data.</span
+            vendor does not publish machine-readable curves are listed with
+            specs only and marked as having no derating data.</span
           >
           <span
-            >Board area is the estimated courtyard: the land runs body length +
-            2 × toe by body width + 2 × side, and the courtyard adds its excess
-            all round, with IPC-7351 density levels least (C) 0.15/0.01/0.10,
-            nominal (B) 0.35/0.03/0.25 and most (A) 0.55/0.05/0.50 mm. Body size
-            is the vendor's published dimension where there is one and the
-            nominal package size otherwise, tolerances ignored. It is a planning
-            figure for comparing parts, not a land pattern drawing.</span
+            >Board area is the courtyard around a real land pattern. The pads
+            come from the KiCad official <code>Capacitor_SMD</code> library,
+            whose chip capacitor footprints are IPC-7351 nominal, and the
+            courtyard adds the density level's excess all round: least (C) 0.10,
+            nominal (B) 0.25 and most (A) 0.50 mm. A 0402 is 0.56 × 0.62 mm pads
+            on 0.96 mm centres, so the pad is wider than the 0.50 mm body — an
+            estimate from body size and side extension gets that backwards. A
+            package with no reference pattern falls back to body + 2 × toe by
+            body + 2 × side, with toe and side 0.15/0.01, 0.35/0.03 and
+            0.55/0.05 mm by density level, and is marked as an estimated land.
+            Body size is the vendor's published dimension where there is one and
+            the nominal package size otherwise, tolerances ignored. It is a
+            planning figure for comparing parts, not a land pattern
+            drawing.</span
+          >
+          <span
+            >Relative Size draws the selected part at the selected quantity to
+            one scale, courtyards touching, which is the closest the parts may
+            legally sit. The pads, body and courtyard are the same figures the
+            board area uses.</span
+          >
+          <span
+            >On the single part tab the curves are the manufacturer's own, as
+            published. On the part bank tab they are worked out for the whole
+            selection at the operating point: total effective µF against bias at
+            the set temperature, total µF against temperature at the set bias,
+            the lines' ESR in parallel against frequency, and the ripple current
+            the bank can carry for a given rise. Picking a line adds that line's
+            own contribution as a second curve. A line with no curve of the kind
+            being plotted is left out of the total, and the note under the chart
+            says so.</span
+          >
+          <span
+            >The bank ESR curve combines the resistive part only, so it ignores
+            the phase difference between unlike parts; near each part's own
+            resonance the real impedance of a mixed bank departs from it.</span
+          >
+          <span
+            >Selected Parts is a bank of mixed parts. A line starts at the
+            quantity that was in the operating point card when it was added,
+            adding a part already on the list adds to its quantity, and + or −
+            on the line changes it afterwards. Clicking a line picks it out in
+            the layout and dims the rest. Effective capacitance adds across the
+            whole selection; ESR combines in parallel, so a line of qty parts
+            contributes ESR ÷ qty and its share of the ripple goes as its
+            conductance. Lines with no ESR curve are left out of the combined
+            figure, which then reads high. Selection Layout shelf-packs those
+            courtyards to one scale; the area total is the sum of the courtyards
+            and ignores the gaps the packing leaves.</span
           >
           <span
             >LCSC codes, library type, stock and price come from the JLCPCB
@@ -1097,7 +1614,8 @@
         // point, so it composes with the bias term instead of repeating it.
         function tempDelta(part, tempC, vdc) {
           if (!part.tcc25 || !part.tcc25.length) return 0;
-          var plain = interpolate(part.tcc25, tempC) - interpolate(part.tcc25, 25);
+          var plain =
+            interpolate(part.tcc25, tempC) - interpolate(part.tcc25, 25);
           if (!part.tccBias || !part.tccBias.length || !part.tccBiasVdc) {
             return plain;
           }
@@ -1160,7 +1678,8 @@
         function formatCap(uF) {
           if (uF == null || !isFinite(uF)) return "—";
           if (uF >= 1) return uF.toFixed(uF >= 10 ? 1 : 2) + " µF";
-          if (uF >= 0.001) return (uF * 1000).toFixed(uF >= 0.1 ? 0 : 1) + " nF";
+          if (uF >= 0.001)
+            return (uF * 1000).toFixed(uF >= 0.1 ? 0 : 1) + " nF";
           return (uF * 1000000).toFixed(0) + " pF";
         }
 
@@ -1182,18 +1701,38 @@
           "0402": [1.0, 0.5],
           "0603": [1.6, 0.8],
           "0805": [2.0, 1.25],
-          "1206": [3.2, 1.6],
-          "1210": [3.2, 2.5],
-          "1812": [4.5, 3.2],
+          1206: [3.2, 1.6],
+          1210: [3.2, 2.5],
+          1812: [4.5, 3.2],
         };
 
-        // Toe extension, side extension and courtyard excess per IPC-7351
-        // density level, in mm. The land runs body + 2 × toe long and
-        // body + 2 × side wide, and the courtyard adds its excess all round.
+        // Courtyard excess per IPC-7351 density level, in mm, added all round
+        // the land. The toe and side extensions are only used for a package
+        // with no reference land pattern below.
         var DENSITY = {
           least: { toe: 0.15, side: 0.01, courtyard: 0.1, label: "least (C)" },
-          nominal: { toe: 0.35, side: 0.03, courtyard: 0.25, label: "nominal (B)" },
+          nominal: {
+            toe: 0.35,
+            side: 0.03,
+            courtyard: 0.25,
+            label: "nominal (B)",
+          },
           most: { toe: 0.55, side: 0.05, courtyard: 0.5, label: "most (A)" },
+        };
+
+        // Real land patterns rather than an extension estimate: pad size and
+        // pad centre offset from the part centre, in mm, read from the KiCad
+        // official Capacitor_SMD library, whose chip capacitor footprints are
+        // IPC-7351 nominal. Note the pad is wider than the body, which a
+        // body-plus-side-extension estimate gets wrong.
+        var REFERENCE_LAND = {
+          "0201": { pad: [0.46, 0.4], offset: 0.32 },
+          "0402": { pad: [0.56, 0.62], offset: 0.48 },
+          "0603": { pad: [0.9, 0.95], offset: 0.775 },
+          "0805": { pad: [1.0, 1.45], offset: 0.95 },
+          1206: { pad: [1.15, 1.8], offset: 1.475 },
+          1210: { pad: [1.15, 2.7], offset: 1.475 },
+          1812: { pad: [1.4, 3.4], offset: 2.05 },
         };
 
         // "1.60±0.20mm x 0.80±0.20mm x 0.80±0.20mm" to [1.6, 0.8], ignoring the
@@ -1208,20 +1747,44 @@
           return PACKAGE_BODY[part.size] || null;
         }
 
-        function boardArea(part) {
+        // The land the part sits on: the reference pattern for its package
+        // where there is one, and the body grown by the density rule's toe and
+        // side extensions otherwise.
+        function landOf(part) {
+          var reference = REFERENCE_LAND[part.size];
+          if (reference) {
+            return {
+              length: 2 * reference.offset + reference.pad[0],
+              width: reference.pad[1],
+              pad: reference.pad,
+              offset: reference.offset,
+              reference: true,
+            };
+          }
           var body = bodySize(part);
           if (!body) return null;
           var rule = DENSITY[densityLevel] || DENSITY.nominal;
-          var landLength = body[0] + 2 * rule.toe;
-          var landWidth = body[1] + 2 * rule.side;
           return {
-            land: landLength * landWidth,
+            length: body[0] + 2 * rule.toe,
+            width: body[1] + 2 * rule.side,
+            pad: null,
+            offset: null,
+            reference: false,
+          };
+        }
+
+        function boardArea(part) {
+          var land = landOf(part);
+          if (!land) return null;
+          var rule = DENSITY[densityLevel] || DENSITY.nominal;
+          return {
+            land: land.length * land.width,
             courtyard:
-              (landLength + 2 * rule.courtyard) *
-              (landWidth + 2 * rule.courtyard),
-            length: landLength + 2 * rule.courtyard,
-            width: landWidth + 2 * rule.courtyard,
-            estimated: !part.dims,
+              (land.length + 2 * rule.courtyard) *
+              (land.width + 2 * rule.courtyard),
+            length: land.length + 2 * rule.courtyard,
+            width: land.width + 2 * rule.courtyard,
+            estimated: !land.reference,
           };
         }
 
@@ -1244,6 +1807,12 @@
         function formatArea(value) {
           if (value == null) return "—";
           return value.toFixed(value < 10 ? 2 : 1) + " mm²";
+        }
+
+        function formatMoney(usd) {
+          if (usd == null || !isFinite(usd)) return "—";
+          if (usd >= 1) return "$" + usd.toFixed(2);
+          return (usd * 100).toFixed(usd >= 0.1 ? 1 : 2) + " ¢";
         }
 
         function costPerMicrofarad(part, ceff) {
@@ -1274,11 +1843,36 @@
         var warningsEl = document.getElementById("warnings");
         var chartWrap = document.getElementById("chart-wrap");
         var chartNote = document.getElementById("chart-note");
+        var chartPartNote = document.getElementById("chart-part");
         var tableCount = document.getElementById("table-count");
         var partBadges = document.getElementById("part-badges");
         var exportSection = document.getElementById("export-section");
         var exportText = document.getElementById("export-text");
         var copyStatus = document.getElementById("copy-status");
+        var scaleWrap = document.getElementById("scale-wrap");
+        var scaleNote = document.getElementById("scale-note");
+        var selectionBody = document.getElementById("selection-body");
+        var selectionTableWrap = document.getElementById(
+          "selection-table-wrap",
+        );
+        var selectionTotalsEl = document.getElementById("selection-totals");
+        var selectionEmpty = document.getElementById("selection-empty");
+        var selectionCount = document.getElementById("selection-count");
+        var selectionWarnings = document.getElementById("selection-warnings");
+        var selectionHint = document.getElementById("selection-hint");
+        var clearSelectionButton = document.getElementById(
+          "clear-selection-btn",
+        );
+        var layoutWrap = document.getElementById("layout-wrap");
+        var layoutNote = document.getElementById("layout-note");
+        var layoutCount = document.getElementById("layout-count");
+
+        // Lines of { index, qty } added from the operating point card. Adding a
+        // part that is already there adds to its quantity instead of repeating
+        // the line.
+        var selection = [];
+        // The line picked out in the layout, by part index, or null for none.
+        var activeLine = null;
 
         // Open on a part that has curves, so the first thing shown is a real
         // derating rather than an empty specs-only panel.
@@ -1292,6 +1886,9 @@
         );
         var chartMode = "dcbias";
         var exportFormat = "md";
+        // "", "curves" or "specs": every part, only those with derating
+        // curves, or only those listed on specs alone.
+        var dataFilter = "";
         var sizeFilter = new Set();
         var tccFilter = new Set();
         var vdcFilter = new Set();
@@ -1337,7 +1934,14 @@
             : seen.sort();
         }
 
-        function buildFilterChips(containerId, key, chosen, allLabel, format, onPick) {
+        function buildFilterChips(
+          containerId,
+          key,
+          chosen,
+          allLabel,
+          format,
+          onPick,
+        ) {
           var container = document.getElementById(containerId);
           var values = uniqueValues(key);
           var html = [
@@ -1386,7 +1990,10 @@
         }
 
         function matchesFilters(part) {
-          if (sizeFilter.size && !sizeFilter.has(String(part.size))) return false;
+          if (dataFilter === "curves" && !hasCurves(part)) return false;
+          if (dataFilter === "specs" && hasCurves(part)) return false;
+          if (sizeFilter.size && !sizeFilter.has(String(part.size)))
+            return false;
           if (tccFilter.size && !tccFilter.has(String(part.tcc))) return false;
           if (vdcFilter.size && !vdcFilter.has(String(part.vdc))) return false;
           if (vendorFilter.size && !vendorFilter.has(String(part.vendor))) {
@@ -1446,7 +2053,8 @@
           partBadges.innerHTML = badges.join(" ");
           selectedPartNote.textContent = partLabel(part);
 
-          document.getElementById("out-nominal").textContent = formatCap(nominal);
+          document.getElementById("out-nominal").textContent =
+            formatCap(nominal);
           document.getElementById("out-ceff").textContent = formatCap(ceff);
           document.getElementById("out-bank").textContent =
             ceff == null ? "—" : formatCap(ceff * op.qty);
@@ -1499,7 +2107,7 @@
               " × " +
               area.width.toFixed(2) +
               " mm" +
-              (area.estimated ? ", from package size" : "") +
+              (area.estimated ? ", land estimated" : "") +
               ", ×" +
               op.qty +
               " = " +
@@ -1613,7 +2221,10 @@
             function (th) {
               var active = th.dataset.key === sortKey;
               if (active) {
-                th.setAttribute("aria-sort", sortDir === "asc" ? "ascending" : "descending");
+                th.setAttribute(
+                  "aria-sort",
+                  sortDir === "asc" ? "ascending" : "descending",
+                );
               } else {
                 th.removeAttribute("aria-sort");
               }
@@ -1671,7 +2282,15 @@
                 (index === selectedIndex ? ' class="selected-row"' : "") +
                 ' data-index="' +
                 index +
-                '"><td>' +
+                '"><td class="add-cell"><button type="button" class="action-btn add-btn" data-add="' +
+                index +
+                '" aria-label="Add ' +
+                op.qty +
+                " × " +
+                escapeHTML(part.pn) +
+                ' to the selection" title="Add ' +
+                op.qty +
+                ' × to the selection">+</button></td><td>' +
                 escapeHTML(part.pn) +
                 "</td><td>" +
                 (part.lcsc
@@ -1735,7 +2354,9 @@
           Array.prototype.forEach.call(
             partsBody.querySelectorAll("tr"),
             function (tr) {
-              tr.addEventListener("click", function () {
+              tr.addEventListener("click", function (event) {
+                // The add button in the row has its own job.
+                if (event.target.closest("button")) return;
                 selectedIndex = Number(tr.dataset.index);
                 renderAll();
               });
@@ -1744,6 +2365,37 @@
         }
 
         // ==================== CHART ====================
+        // Whole decades inside a log axis's range, so a log scale ticks at
+        // 1 mΩ and 10 mΩ rather than at 1.8 mΩ and 5.6 mΩ.
+        // Decade ticks, so each one is a round unit rather than 1000Ω or 0.10k.
+        function ohmTick(logOhms) {
+          var ohms = Math.pow(10, logOhms);
+          if (ohms >= 1000) return (ohms / 1000).toFixed(0) + "kΩ";
+          if (ohms >= 1) return ohms.toFixed(0) + "Ω";
+          if (ohms >= 0.001) return (ohms * 1000).toFixed(0) + "mΩ";
+          return (ohms * 1000000).toFixed(0) + "µΩ";
+        }
+
+        function freqTick(logMHz) {
+          var mhz = Math.pow(10, logMHz);
+          if (mhz >= 1000) return (mhz / 1000).toFixed(0) + " GHz";
+          if (mhz >= 1) return mhz.toFixed(0) + " MHz";
+          if (mhz >= 0.001) return (mhz * 1000).toFixed(0) + " kHz";
+          return (mhz * 1000000).toFixed(0) + " Hz";
+        }
+
+        function decadeTicks(min, max) {
+          var ticks = [];
+          for (
+            var e = Math.ceil(min - 1e-9);
+            e <= Math.floor(max + 1e-9);
+            e++
+          ) {
+            ticks.push(e);
+          }
+          return ticks.length > 1 ? ticks : null;
+        }
+
         function niceTicks(min, max, count) {
           var ticks = [];
           for (var i = 0; i <= count; i++) {
@@ -1753,11 +2405,25 @@
         }
 
         function drawChart(config) {
+          var traces = (config.traces || []).filter(function (trace) {
+            return trace.points && trace.points.length;
+          });
+          // One series needs no legend: the card's heading and note name it.
+          // Two or more get both a legend and a label on the line itself, so
+          // identity never rests on colour alone.
+          var keyed = traces.length > 1;
+          // 5.6px per character is close enough at this font size to lay the
+          // labels out without measuring the text.
+          var charW = 5.6;
+          var widestLabel = traces.reduce(function (max, trace, i) {
+            return Math.max(max, (trace.label || "Series " + (i + 1)).length);
+          }, 0);
           var width = 720;
           var height = 300;
-          var left = 56;
-          var right = 16;
-          var top = 14;
+          var left = config.yLabel ? 70 : 56;
+          // The gutter holds the label that sits at the end of each line.
+          var right = keyed ? Math.ceil(widestLabel * charW) + 14 : 16;
+          var top = keyed ? 34 : 14;
           var bottom = 38;
           var plotW = width - left - right;
           var plotH = height - top - bottom;
@@ -1769,7 +2435,9 @@
           }
           function sy(y) {
             return (
-              top + plotH - ((y - config.yMin) / (config.yMax - config.yMin)) * plotH
+              top +
+              plotH -
+              ((y - config.yMin) / (config.yMax - config.yMin)) * plotH
             );
           }
 
@@ -1783,53 +2451,91 @@
               '">',
           ];
 
-          niceTicks(config.yMin, config.yMax, 4).forEach(function (value) {
-            var y = sy(value);
-            svg.push(
-              '<line class="grid" x1="' +
-                left +
-                '" y1="' +
-                y +
-                '" x2="' +
-                (left + plotW) +
-                '" y2="' +
-                y +
-                '" />',
-            );
-            svg.push(
-              '<text x="' +
-                (left - 6) +
-                '" y="' +
-                (y + 3) +
-                '" text-anchor="end">' +
-                config.yFormat(value) +
-                "</text>",
-            );
-          });
+          if (keyed) {
+            var cursor = left;
+            traces.forEach(function (trace, i) {
+              var label = trace.label || "Series " + (i + 1);
+              svg.push(
+                '<line class="trace series-' +
+                  ((i % 4) + 1) +
+                  '" x1="' +
+                  cursor +
+                  '" y1="10" x2="' +
+                  (cursor + 20) +
+                  '" y2="10" />',
+              );
+              svg.push(
+                '<text x="' +
+                  (cursor + 25) +
+                  '" y="14">' +
+                  escapeHTML(label) +
+                  "</text>",
+              );
+              cursor = Math.round(cursor + 25 + label.length * charW + 16);
+            });
+          }
 
-          niceTicks(config.xMin, config.xMax, 5).forEach(function (value) {
-            var x = sx(value);
+          (config.yTicks || niceTicks(config.yMin, config.yMax, 4)).forEach(
+            function (value) {
+              var y = sy(value);
+              svg.push(
+                '<line class="grid" x1="' +
+                  left +
+                  '" y1="' +
+                  y +
+                  '" x2="' +
+                  (left + plotW) +
+                  '" y2="' +
+                  y +
+                  '" />',
+              );
+              svg.push(
+                '<text x="' +
+                  (left - 6) +
+                  '" y="' +
+                  (y + 3) +
+                  '" text-anchor="end">' +
+                  config.yFormat(value) +
+                  "</text>",
+              );
+            },
+          );
+
+          if (config.yLabel) {
             svg.push(
-              '<line class="grid" x1="' +
-                x +
-                '" y1="' +
-                top +
-                '" x2="' +
-                x +
-                '" y2="' +
-                (top + plotH) +
-                '" />',
-            );
-            svg.push(
-              '<text x="' +
-                x +
-                '" y="' +
-                (height - 20) +
-                '" text-anchor="middle">' +
-                config.xFormat(value) +
+              '<text transform="rotate(-90)" x="' +
+                -(top + plotH / 2) +
+                '" y="12" text-anchor="middle">' +
+                escapeHTML(config.yLabel) +
                 "</text>",
             );
-          });
+          }
+
+          (config.xTicks || niceTicks(config.xMin, config.xMax, 5)).forEach(
+            function (value) {
+              var x = sx(value);
+              svg.push(
+                '<line class="grid" x1="' +
+                  x +
+                  '" y1="' +
+                  top +
+                  '" x2="' +
+                  x +
+                  '" y2="' +
+                  (top + plotH) +
+                  '" />',
+              );
+              svg.push(
+                '<text x="' +
+                  x +
+                  '" y="' +
+                  (height - 20) +
+                  '" text-anchor="middle">' +
+                  config.xFormat(value) +
+                  "</text>",
+              );
+            },
+          );
 
           svg.push(
             '<line class="axis" x1="' +
@@ -1854,12 +2560,12 @@
               '" />',
           );
 
-          (config.traces || []).forEach(function (trace) {
-            if (!trace.points || !trace.points.length) return;
+          var endLabels = [];
+          traces.forEach(function (trace, i) {
             var d = trace.points
-              .map(function (point, i) {
+              .map(function (point, j) {
                 return (
-                  (i ? "L" : "M") +
+                  (j ? "L" : "M") +
                   sx(point[0]).toFixed(1) +
                   " " +
                   sy(point[1]).toFixed(1)
@@ -1867,15 +2573,50 @@
               })
               .join(" ");
             svg.push(
-              '<path class="' +
-                (trace.alt ? "trace-alt" : "trace") +
+              '<path class="trace series-' +
+                ((i % 4) + 1) +
                 '" d="' +
                 d +
                 '" />',
             );
+            if (keyed) {
+              var last = trace.points[trace.points.length - 1];
+              endLabels.push({
+                x: Math.min(sx(last[0]), left + plotW),
+                y: sy(last[1]),
+                text: trace.label || "Series " + (i + 1),
+                series: (i % 4) + 1,
+              });
+            }
           });
 
-          if (config.marker) {
+          // Nudge labels apart where two lines finish at nearly the same
+          // height, so a label never sits on top of another.
+          endLabels.sort(function (a, b) {
+            return a.y - b.y;
+          });
+          endLabels.forEach(function (label, i) {
+            if (i && label.y - endLabels[i - 1].y < 11) {
+              label.y = endLabels[i - 1].y + 11;
+            }
+          });
+          endLabels.forEach(function (label) {
+            svg.push(
+              '<text class="trace-label" x="' +
+                (label.x + 5).toFixed(1) +
+                '" y="' +
+                Math.min(label.y + 3, top + plotH).toFixed(1) +
+                '">' +
+                escapeHTML(label.text) +
+                "</text>",
+            );
+          });
+
+          if (
+            config.marker &&
+            isFinite(config.marker[0]) &&
+            isFinite(config.marker[1])
+          ) {
             var mx = sx(config.marker[0]);
             var my = sy(config.marker[1]);
             svg.push(
@@ -1907,8 +2648,368 @@
           chartWrap.innerHTML = svg.join("");
         }
 
+        // The single part tab plots the row loaded from the list. The bank tab
+        // plots the line picked in the selection, or its first line when none
+        // is picked, so the chart is about the bank being built rather than
+        // whatever was last clicked in the full list.
+        function chartPartIndex() {
+          if (currentTab === "bank") {
+            if (activeLine != null) return activeLine;
+            if (selection.length) return selection[0].index;
+          }
+          return selectedIndex;
+        }
+
         function renderChart() {
-          var part = parts[selectedIndex];
+          // On the bank tab the curves are worked out for the whole selection
+          // at the operating point, rather than read straight off one part.
+          if (currentTab === "bank" && selection.length) {
+            renderBankChart();
+            return;
+          }
+          var part = parts[chartPartIndex()];
+          chartPartNote.textContent = part ? partLabel(part) : "";
+          renderChartFor(part);
+        }
+
+        // ==================== BANK CURVES ====================
+        // One format for the whole axis, chosen from its top value.
+        function capAxisFormat(top) {
+          var digits = top >= 100 ? 0 : top >= 10 ? 1 : 2;
+          return function (v) {
+            return v.toFixed(digits);
+          };
+        }
+
+        function sampleCurve(min, max, steps, fn) {
+          var points = [];
+          for (var i = 0; i <= steps; i++) {
+            var x = min + ((max - min) * i) / steps;
+            var y = fn(x);
+            if (y != null && isFinite(y)) points.push([x, y]);
+          }
+          return points;
+        }
+
+        // Lines that can contribute to a curve of the given kind.
+        function bankLines(kind) {
+          var out = [];
+          selection.forEach(function (line) {
+            var part = parts[line.index];
+            if (!part) return;
+            if (kind === "cap" && !hasCurves(part)) return;
+            if (kind === "esr" && !(part.freq && part.esr)) return;
+            if (kind === "ripple" && !(part.ripple && part.ripple.length))
+              return;
+            out.push({ line: line, part: part });
+          });
+          return out;
+        }
+
+        // Effective capacitance of a set of lines at a bias and temperature:
+        // the same derating the result panel applies, summed over the bank.
+        function bankCapAt(lines, vdc, tempC) {
+          var total = 0;
+          var any = false;
+          lines.forEach(function (entry) {
+            var value = effective(entry.part, vdc, tempC);
+            if (value == null) return;
+            total += value * entry.line.qty;
+            any = true;
+          });
+          return any ? total : null;
+        }
+
+        // Parallel resistance of the bank: each line contributes its own ESR
+        // divided by its quantity.
+        function bankEsrAt(lines, freqMHz) {
+          var conductance = 0;
+          lines.forEach(function (entry) {
+            var esr = esrAt(entry.part, freqMHz);
+            if (esr == null || esr <= 0) return;
+            conductance += entry.line.qty / esr;
+          });
+          return conductance > 0 ? 1 / conductance : null;
+        }
+
+        // Ripple current the bank can take for a given temperature rise, as
+        // the sum of what each part can take at that rise.
+        function bankRippleAt(lines, riseC) {
+          var total = 0;
+          var any = false;
+          lines.forEach(function (entry) {
+            var op = readOperatingPoint();
+            var reading = rippleAt(entry.part, op.freqKHz, riseC);
+            if (!reading) return;
+            total += reading.amps * entry.line.qty;
+            any = true;
+          });
+          return any ? total : null;
+        }
+
+        function bankLineLabel(entry) {
+          return entry.line.qty + " × " + entry.part.pn;
+        }
+
+        function noBankCurve(message) {
+          chartWrap.innerHTML = "";
+          chartNote.textContent = message;
+        }
+
+        function renderBankChart() {
+          var op = readOperatingPoint();
+          var picked = null;
+          selection.forEach(function (line) {
+            if (line.index === activeLine) picked = line;
+          });
+          var parts_ = selection.reduce(function (sum, line) {
+            return sum + line.qty;
+          }, 0);
+          chartPartNote.textContent =
+            "Whole selection: " +
+            selection.length +
+            (selection.length === 1 ? " line, " : " lines, ") +
+            parts_ +
+            (parts_ === 1 ? " part" : " parts") +
+            (picked ? ", with " + parts[picked.index].pn + " picked out" : "");
+
+          function withPicked(kind, lines, traceOf) {
+            var traces = [traceOf(lines, "Selection total")];
+            if (picked) {
+              var only = lines.filter(function (entry) {
+                return entry.line.index === picked.index;
+              });
+              if (only.length)
+                traces.push(traceOf(only, bankLineLabel(only[0])));
+            }
+            return traces.filter(function (trace) {
+              return trace.points.length > 1;
+            });
+          }
+
+          if (chartMode === "dcbias") {
+            var capLines = bankLines("cap");
+            if (!capLines.length) {
+              noBankCurve(
+                "No selected part has derating curves, so the bank has no capacitance curve to plot.",
+              );
+              return;
+            }
+            var maxBias = capLines.reduce(function (max, entry) {
+              var curve = entry.part.dcBias;
+              return Math.max(max, curve[curve.length - 1][0]);
+            }, 0);
+            var biasTraces = withPicked(
+              "cap",
+              capLines,
+              function (lines, label) {
+                return {
+                  label: label,
+                  points: sampleCurve(0, maxBias, 80, function (v) {
+                    return bankCapAt(lines, v, op.temp);
+                  }),
+                };
+              },
+            );
+            var biasTop = biasTraces[0].points.reduce(function (max, point) {
+              return Math.max(max, point[1]);
+            }, 0);
+            drawChart({
+              title: "Bank capacitance against DC bias",
+              xMin: 0,
+              xMax: maxBias,
+              yMin: 0,
+              yMax: biasTop * 1.08,
+              xLabel: "DC bias (V)",
+              yLabel: "Bank capacitance (µF)",
+              xFormat: function (v) {
+                return v.toFixed(1);
+              },
+              yFormat: capAxisFormat(biasTop),
+              traces: biasTraces,
+              marker: [
+                Math.min(op.vdc, maxBias),
+                bankCapAt(capLines, Math.min(op.vdc, maxBias), op.temp),
+              ],
+            });
+            chartNote.textContent =
+              "Total effective µF at " +
+              op.temp +
+              " °C, summed over the bank with each part's own bias curve. Marker is the current bias point. Lines with no curves are left out.";
+            return;
+          }
+
+          if (chartMode === "tcc") {
+            var tempLines = bankLines("cap").filter(function (entry) {
+              return entry.part.tcc25 && entry.part.tcc25.length;
+            });
+            if (!tempLines.length) {
+              noBankCurve(
+                "No selected part has a temperature curve, so the bank has none to plot.",
+              );
+              return;
+            }
+            var tempTraces = withPicked(
+              "cap",
+              tempLines,
+              function (lines, label) {
+                return {
+                  label: label,
+                  points: sampleCurve(-55, 125, 90, function (t) {
+                    return bankCapAt(lines, op.vdc, t);
+                  }),
+                };
+              },
+            );
+            var tempTop = tempTraces[0].points.reduce(function (max, point) {
+              return Math.max(max, point[1]);
+            }, 0);
+            drawChart({
+              title: "Bank capacitance against temperature",
+              xMin: -55,
+              xMax: 125,
+              yMin: 0,
+              yMax: tempTop * 1.08,
+              xLabel: "Temperature (°C)",
+              yLabel: "Bank capacitance (µF)",
+              xFormat: function (v) {
+                return v.toFixed(0);
+              },
+              yFormat: capAxisFormat(tempTop),
+              traces: tempTraces,
+              marker: [op.temp, bankCapAt(tempLines, op.vdc, op.temp)],
+            });
+            chartNote.textContent =
+              "Total effective µF at " +
+              op.vdc +
+              " V, each part blended between its unbiased and biased temperature curves by that bias. Marker is the current temperature.";
+            return;
+          }
+
+          if (chartMode === "esr") {
+            var esrLines = bankLines("esr");
+            if (!esrLines.length) {
+              noBankCurve(
+                "No selected part has an ESR curve, so the bank has none to plot.",
+              );
+              return;
+            }
+            var lo = null;
+            var hi = null;
+            esrLines.forEach(function (entry) {
+              var freqs = entry.part.freq;
+              lo = lo == null ? freqs[0] : Math.max(lo, freqs[0]);
+              hi =
+                hi == null
+                  ? freqs[freqs.length - 1]
+                  : Math.min(hi, freqs[freqs.length - 1]);
+            });
+            if (!(hi > lo)) {
+              noBankCurve(
+                "The selected parts' ESR curves cover no common frequency range.",
+              );
+              return;
+            }
+            var esrTraces = withPicked(
+              "esr",
+              esrLines,
+              function (lines, label) {
+                return {
+                  label: label,
+                  points: sampleCurve(
+                    Math.log10(lo),
+                    Math.log10(hi),
+                    90,
+                    function (logF) {
+                      var value = bankEsrAt(lines, Math.pow(10, logF));
+                      return value == null ? null : Math.log10(value);
+                    },
+                  ),
+                };
+              },
+            );
+            var esrYs = esrTraces[0].points.map(function (point) {
+              return point[1];
+            });
+            drawChart({
+              title: "Bank ESR against frequency",
+              xMin: Math.log10(lo),
+              xMax: Math.log10(hi),
+              yMin: Math.floor(Math.min.apply(null, esrYs)),
+              yMax: Math.ceil(Math.max.apply(null, esrYs)),
+              xTicks: decadeTicks(Math.log10(lo), Math.log10(hi)),
+              yTicks: decadeTicks(
+                Math.floor(Math.min.apply(null, esrYs)),
+                Math.ceil(Math.max.apply(null, esrYs)),
+              ),
+              xLabel: "Frequency (log scale)",
+              yLabel: "Bank ESR (log scale)",
+              xFormat: freqTick,
+              yFormat: ohmTick,
+              traces: esrTraces,
+              marker: [
+                Math.log10(Math.min(Math.max(op.freqKHz / 1000, lo), hi)),
+                Math.log10(
+                  bankEsrAt(
+                    esrLines,
+                    Math.min(Math.max(op.freqKHz / 1000, lo), hi),
+                  ),
+                ),
+              ],
+            });
+            chartNote.textContent =
+              "The lines in parallel: each contributes its own ESR divided by its quantity. Resistive part only, so it ignores the phase difference between unlike parts. Marker is the selected frequency.";
+            return;
+          }
+
+          var rippleLines = bankLines("ripple");
+          if (!rippleLines.length) {
+            noBankCurve(
+              "No selected part has ripple current data, so the bank has none to plot.",
+            );
+            return;
+          }
+          var rippleTraces = withPicked(
+            "ripple",
+            rippleLines,
+            function (lines, label) {
+              return {
+                label: label,
+                points: sampleCurve(1, 40, 78, function (rise) {
+                  var amps = bankRippleAt(lines, rise);
+                  return amps == null ? null : amps;
+                }).map(function (point) {
+                  return [point[1], point[0]];
+                }),
+              };
+            },
+          );
+          var rippleXs = rippleTraces[0].points.map(function (point) {
+            return point[0];
+          });
+          drawChart({
+            title: "Temperature rise against bank ripple current",
+            xMin: 0,
+            xMax: Math.max.apply(null, rippleXs) * 1.05,
+            yMin: 0,
+            yMax: 40,
+            xLabel: "Ripple current (A, whole bank)",
+            yLabel: "Temperature rise (°C)",
+            xFormat: function (v) {
+              return v.toFixed(1);
+            },
+            yFormat: function (v) {
+              return v.toFixed(0) + "°";
+            },
+            traces: rippleTraces,
+          });
+          chartNote.textContent =
+            "What the bank can carry: each part's own curve at the published frequency nearest " +
+            op.freqKHz +
+            " kHz, times its quantity. Still air, so optimistic on a dense board.";
+        }
+
+        function renderChartFor(part) {
           var op = readOperatingPoint();
           if (!part || !hasCurves(part)) {
             chartWrap.innerHTML = "";
@@ -1924,9 +3025,13 @@
               title: "Capacitance change against DC bias",
               xMin: 0,
               xMax: pts[pts.length - 1][0],
-              yMin: Math.min(-100, Math.floor(pts[pts.length - 1][1] / 10) * 10),
+              yMin: Math.min(
+                -100,
+                Math.floor(pts[pts.length - 1][1] / 10) * 10,
+              ),
               yMax: 0,
               xLabel: "DC bias (V)",
+              yLabel: "Capacitance change (%)",
               xFormat: function (v) {
                 return v.toFixed(1);
               },
@@ -1950,8 +3055,13 @@
               chartNote.textContent = "No temperature curve for this part.";
               return;
             }
-            var traces = [{ points: part.tcc25 }];
-            if (part.tccBias) traces.push({ points: part.tccBias, alt: true });
+            var traces = [{ points: part.tcc25, label: "No bias" }];
+            if (part.tccBias) {
+              traces.push({
+                points: part.tccBias,
+                label: (part.tccBiasVdc || "?") + " V bias",
+              });
+            }
             var all = traces.reduce(function (acc, trace) {
               return acc.concat(
                 trace.points.map(function (p) {
@@ -1966,6 +3076,7 @@
               yMin: Math.floor(Math.min.apply(null, all) / 10) * 10,
               yMax: Math.max(5, Math.ceil(Math.max.apply(null, all) / 10) * 10),
               xLabel: "Temperature (°C)",
+              yLabel: "Capacitance change (%)",
               xFormat: function (v) {
                 return v.toFixed(0);
               },
@@ -1975,10 +3086,9 @@
               traces: traces,
               marker: [op.temp, interpolate(part.tcc25, op.temp)],
             });
-            chartNote.textContent =
-              "Solid: no bias. Dashed: manufacturer's curve at " +
-              (part.tccBiasVdc || "?") +
-              " V bias. The result panel blends between them by applied bias.";
+            chartNote.textContent = part.tccBias
+              ? "Both curves are the manufacturer's own. The result blends between them in proportion to the applied bias. Marker is the current temperature on the unbiased curve."
+              : "Only the unbiased curve is published for this part, so it is used at every bias. Marker is the current temperature.";
             return;
           }
 
@@ -2006,27 +3116,26 @@
               xMax: logZ[logZ.length - 1][0],
               yMin: Math.floor(Math.min.apply(null, ys)),
               yMax: Math.ceil(Math.max.apply(null, ys)),
-              xLabel: "Frequency (MHz, log scale)",
-              xFormat: function (v) {
-                var mhz = Math.pow(10, v);
-                return mhz >= 1
-                  ? mhz.toFixed(0) + "M"
-                  : (mhz * 1000).toFixed(mhz >= 0.001 ? 0 : 2) + "k";
-              },
-              yFormat: function (v) {
-                var ohms = Math.pow(10, v);
-                return ohms >= 1
-                  ? ohms.toFixed(0) + "Ω"
-                  : (ohms * 1000).toFixed(0) + "m";
-              },
-              traces: [{ points: logZ }, { points: logR, alt: true }],
+              xTicks: decadeTicks(logZ[0][0], logZ[logZ.length - 1][0]),
+              yTicks: decadeTicks(
+                Math.floor(Math.min.apply(null, ys)),
+                Math.ceil(Math.max.apply(null, ys)),
+              ),
+              xLabel: "Frequency (log scale)",
+              yLabel: "Impedance (log scale)",
+              xFormat: freqTick,
+              yFormat: ohmTick,
+              traces: [
+                { points: logZ, label: "|Z|" },
+                { points: logR, label: "ESR" },
+              ],
               marker: [
                 Math.log10(op.freqKHz / 1000),
                 Math.log10(impedanceAt(part, op.freqKHz / 1000)),
               ],
             });
             chartNote.textContent =
-              "Solid: |Z|. Dashed: ESR, both at 25 °C with no DC bias.";
+              "At 25 °C with no DC bias. Marker is |Z| at the selected frequency.";
             return;
           }
 
@@ -2035,9 +3144,16 @@
             chartNote.textContent = "No ripple current data for this part.";
             return;
           }
-          var rippleTraces = part.ripple.map(function (series, i) {
-            return { points: series.points, alt: i > 0 };
-          });
+          // Published at a handful of fixed frequencies, so each is its own
+          // series rather than something to interpolate between.
+          var rippleTraces = part.ripple
+            .slice()
+            .sort(function (a, b) {
+              return a.khz - b.khz;
+            })
+            .map(function (series) {
+              return { points: series.points, label: series.khz + " kHz" };
+            });
           var xs = [];
           var ysRipple = [];
           part.ripple.forEach(function (series) {
@@ -2053,6 +3169,7 @@
             yMin: 0,
             yMax: Math.ceil(Math.max.apply(null, ysRipple) / 10) * 10,
             xLabel: "Ripple current (A)",
+            yLabel: "Temperature rise (°C)",
             xFormat: function (v) {
               return v.toFixed(1);
             },
@@ -2062,13 +3179,7 @@
             traces: rippleTraces,
           });
           chartNote.textContent =
-            "Self-heating in still air at " +
-            part.ripple
-              .map(function (series) {
-                return series.khz + " kHz";
-              })
-              .join(", ") +
-            ". Solid trace is the lowest frequency.";
+            "Self-heating in still air, one curve per published frequency. The result panel reads the curve closest to the frequency in the operating point card.";
         }
 
         // ==================== EXPORT ====================
@@ -2206,9 +3317,927 @@
           return out.join("\n");
         }
 
+        // ==================== FOOTPRINT SCALE ====================
+        // The selected part's own geometry: its published body size where the
+        // vendor gives one, the nominal package size otherwise, grown into a
+        // land pattern and courtyard by the current density rule. Same numbers
+        // as the board area in the result panel.
+        function footprintOf(part) {
+          if (!part) return null;
+          var body = bodySize(part);
+          var land = landOf(part);
+          if (!body || !land) return null;
+          var rule = DENSITY[densityLevel] || DENSITY.nominal;
+          return {
+            body: body,
+            land: land,
+            landL: land.length,
+            landW: land.width,
+            courtL: land.length + 2 * rule.courtyard,
+            courtW: land.width + 2 * rule.courtyard,
+            area:
+              (land.length + 2 * rule.courtyard) *
+              (land.width + 2 * rule.courtyard),
+            rule: rule,
+          };
+        }
+
+        // Courtyard area of the smallest package in the list, so the note can
+        // say how the selected part compares without drawing every package.
+        function smallestCourtyard() {
+          var best = null;
+          var sizes = [];
+          parts.forEach(function (part) {
+            if (part.size && sizes.indexOf(part.size) === -1) {
+              sizes.push(part.size);
+            }
+          });
+          sizes.forEach(function (size) {
+            var area = boardArea({ size: size });
+            if (!area) return;
+            if (!best || area.courtyard < best.area) {
+              best = { size: size, area: area.courtyard };
+            }
+          });
+          return best;
+        }
+
+        // Enough columns to keep the block roughly as wide as the curve chart
+        // beside it, so a bank reads as an area on the board and the card does
+        // not grow into a tall strip.
+        var BANK_ASPECT = 2.4;
+
+        function bankColumns(count, courtL, courtW) {
+          var cols = Math.round(
+            Math.sqrt((count * courtW * BANK_ASPECT) / courtL),
+          );
+          return Math.min(count, Math.max(1, cols));
+        }
+
+        // Nicest round scale-bar length that lands between a third and all of
+        // the drawing's width.
+        function scaleBarMM(spanMM) {
+          var steps = [0.5, 1, 2, 5, 10, 20, 50];
+          for (var i = steps.length - 1; i >= 0; i--) {
+            if (steps[i] <= spanMM) return steps[i];
+          }
+          return steps[0];
+        }
+
+        function drawFootprints() {
+          var part = parts[selectedIndex];
+          var fp = footprintOf(part);
+          if (!fp) {
+            scaleWrap.innerHTML = "";
+            scaleNote.textContent =
+              "No published or nominal body size for this part, so there is nothing to draw.";
+            return;
+          }
+
+          var op = readOperatingPoint();
+          // A bank of a few hundred would draw as a grey mat, so only the first
+          // tiles are drawn and the note says so.
+          var drawLimit = 144;
+          var drawn = Math.min(op.qty, drawLimit);
+          var cols = bankColumns(drawn, fp.courtL, fp.courtW);
+          var rows = Math.ceil(drawn / cols);
+
+          var padX = 8;
+          var legendH = 20;
+          var barH = 30;
+          var topPad = 8;
+          var maxWidth = 720;
+          var maxBandH = 260;
+          var blockL = cols * fp.courtL;
+          var blockW = rows * fp.courtW;
+          // Cap the scale so a single part does not fill the card, and cap the
+          // height so a deep bank stays in view.
+          var scale = Math.min(
+            (maxWidth - 2 * padX) / blockL,
+            maxBandH / blockW,
+            72,
+          );
+          var bandH = blockW * scale;
+          var blockPx = blockL * scale;
+          // A small bank gets a narrower viewBox rather than a lake of empty
+          // space, since the SVG is drawn at whatever width the card is.
+          var width = Math.round(
+            Math.max(260, Math.min(maxWidth, blockPx + 2 * padX)),
+          );
+          var originX = padX + (width - 2 * padX - blockPx) / 2;
+          var height = legendH + topPad + bandH + barH;
+
+          var svg = [
+            '<svg class="curve" viewBox="0 0 ' +
+              width +
+              " " +
+              height.toFixed(0) +
+              '" role="img" aria-label="' +
+              escapeHTML(
+                op.qty +
+                  " × " +
+                  part.pn +
+                  " drawn to scale with land pattern and courtyard",
+              ) +
+              '">',
+          ];
+
+          svg.push(
+            "<title>" +
+              escapeHTML(
+                op.qty +
+                  " × " +
+                  part.pn +
+                  ", courtyard " +
+                  fp.courtL.toFixed(2) +
+                  " × " +
+                  fp.courtW.toFixed(2) +
+                  " mm each, " +
+                  (fp.area * op.qty).toFixed(2) +
+                  " mm² for the bank",
+              ) +
+              "</title>",
+          );
+
+          [
+            { cls: "fp-body", text: "Body" },
+            { cls: "fp-land", text: "Pads" },
+            { cls: "fp-court", text: "Courtyard" },
+          ].forEach(function (item, i) {
+            var x = padX + i * 66;
+            svg.push(
+              '<rect class="' +
+                item.cls +
+                '" x="' +
+                x +
+                '" y="4" width="14" height="9" />',
+            );
+            svg.push(
+              '<text x="' + (x + 18) + '" y="12">' + item.text + "</text>",
+            );
+          });
+
+          // Courtyards touch, which is the closest the parts may legally sit.
+          for (var i = 0; i < drawn; i++) {
+            var col = i % cols;
+            var row = Math.floor(i / cols);
+            var x = originX + col * fp.courtL * scale;
+            var y = legendH + topPad + row * fp.courtW * scale;
+            var courtLpx = fp.courtL * scale;
+            var courtWpx = fp.courtW * scale;
+            svg.push(
+              '<rect class="fp-court" x="' +
+                x.toFixed(1) +
+                '" y="' +
+                y.toFixed(1) +
+                '" width="' +
+                courtLpx.toFixed(1) +
+                '" height="' +
+                courtWpx.toFixed(1) +
+                '" />',
+            );
+            // Two pads with a gap between them where the package has a
+            // reference pattern, the enclosing land extent where it does not.
+            var padY = (y + (courtWpx - fp.landW * scale) / 2).toFixed(1);
+            var padH = (fp.landW * scale).toFixed(1);
+            if (fp.land.reference) {
+              var padWpx = fp.land.pad[0] * scale;
+              [-fp.land.offset, fp.land.offset].forEach(function (offset) {
+                svg.push(
+                  '<rect class="fp-land" x="' +
+                    (x + courtLpx / 2 + offset * scale - padWpx / 2).toFixed(
+                      1,
+                    ) +
+                    '" y="' +
+                    padY +
+                    '" width="' +
+                    padWpx.toFixed(1) +
+                    '" height="' +
+                    padH +
+                    '" />',
+                );
+              });
+            } else {
+              svg.push(
+                '<rect class="fp-land" x="' +
+                  (x + (courtLpx - fp.landL * scale) / 2).toFixed(1) +
+                  '" y="' +
+                  padY +
+                  '" width="' +
+                  (fp.landL * scale).toFixed(1) +
+                  '" height="' +
+                  padH +
+                  '" />',
+              );
+            }
+            svg.push(
+              '<rect class="fp-body" x="' +
+                (x + (courtLpx - fp.body[0] * scale) / 2).toFixed(1) +
+                '" y="' +
+                (y + (courtWpx - fp.body[1] * scale) / 2).toFixed(1) +
+                '" width="' +
+                (fp.body[0] * scale).toFixed(1) +
+                '" height="' +
+                (fp.body[1] * scale).toFixed(1) +
+                '" />',
+            );
+          }
+
+          // Scale bar, so the drawing stays readable as a size and not just a
+          // shape: the card is half a column wide and the scale moves with qty.
+          var barMM = scaleBarMM(
+            Math.min(blockL, ((width - 2 * padX) * 0.3) / scale),
+          );
+          var barPx = barMM * scale;
+          var barY = Math.round(legendH + topPad + bandH + 14);
+          svg.push(
+            '<line class="axis" x1="' +
+              padX +
+              '" y1="' +
+              barY +
+              '" x2="' +
+              (padX + barPx).toFixed(1) +
+              '" y2="' +
+              barY +
+              '" />',
+          );
+          [padX, padX + barPx].forEach(function (tick) {
+            svg.push(
+              '<line class="axis" x1="' +
+                tick.toFixed(1) +
+                '" y1="' +
+                (barY - 4) +
+                '" x2="' +
+                tick.toFixed(1) +
+                '" y2="' +
+                (barY + 4) +
+                '" />',
+            );
+          });
+          svg.push(
+            '<text x="' +
+              (padX + barPx + 6).toFixed(1) +
+              '" y="' +
+              (barY + 4) +
+              '">' +
+              barMM +
+              " mm</text>",
+          );
+          svg.push(
+            '<text class="fp-label" x="' +
+              (width - padX) +
+              '" y="' +
+              (barY + 4) +
+              '" text-anchor="end">' +
+              escapeHTML(formatArea(fp.area * op.qty)) +
+              " total</text>",
+          );
+
+          svg.push("</svg>");
+          scaleWrap.innerHTML = svg.join("");
+
+          var note =
+            op.qty +
+            " × " +
+            part.pn +
+            " at " +
+            fp.rule.label +
+            " density, laid out " +
+            cols +
+            " × " +
+            rows +
+            " with courtyards touching: " +
+            formatArea(fp.area) +
+            " each, " +
+            formatArea(fp.area * op.qty) +
+            " for the bank. Body " +
+            fp.body[0].toFixed(2) +
+            " × " +
+            fp.body[1].toFixed(2) +
+            " mm" +
+            (part.dims ? "" : " from the nominal package size") +
+            ", " +
+            (fp.land.reference
+              ? "pads " +
+                fp.land.pad[0].toFixed(2) +
+                " × " +
+                fp.land.pad[1].toFixed(2) +
+                " mm on " +
+                (2 * fp.land.offset).toFixed(2) +
+                " mm centres"
+              : "estimated land " +
+                fp.landL.toFixed(2) +
+                " × " +
+                fp.landW.toFixed(2) +
+                " mm") +
+            ", courtyard " +
+            fp.courtL.toFixed(2) +
+            " × " +
+            fp.courtW.toFixed(2) +
+            " mm. Drawn at " +
+            scale.toFixed(0) +
+            " px per mm.";
+          var smallest = smallestCourtyard();
+          if (smallest && part.size && smallest.size !== part.size) {
+            note +=
+              " That is ×" +
+              (fp.area / smallest.area).toFixed(1) +
+              " the courtyard of the smallest package in the list (" +
+              smallest.size +
+              ").";
+          }
+          if (drawn < op.qty) {
+            note +=
+              " Showing the first " +
+              drawn +
+              " of " +
+              op.qty +
+              "; the total covers all of them.";
+          }
+          scaleNote.textContent = note;
+        }
+
+        // ==================== SELECTION ====================
+        // One line per selected part at the current operating point. Effective
+        // capacitance adds across the bank; ESR combines in parallel, so a
+        // line's share of the ripple goes as its conductance, qty ÷ ESR.
+        function selectionRows() {
+          var op = readOperatingPoint();
+          var rows = [];
+          var totals = {
+            ceff: 0,
+            conductance: 0,
+            price: 0,
+            area: 0,
+            qty: 0,
+            missingCurves: 0,
+            missingEsr: 0,
+            missingArea: 0,
+          };
+          selection.forEach(function (line) {
+            var part = parts[line.index];
+            if (!part) return;
+            var ceff = effective(part, op.vdc, op.temp);
+            var esr = esrAt(part, op.freqKHz / 1000);
+            var area = boardArea(part);
+            var row = {
+              index: line.index,
+              part: part,
+              qty: line.qty,
+              ceff: ceff,
+              lineCeff: ceff == null ? null : ceff * line.qty,
+              esr: esr,
+              lineEsr: esr == null ? null : esr / line.qty,
+              price: part.jlcPrice == null ? null : part.jlcPrice * line.qty,
+              area: area == null ? null : area.courtyard * line.qty,
+            };
+            rows.push(row);
+            totals.qty += line.qty;
+            if (row.lineCeff == null) totals.missingCurves++;
+            else totals.ceff += row.lineCeff;
+            if (row.lineEsr == null) totals.missingEsr++;
+            else totals.conductance += 1 / row.lineEsr;
+            if (row.price != null) totals.price += row.price;
+            if (row.area == null) totals.missingArea++;
+            else totals.area += row.area;
+          });
+          totals.esr = totals.conductance > 0 ? 1 / totals.conductance : null;
+          rows.forEach(function (row) {
+            row.cShare =
+              totals.ceff > 0 && row.lineCeff != null
+                ? (row.lineCeff / totals.ceff) * 100
+                : null;
+            row.esrShare =
+              totals.conductance > 0 && row.lineEsr != null
+                ? (1 / row.lineEsr / totals.conductance) * 100
+                : null;
+          });
+          return { rows: rows, totals: totals, op: op };
+        }
+
+        function renderSelection() {
+          var state = selectionRows();
+          var rows = state.rows;
+          var totals = state.totals;
+          var op = state.op;
+
+          selectionCount.textContent = rows.length
+            ? rows.length + (rows.length === 1 ? " line" : " lines")
+            : "";
+          selectionEmpty.hidden = rows.length > 0;
+          selectionHint.hidden = rows.length === 0;
+          clearSelectionButton.hidden = rows.length === 0;
+          selectionTableWrap.hidden = rows.length === 0;
+          selectionTotalsEl.hidden = rows.length === 0;
+
+          selectionBody.innerHTML = rows
+            .map(function (row) {
+              return (
+                "<tr" +
+                (row.index === activeLine ? ' class="selected-row"' : "") +
+                ' data-index="' +
+                row.index +
+                '"><td data-label="Part">' +
+                escapeHTML(row.part.pn) +
+                '</td><td data-label="Package">' +
+                escapeHTML(row.part.size || "—") +
+                '</td><td class="num qty-cell" data-label="Qty"><button type="button" class="action-btn" data-step="-1" data-index="' +
+                row.index +
+                '" aria-label="One fewer ' +
+                escapeHTML(row.part.pn) +
+                '"' +
+                (row.qty <= 1 ? " disabled" : "") +
+                '>−</button><span class="qty-value">' +
+                row.qty +
+                '</span><button type="button" class="action-btn" data-step="1" data-index="' +
+                row.index +
+                '" aria-label="One more ' +
+                escapeHTML(row.part.pn) +
+                '">+</button></td><td class="num" data-label="Capacitance">' +
+                (row.lineCeff == null
+                  ? '<span class="warn-pill">no data</span>'
+                  : formatCap(row.lineCeff) +
+                    (row.cShare == null
+                      ? ""
+                      : ' <span class="optional">' +
+                        row.cShare.toFixed(0) +
+                        "%</span>")) +
+                '</td><td class="num" data-label="ESR">' +
+                (row.lineEsr == null
+                  ? "—"
+                  : formatOhms(row.lineEsr) +
+                    (row.esrShare == null
+                      ? ""
+                      : ' <span class="optional">' +
+                        row.esrShare.toFixed(0) +
+                        "%</span>")) +
+                '</td><td class="num" data-label="Price">' +
+                formatMoney(row.price) +
+                '</td><td class="num" data-label="Area">' +
+                formatArea(row.area) +
+                '</td><td class="num remove-cell"><button type="button" class="action-btn" data-remove="' +
+                row.index +
+                '" aria-label="Remove ' +
+                escapeHTML(row.part.pn) +
+                ' from the selection">Remove</button></td></tr>'
+              );
+            })
+            .join("");
+
+          document.getElementById("selection-c").textContent = totals.ceff
+            ? formatCap(totals.ceff)
+            : "—";
+          document.getElementById("selection-c-at").textContent =
+            "(at " + op.vdc + " V, " + op.temp + " °C)";
+          document.getElementById("selection-esr").textContent = formatOhms(
+            totals.esr,
+          );
+          document.getElementById("selection-esr-at").textContent =
+            "(in parallel, at " + op.freqKHz + " kHz)";
+          document.getElementById("selection-qty").textContent = rows.length
+            ? rows.length + " × line, " + totals.qty + " parts"
+            : "—";
+          document.getElementById("selection-price").textContent = formatMoney(
+            totals.price,
+          );
+          document.getElementById("selection-area").textContent = totals.area
+            ? formatArea(totals.area)
+            : "—";
+          document.getElementById("selection-area-at").textContent =
+            "(courtyards, " +
+            (DENSITY[densityLevel] || DENSITY.nominal).label +
+            " density)";
+          document.getElementById("selection-cost").textContent =
+            totals.ceff > 0 && totals.price > 0
+              ? ((totals.price / totals.ceff) * 100).toFixed(2) + " ¢/µF"
+              : "—";
+
+          var notes = [];
+          if (totals.missingCurves) {
+            notes.push(
+              '<span class="warn-pill">No curve data</span> ' +
+                totals.missingCurves +
+                (totals.missingCurves === 1 ? " line has" : " lines have") +
+                " no derating curves, so nothing of theirs is counted in the total capacitance.",
+            );
+          }
+          if (totals.missingEsr) {
+            notes.push(
+              '<span class="warn-pill">No ESR curve</span> ' +
+                totals.missingEsr +
+                (totals.missingEsr === 1 ? " line is" : " lines are") +
+                " left out of the combined ESR, which is therefore higher than the real bank.",
+            );
+          }
+          rows.forEach(function (row) {
+            if (row.part.vdc && op.vdc > row.part.vdc) {
+              notes.push(
+                '<span class="bad-pill">Over rated</span> ' +
+                  escapeHTML(row.part.pn) +
+                  " is rated " +
+                  row.part.vdc +
+                  " V.",
+              );
+            }
+          });
+          selectionWarnings.innerHTML = notes
+            .map(function (line) {
+              return '<div class="warning-line">' + line + "</div>";
+            })
+            .join("");
+
+          drawSelectionLayout(state);
+          // The bank tab's chart is about the picked line, so it moves with it.
+          if (currentTab === "bank") renderChart();
+        }
+
+        // Shelf packing: fill a row of courtyards left to right, drop to a new
+        // shelf when the next one will not fit, and keep the block about as
+        // wide as the card beside it.
+        function packShelves(tiles, targetMM) {
+          var shelves = [];
+          var shelf = null;
+          tiles.forEach(function (tile) {
+            if (!shelf || shelf.length + tile.courtL > targetMM) {
+              shelf = { length: 0, height: 0, items: [] };
+              shelves.push(shelf);
+            }
+            tile.x = shelf.length;
+            shelf.length += tile.courtL;
+            shelf.height = Math.max(shelf.height, tile.courtW);
+            shelf.items.push(tile);
+          });
+          var y = 0;
+          var width = 0;
+          shelves.forEach(function (row) {
+            row.y = y;
+            y += row.height;
+            width = Math.max(width, row.length);
+          });
+          return { shelves: shelves, width: width, height: y };
+        }
+
+        function drawSelectionLayout(state) {
+          var rows = state.rows;
+          var op = state.op;
+          var drawLimit = 240;
+          var tiles = [];
+          var skipped = 0;
+          var placeable = [];
+
+          rows.forEach(function (row) {
+            var fp = footprintOf(row.part);
+            if (!fp) {
+              skipped += row.qty;
+              return;
+            }
+            placeable.push({ row: row, fp: fp });
+          });
+
+          // Widest courtyards first, so shelves hold parts of a like height.
+          placeable.sort(function (a, b) {
+            return b.fp.courtW - a.fp.courtW || b.fp.courtL - a.fp.courtL;
+          });
+
+          var wanted = 0;
+          placeable.forEach(function (item) {
+            wanted += item.row.qty;
+            for (var i = 0; i < item.row.qty && tiles.length < drawLimit; i++) {
+              tiles.push({
+                courtL: item.fp.courtL,
+                courtW: item.fp.courtW,
+                fp: item.fp,
+                part: item.row.part,
+                index: item.row.index,
+              });
+            }
+          });
+
+          if (!tiles.length) {
+            layoutWrap.innerHTML = "";
+            layoutWrap.hidden = true;
+            layoutCount.textContent = "";
+            layoutNote.textContent = rows.length
+              ? "No package dimensions for the selected parts, so there is nothing to draw."
+              : "Add a part to the selection to see it laid out here.";
+            return;
+          }
+
+          var totalArea = tiles.reduce(function (sum, tile) {
+            return sum + tile.courtL * tile.courtW;
+          }, 0);
+          var packed = packShelves(
+            tiles,
+            Math.max(tiles[0].courtL, Math.sqrt(totalArea * BANK_ASPECT)),
+          );
+
+          var padX = 8;
+          var legendH = 20;
+          var barH = 30;
+          var topPad = 8;
+          var maxWidth = 720;
+          var maxBandH = 300;
+          var scale = Math.min(
+            (maxWidth - 2 * padX) / packed.width,
+            maxBandH / packed.height,
+            72,
+          );
+          var blockPx = packed.width * scale;
+          var bandH = packed.height * scale;
+          var width = Math.round(
+            Math.max(260, Math.min(maxWidth, blockPx + 2 * padX)),
+          );
+          var originX = padX + (width - 2 * padX - blockPx) / 2;
+          var height = legendH + topPad + bandH + barH;
+
+          var svg = [
+            '<svg class="curve" viewBox="0 0 ' +
+              width +
+              " " +
+              height.toFixed(0) +
+              '" role="img" aria-label="' +
+              escapeHTML(
+                tiles.length +
+                  " selected parts drawn to scale with land patterns and courtyards",
+              ) +
+              '">',
+          ];
+
+          [
+            { cls: "fp-body", text: "Body" },
+            { cls: "fp-land", text: "Pads" },
+            { cls: "fp-court", text: "Courtyard" },
+          ].forEach(function (item, i) {
+            var x = padX + i * 66;
+            svg.push(
+              '<rect class="' +
+                item.cls +
+                '" x="' +
+                x +
+                '" y="4" width="14" height="9" />',
+            );
+            svg.push(
+              '<text x="' + (x + 18) + '" y="12">' + item.text + "</text>",
+            );
+          });
+
+          packed.shelves.forEach(function (shelf) {
+            shelf.items.forEach(function (tile) {
+              var fp = tile.fp;
+              var x = originX + tile.x * scale;
+              var y = legendH + topPad + shelf.y * scale;
+              var courtLpx = fp.courtL * scale;
+              var courtWpx = fp.courtW * scale;
+              svg.push(
+                "<g><title>" +
+                  escapeHTML(
+                    tile.part.pn +
+                      " · " +
+                      (tile.part.size || "") +
+                      " · courtyard " +
+                      fp.courtL.toFixed(2) +
+                      " × " +
+                      fp.courtW.toFixed(2) +
+                      " mm",
+                  ) +
+                  "</title>",
+              );
+              var active = tile.index === activeLine;
+              svg.push(
+                '<rect class="fp-court' +
+                  (active ? " fp-court-active" : "") +
+                  '" x="' +
+                  x.toFixed(1) +
+                  '" y="' +
+                  y.toFixed(1) +
+                  '" width="' +
+                  courtLpx.toFixed(1) +
+                  '" height="' +
+                  courtWpx.toFixed(1) +
+                  '" />',
+              );
+              var padY = (y + (courtWpx - fp.landW * scale) / 2).toFixed(1);
+              var padH = (fp.landW * scale).toFixed(1);
+              if (fp.land.reference) {
+                var padWpx = fp.land.pad[0] * scale;
+                [-fp.land.offset, fp.land.offset].forEach(function (offset) {
+                  svg.push(
+                    '<rect class="fp-land" x="' +
+                      (x + courtLpx / 2 + offset * scale - padWpx / 2).toFixed(
+                        1,
+                      ) +
+                      '" y="' +
+                      padY +
+                      '" width="' +
+                      padWpx.toFixed(1) +
+                      '" height="' +
+                      padH +
+                      '" />',
+                  );
+                });
+              } else {
+                svg.push(
+                  '<rect class="fp-land" x="' +
+                    (x + (courtLpx - fp.landL * scale) / 2).toFixed(1) +
+                    '" y="' +
+                    padY +
+                    '" width="' +
+                    (fp.landL * scale).toFixed(1) +
+                    '" height="' +
+                    padH +
+                    '" />',
+                );
+              }
+              svg.push(
+                '<rect class="' +
+                  (activeLine != null && !active ? "fp-body-dim" : "fp-body") +
+                  '" x="' +
+                  (x + (courtLpx - fp.body[0] * scale) / 2).toFixed(1) +
+                  '" y="' +
+                  (y + (courtWpx - fp.body[1] * scale) / 2).toFixed(1) +
+                  '" width="' +
+                  (fp.body[0] * scale).toFixed(1) +
+                  '" height="' +
+                  (fp.body[1] * scale).toFixed(1) +
+                  '" />',
+              );
+              svg.push("</g>");
+            });
+          });
+
+          var barMM = scaleBarMM(
+            Math.min(packed.width, ((width - 2 * padX) * 0.3) / scale),
+          );
+          var barPx = barMM * scale;
+          var barY = Math.round(legendH + topPad + bandH + 14);
+          svg.push(
+            '<line class="axis" x1="' +
+              padX +
+              '" y1="' +
+              barY +
+              '" x2="' +
+              (padX + barPx).toFixed(1) +
+              '" y2="' +
+              barY +
+              '" />',
+          );
+          [padX, padX + barPx].forEach(function (tick) {
+            svg.push(
+              '<line class="axis" x1="' +
+                tick.toFixed(1) +
+                '" y1="' +
+                (barY - 4) +
+                '" x2="' +
+                tick.toFixed(1) +
+                '" y2="' +
+                (barY + 4) +
+                '" />',
+            );
+          });
+          svg.push(
+            '<text x="' +
+              (padX + barPx + 6).toFixed(1) +
+              '" y="' +
+              (barY + 4) +
+              '">' +
+              barMM +
+              " mm</text>",
+          );
+          svg.push(
+            '<text class="fp-label" x="' +
+              (width - padX) +
+              '" y="' +
+              (barY + 4) +
+              '" text-anchor="end">' +
+              escapeHTML(formatArea(state.totals.area)) +
+              " total</text>",
+          );
+          svg.push("</svg>");
+          layoutWrap.innerHTML = svg.join("");
+          layoutWrap.hidden = false;
+
+          layoutCount.textContent =
+            tiles.length + (tiles.length === 1 ? " part" : " parts");
+          var note =
+            "Packed " +
+            packed.shelves.length +
+            (packed.shelves.length === 1 ? " row" : " rows") +
+            " into " +
+            packed.width.toFixed(2) +
+            " × " +
+            packed.height.toFixed(2) +
+            " mm of board at " +
+            (DENSITY[densityLevel] || DENSITY.nominal).label +
+            " density, drawn at " +
+            scale.toFixed(0) +
+            " px per mm. Courtyards touch, so this is the tightest the parts may sit; the total is the sum of their courtyards, which ignores the gaps shelf packing leaves.";
+          if (tiles.length < wanted) {
+            note +=
+              " Showing the first " + tiles.length + " of " + wanted + ".";
+          }
+          if (skipped) {
+            note +=
+              " " +
+              skipped +
+              (skipped === 1 ? " part has" : " parts have") +
+              " no package dimensions and is left out of the drawing.";
+          }
+          if (activeLine != null) {
+            var activeRow = null;
+            rows.forEach(function (row) {
+              if (row.index === activeLine) activeRow = row;
+            });
+            if (activeRow) {
+              note +=
+                " " +
+                activeRow.part.pn +
+                " is picked out, " +
+                activeRow.qty +
+                " of " +
+                tiles.length +
+                " drawn.";
+            }
+          }
+          layoutNote.textContent = note;
+        }
+
         function renderExport() {
           exportText.value = buildExport();
         }
+
+        // ==================== TABS ====================
+        // One copy of each card, moved between the two panels rather than
+        // duplicated, so every id, listener and piece of state stays single.
+        // A card the active tab has no use for is left parked in the other
+        // panel, which is hidden.
+        var panels = {
+          single: document.getElementById("panel-single"),
+          bank: document.getElementById("panel-bank"),
+        };
+        var tabButtons = {
+          single: document.getElementById("tab-single"),
+          bank: document.getElementById("tab-bank"),
+        };
+        var cards = {
+          op: document.getElementById("card-op"),
+          result: document.getElementById("card-result"),
+          curves: document.getElementById("card-curves"),
+          size: document.getElementById("card-size"),
+          parts: document.getElementById("card-parts"),
+          selection: document.getElementById("card-selection"),
+          layout: document.getElementById("card-layout"),
+        };
+        var slots = {
+          opResult: document.getElementById("row-op-result"),
+          curvesSize: document.getElementById("row-curves-size"),
+          partsSingle: document.getElementById("slot-parts-single"),
+          opBank: document.getElementById("slot-op-bank"),
+          partsBank: document.getElementById("slot-parts-bank"),
+          curvesLayout: document.getElementById("row-curves-layout"),
+        };
+        var currentTab = "single";
+
+        function applyTab(name) {
+          currentTab = name === "bank" ? "bank" : "single";
+          if (currentTab === "single") {
+            slots.opResult.appendChild(cards.op);
+            slots.opResult.appendChild(cards.result);
+            slots.curvesSize.appendChild(cards.curves);
+            slots.curvesSize.appendChild(cards.size);
+            slots.partsSingle.appendChild(cards.parts);
+          } else {
+            slots.opBank.appendChild(cards.op);
+            slots.partsBank.appendChild(cards.parts);
+            slots.curvesLayout.appendChild(cards.curves);
+            slots.curvesLayout.appendChild(cards.layout);
+          }
+          Object.keys(panels).forEach(function (key) {
+            if (key === currentTab) panels[key].removeAttribute("hidden");
+            else panels[key].setAttribute("hidden", "hidden");
+            tabButtons[key].setAttribute(
+              "aria-selected",
+              key === currentTab ? "true" : "false",
+            );
+          });
+          document.documentElement.setAttribute("data-tab", currentTab);
+          if (parts.length) renderChart();
+        }
+
+        Object.keys(tabButtons).forEach(function (key) {
+          tabButtons[key].addEventListener("click", function () {
+            applyTab(key);
+          });
+        });
+
+        document
+          .querySelector('[role="tablist"]')
+          .addEventListener("keydown", function (event) {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            var next = currentTab === "single" ? "bank" : "single";
+            applyTab(next);
+            tabButtons[next].focus();
+            event.preventDefault();
+          });
 
         // ==================== WIRING ====================
         function renderAll() {
@@ -2216,8 +4245,76 @@
           renderBiasPresets();
           renderTable();
           renderChart();
+          drawFootprints();
+          renderSelection();
           renderExport();
         }
+
+        // Adding a part already on the list adds to its quantity rather than
+        // repeating the line, whichever button did the adding.
+        function addToSelection(index) {
+          if (!parts[index]) return;
+          var op = readOperatingPoint();
+          var existing = null;
+          selection.forEach(function (line) {
+            if (line.index === index) existing = line;
+          });
+          if (existing) existing.qty += op.qty;
+          else selection.push({ index: index, qty: op.qty });
+          renderSelection();
+        }
+
+        document
+          .getElementById("add-selection-btn")
+          .addEventListener("click", function () {
+            addToSelection(selectedIndex);
+          });
+
+        // Delegated, so it survives every redraw of the parts table.
+        partsBody.addEventListener("click", function (event) {
+          var button = event.target.closest("[data-add]");
+          if (!button) return;
+          addToSelection(Number(button.dataset.add));
+        });
+
+        clearSelectionButton.addEventListener("click", function () {
+          selection = [];
+          activeLine = null;
+          renderSelection();
+        });
+
+        selectionBody.addEventListener("click", function (event) {
+          var step = event.target.closest("[data-step]");
+          if (step) {
+            var stepIndex = Number(step.dataset.index);
+            selection.forEach(function (line) {
+              if (line.index === stepIndex) {
+                line.qty = Math.max(1, line.qty + Number(step.dataset.step));
+              }
+            });
+            renderSelection();
+            return;
+          }
+
+          var remove = event.target.closest("[data-remove]");
+          if (remove) {
+            var removeIndex = Number(remove.dataset.remove);
+            selection = selection.filter(function (line) {
+              return line.index !== removeIndex;
+            });
+            if (activeLine === removeIndex) activeLine = null;
+            renderSelection();
+            return;
+          }
+
+          // Clicking the line itself picks it out in the layout, and clicking
+          // it again lets the whole bank stand out evenly.
+          var tr = event.target.closest("tr");
+          if (!tr || !tr.dataset.index) return;
+          var lineIndex = Number(tr.dataset.index);
+          activeLine = activeLine === lineIndex ? null : lineIndex;
+          renderSelection();
+        });
 
         [inputVdc, inputTemp, inputQty, inputFreq].forEach(function (input) {
           input.addEventListener("input", renderAll);
@@ -2255,6 +4352,26 @@
               sortKey = key;
               sortDir = th.dataset.type === "text" ? "asc" : "desc";
             }
+            renderTable();
+            renderExport();
+          });
+
+        document
+          .getElementById("data-filters")
+          .addEventListener("click", function (event) {
+            var button = event.target.closest(".filter-chip");
+            if (!button) return;
+            dataFilter = button.dataset.data;
+            Array.prototype.forEach.call(
+              this.querySelectorAll(".filter-chip"),
+              function (chip) {
+                chip.classList.toggle("active", chip === button);
+                chip.setAttribute(
+                  "aria-pressed",
+                  chip === button ? "true" : "false",
+                );
+              },
+            );
             renderTable();
             renderExport();
           });
@@ -2308,6 +4425,24 @@
             renderExport();
           });
 
+        // The parts table is long, so it folds away. The count stays in the
+        // header either way, and the table is kept rendered so the operating
+        // point it was sorted at is still current when it comes back.
+        var partsPanel = document.getElementById("parts-panel");
+        var togglePartsButton = document.getElementById("toggle-parts-btn");
+        togglePartsButton.addEventListener("click", function () {
+          var wasHidden = partsPanel.hasAttribute("hidden");
+          if (wasHidden) partsPanel.removeAttribute("hidden");
+          else partsPanel.setAttribute("hidden", "hidden");
+          togglePartsButton.textContent = wasHidden
+            ? "Hide parts"
+            : "Show parts";
+          togglePartsButton.setAttribute(
+            "aria-expanded",
+            wasHidden ? "true" : "false",
+          );
+        });
+
         var toggleExportButton = document.getElementById("toggle-export-btn");
         toggleExportButton.addEventListener("click", function () {
           var isHidden = exportSection.hasAttribute("hidden");
@@ -2342,29 +4477,40 @@
               : "Copy failed — select the text and copy manually.";
           });
 
-        document.getElementById("reset-btn").addEventListener("click", function () {
-          inputVdc.value = "3.3";
-          inputTemp.value = "25";
-          inputQty.value = "1";
-          inputFreq.value = "500";
-          inputFilter.value = "";
-          densityLevel = "nominal";
-          Array.prototype.forEach.call(
-            document.querySelectorAll("#density-chips .filter-chip"),
-            function (chip) {
-              chip.classList.toggle(
-                "active",
-                chip.dataset.density === "nominal",
-              );
-            },
-          );
-          sizeFilter.clear();
-          tccFilter.clear();
-          vdcFilter.clear();
-          vendorFilter.clear();
-          buildFilters();
-          renderAll();
-        });
+        document
+          .getElementById("reset-btn")
+          .addEventListener("click", function () {
+            inputVdc.value = "3.3";
+            inputTemp.value = "25";
+            inputQty.value = "1";
+            inputFreq.value = "500";
+            inputFilter.value = "";
+            densityLevel = "nominal";
+            Array.prototype.forEach.call(
+              document.querySelectorAll("#density-chips .filter-chip"),
+              function (chip) {
+                chip.classList.toggle(
+                  "active",
+                  chip.dataset.density === "nominal",
+                );
+              },
+            );
+            dataFilter = "";
+            Array.prototype.forEach.call(
+              document.querySelectorAll("#data-filters .filter-chip"),
+              function (chip) {
+                var active = chip.dataset.data === "";
+                chip.classList.toggle("active", active);
+                chip.setAttribute("aria-pressed", active ? "true" : "false");
+              },
+            );
+            sizeFilter.clear();
+            tccFilter.clear();
+            vdcFilter.clear();
+            vendorFilter.clear();
+            buildFilters();
+            renderAll();
+          });
 
         function buildFilters() {
           function pick(chosen) {
@@ -2410,6 +4556,8 @@
             pick(vendorFilter),
           );
         }
+
+        applyTab("single");
 
         if (!parts.length) {
           document.getElementById("table-count").textContent =
