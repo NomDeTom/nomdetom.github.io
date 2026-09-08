@@ -152,6 +152,7 @@
 
       .field {
         display: grid;
+        align-content: start;
         gap: 0.35rem;
         margin-bottom: 0.9rem;
       }
@@ -159,6 +160,7 @@
       label {
         font-weight: 600;
         display: grid;
+        align-content: start;
         gap: 0.35rem;
       }
 
@@ -720,6 +722,12 @@
             </div>
             <div class="result">
               <span class="result-label"
+                >Bank ESR <span class="optional" id="out-esr-bank-at"></span
+              ></span>
+              <span class="result-value" id="out-esr-bank">—</span>
+            </div>
+            <div class="result">
+              <span class="result-label"
                 >Impedance <span class="optional">(|Z|)</span></span
               >
               <span class="result-value" id="out-z">—</span>
@@ -823,6 +831,7 @@
                 <th class="sortable num" data-key="ceff">C effective</th>
                 <th class="sortable num" data-key="retained">Retained</th>
                 <th class="sortable num" data-key="bank">Bank</th>
+                <th class="sortable num" data-key="esr">ESR</th>
                 <th class="sortable num" data-key="area">Area</th>
                 <th class="sortable num" data-key="density">µF / mm²</th>
                 <th class="sortable num" data-key="cost">Cost / eff µF</th>
@@ -887,6 +896,12 @@
             pages, at 25 °C and no bias. Ripple current is the manufacturer's
             thermal model in still air, which is optimistic on a dense
             board.</span
+          >
+          <span
+            >The bank ESR is one part's ESR at the selected frequency divided by
+            the number in parallel, which assumes identical parts sharing the
+            ripple equally and ignores any difference in trace resistance
+            between them.</span
           >
           <span
             >Curves are captured to this page by one script per vendor:
@@ -1451,11 +1466,16 @@
             "(at " + op.temp + " °C)";
 
           var freqMHz = op.freqKHz / 1000;
-          document.getElementById("out-esr").textContent = formatOhms(
-            esrAt(part, freqMHz),
-          );
+          var esr = esrAt(part, freqMHz);
+          document.getElementById("out-esr").textContent = formatOhms(esr);
           document.getElementById("out-esr-at").textContent =
-            "(at " + op.freqKHz + " kHz)";
+            "(one part, at " + op.freqKHz + " kHz)";
+          // Identical parts in parallel each take a share of the ripple, so the
+          // bank's ESR is one part's divided by the count.
+          document.getElementById("out-esr-bank").textContent =
+            esr == null ? "—" : formatOhms(esr / op.qty);
+          document.getElementById("out-esr-bank-at").textContent =
+            "(" + op.qty + " × in parallel, at " + op.freqKHz + " kHz)";
           document.getElementById("out-z").textContent = formatOhms(
             impedanceAt(part, freqMHz),
           );
@@ -1625,6 +1645,7 @@
             var overRated = part.vdc && op.vdc > part.vdc;
             var area = areaOf(part);
             var density = densityPerArea(part, ceff);
+            var esr = esrAt(part, op.freqKHz / 1000);
             rows.push({
               index: index,
               values: {
@@ -1637,6 +1658,7 @@
                 ceff: ceff,
                 retained: retained,
                 bank: ceff == null ? null : ceff * op.qty,
+                esr: esr,
                 area: area,
                 density: density,
                 cost:
@@ -1676,6 +1698,8 @@
                 '</td><td class="num">' +
                 (ceff == null ? "—" : formatCap(ceff * op.qty)) +
                 '</td><td class="num">' +
+                formatOhms(esr) +
+                '</td><td class="num">' +
                 formatArea(areaOf(part)) +
                 '</td><td class="num">' +
                 (densityPerArea(part, ceff) == null
@@ -1704,7 +1728,9 @@
             op.vdc +
             " V, " +
             op.temp +
-            " °C";
+            " °C, ESR at " +
+            op.freqKHz +
+            " kHz";
 
           Array.prototype.forEach.call(
             partsBody.querySelectorAll("tr"),
@@ -2080,6 +2106,7 @@
             "C effective",
             "Retained",
             "Bank of " + op.qty,
+            "ESR",
             "Area mm2",
             "Eff uF per mm2",
             "Cost / eff uF",
@@ -2100,6 +2127,9 @@
               ceff == null ? "no data" : formatCap(ceff),
               ceff == null ? "" : formatPercent((ceff / nominalUF) * 100),
               ceff == null ? "" : formatCap(ceff * op.qty),
+              esrAt(item, op.freqKHz / 1000) == null
+                ? ""
+                : formatOhms(esrAt(item, op.freqKHz / 1000)),
               areaOf(item) == null ? "" : areaOf(item).toFixed(2),
               densityPerArea(item, ceff) == null
                 ? ""
@@ -2116,6 +2146,7 @@
               ceff: ceff,
               retained: ceff == null ? null : (ceff / nominalUF) * 100,
               bank: ceff == null ? null : ceff * op.qty,
+              esr: esrAt(item, op.freqKHz / 1000),
               area: areaOf(item),
               density: densityPerArea(item, ceff),
               cost:
