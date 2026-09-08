@@ -886,7 +886,9 @@
                     step="1"
                     value="1"
                   />
-                  <span class="field-hint">Bank size for the totals below</span>
+                  <span class="field-hint" id="qty-hint"
+                    >Bank size for the totals below</span
+                  >
                 </label>
               </div>
               <div class="field">
@@ -936,6 +938,49 @@
                   </button>
                   <button type="button" class="filter-chip" data-vdc="max">
                     Max
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <span class="field-hint">Temperature presets</span>
+                <div class="filter-chips" id="temp-presets">
+                  <button type="button" class="filter-chip" data-temp="0">
+                    0 °C
+                  </button>
+                  <button type="button" class="filter-chip" data-temp="25">
+                    25 °C
+                  </button>
+                  <button type="button" class="filter-chip" data-temp="35">
+                    35 °C
+                  </button>
+                  <button type="button" class="filter-chip" data-temp="45">
+                    45 °C
+                  </button>
+                  <button type="button" class="filter-chip" data-temp="55">
+                    55 °C
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <span class="field-hint">Frequency presets</span>
+                <div class="filter-chips" id="freq-presets">
+                  <button type="button" class="filter-chip" data-khz="250">
+                    250 kHz
+                  </button>
+                  <button type="button" class="filter-chip" data-khz="400">
+                    400 kHz
+                  </button>
+                  <button type="button" class="filter-chip" data-khz="500">
+                    500 kHz
+                  </button>
+                  <button type="button" class="filter-chip" data-khz="750">
+                    750 kHz
+                  </button>
+                  <button type="button" class="filter-chip" data-khz="1000">
+                    1 MHz
+                  </button>
+                  <button type="button" class="filter-chip" data-khz="1500">
+                    1.5 MHz
                   </button>
                 </div>
               </div>
@@ -2016,10 +2061,45 @@
         }
 
         // ==================== RENDERING ====================
+        // The voltage the bias presets call "Max": the selected part's rating
+        // on the single part tab, and the lowest rating in the bank on the
+        // other, since that is the part that gives out first.
+        function ratedLimit() {
+          if (currentTab === "bank" && selection.length) {
+            var lowest = null;
+            selection.forEach(function (line) {
+              var line_part = parts[line.index];
+              if (!line_part || !line_part.vdc) return;
+              lowest =
+                lowest == null
+                  ? line_part.vdc
+                  : Math.min(lowest, line_part.vdc);
+            });
+            return lowest;
+          }
+          var selected = parts[selectedIndex];
+          return selected && selected.vdc ? selected.vdc : null;
+        }
+
+        function renderValueChips(containerId, key, current) {
+          Array.prototype.forEach.call(
+            document.querySelectorAll("#" + containerId + " .filter-chip"),
+            function (chip) {
+              var target = Number(chip.dataset[key]);
+              var active =
+                isFinite(target) && Math.abs(current - target) < 1e-9;
+              chip.classList.toggle("active", active);
+              chip.setAttribute("aria-pressed", active ? "true" : "false");
+            },
+          );
+        }
+
         function renderBiasPresets() {
+          renderValueChips("temp-presets", "temp", Number(inputTemp.value));
+          renderValueChips("freq-presets", "khz", Number(inputFreq.value));
           var current = Number(inputVdc.value);
-          var part = parts[selectedIndex];
-          var rated = part && part.vdc ? part.vdc : null;
+          var rated = ratedLimit();
+          var bank = currentTab === "bank" && selection.length;
           Array.prototype.forEach.call(
             document.querySelectorAll("#bias-presets .filter-chip"),
             function (chip) {
@@ -2031,6 +2111,9 @@
               if (chip.dataset.vdc === "max") {
                 chip.textContent = rated ? "Max (" + rated + " V)" : "Max";
                 chip.disabled = !rated;
+                chip.title = bank
+                  ? "Lowest rating in the selection"
+                  : "This part's rating";
               }
             },
           );
@@ -2133,7 +2216,92 @@
             ceff,
           );
 
-          renderWarnings(part, op);
+          if (currentTab === "bank" && selection.length) {
+            renderBankWarnings(op);
+          } else {
+            renderWarnings(part, op);
+          }
+        }
+
+        // "CL05A106MQ5NUNC (6.3 V), CL31A107MQHNNNE (6.3 V) and 2 more"
+        function namesList(names) {
+          if (names.length <= 3) return names.join(", ");
+          return (
+            names.slice(0, 3).join(", ") +
+            " and " +
+            (names.length - 3) +
+            " more"
+          );
+        }
+
+        function renderBankWarnings(op) {
+          var lines = [];
+          var over = [];
+          var near = [];
+          var heldBias = [];
+          var heldTemp = [];
+          selection.forEach(function (line) {
+            var part = parts[line.index];
+            if (!part) return;
+            if (part.vdc && op.vdc > part.vdc) {
+              over.push(part.pn + " (" + part.vdc + " V)");
+            } else if (part.vdc && op.vdc > part.vdc * 0.8) {
+              near.push(part.pn + " (" + part.vdc + " V)");
+            }
+            if (!hasCurves(part)) return;
+            if (op.vdc > part.dcBias[part.dcBias.length - 1][0]) {
+              heldBias.push(part.pn);
+            }
+            if (part.tcc25 && part.tcc25.length) {
+              var lo = part.tcc25[0][0];
+              var hi = part.tcc25[part.tcc25.length - 1][0];
+              if (op.temp < lo || op.temp > hi) heldTemp.push(part.pn);
+            }
+          });
+
+          if (over.length) {
+            lines.push(
+              '<span class="bad-pill">Over rated</span> ' +
+                op.vdc +
+                " V exceeds the rating of " +
+                (over.length === 1 ? "one line" : over.length + " lines") +
+                ": " +
+                escapeHTML(namesList(over)) +
+                ".",
+            );
+          }
+          if (near.length) {
+            lines.push(
+              '<span class="warn-pill">Near rating</span> ' +
+                op.vdc +
+                " V is above 80% of the rating of " +
+                escapeHTML(namesList(near)) +
+                ".",
+            );
+          }
+          if (heldBias.length) {
+            lines.push(
+              '<span class="warn-pill">Beyond curve</span> the bias curve stops below ' +
+                op.vdc +
+                " V for " +
+                escapeHTML(namesList(heldBias)) +
+                "; those values are held at the end of the curve.",
+            );
+          }
+          if (heldTemp.length) {
+            lines.push(
+              '<span class="warn-pill">Beyond curve</span> the temperature curve does not reach ' +
+                op.temp +
+                " °C for " +
+                escapeHTML(namesList(heldTemp)) +
+                "; those values are held at the nearest end.",
+            );
+          }
+          warningsEl.innerHTML = lines
+            .map(function (line) {
+              return '<div class="warning-line">' + line + "</div>";
+            })
+            .join("");
         }
 
         function renderWarnings(part, op) {
@@ -4196,6 +4364,7 @@
           curvesLayout: document.getElementById("row-curves-layout"),
         };
         var currentTab = "single";
+        var qtyHint = document.getElementById("qty-hint");
 
         function applyTab(name) {
           currentTab = name === "bank" ? "bank" : "single";
@@ -4220,7 +4389,13 @@
             );
           });
           document.documentElement.setAttribute("data-tab", currentTab);
-          if (parts.length) renderChart();
+          qtyHint.textContent =
+            currentTab === "bank"
+              ? "How many of a part to add to the selection"
+              : "Bank size for the totals below";
+          // Everything in the operating point card reads differently per tab —
+          // what "Max" means, which warnings apply — so redraw all of it.
+          if (parts.length) renderAll();
         }
 
         Object.keys(tabButtons).forEach(function (key) {
@@ -4250,6 +4425,16 @@
           renderExport();
         }
 
+        // The operating point card reads the bank on the second tab, so a
+        // change to the selection has to refresh it too.
+        function selectionChanged() {
+          renderSelection();
+          if (currentTab === "bank") {
+            renderResult();
+            renderBiasPresets();
+          }
+        }
+
         // Adding a part already on the list adds to its quantity rather than
         // repeating the line, whichever button did the adding.
         function addToSelection(index) {
@@ -4261,7 +4446,7 @@
           });
           if (existing) existing.qty += op.qty;
           else selection.push({ index: index, qty: op.qty });
-          renderSelection();
+          selectionChanged();
         }
 
         document
@@ -4280,7 +4465,7 @@
         clearSelectionButton.addEventListener("click", function () {
           selection = [];
           activeLine = null;
-          renderSelection();
+          selectionChanged();
         });
 
         selectionBody.addEventListener("click", function (event) {
@@ -4292,7 +4477,7 @@
                 line.qty = Math.max(1, line.qty + Number(step.dataset.step));
               }
             });
-            renderSelection();
+            selectionChanged();
             return;
           }
 
@@ -4303,7 +4488,7 @@
               return line.index !== removeIndex;
             });
             if (activeLine === removeIndex) activeLine = null;
-            renderSelection();
+            selectionChanged();
             return;
           }
 
@@ -4313,7 +4498,7 @@
           if (!tr || !tr.dataset.index) return;
           var lineIndex = Number(tr.dataset.index);
           activeLine = activeLine === lineIndex ? null : lineIndex;
-          renderSelection();
+          selectionChanged();
         });
 
         [inputVdc, inputTemp, inputQty, inputFreq].forEach(function (input) {
@@ -4330,10 +4515,9 @@
           .addEventListener("click", function (event) {
             var button = event.target.closest(".filter-chip");
             if (!button) return;
-            var part = parts[selectedIndex];
             var target =
               button.dataset.vdc === "max"
-                ? part && part.vdc
+                ? ratedLimit()
                 : Number(button.dataset.vdc);
             if (!target) return;
             inputVdc.value = String(target);
@@ -4355,6 +4539,22 @@
             renderTable();
             renderExport();
           });
+
+        [
+          { id: "temp-presets", key: "temp", input: inputTemp },
+          { id: "freq-presets", key: "khz", input: inputFreq },
+        ].forEach(function (group) {
+          document
+            .getElementById(group.id)
+            .addEventListener("click", function (event) {
+              var button = event.target.closest(".filter-chip");
+              if (!button) return;
+              var value = Number(button.dataset[group.key]);
+              if (!isFinite(value)) return;
+              group.input.value = String(value);
+              renderAll();
+            });
+        });
 
         document
           .getElementById("data-filters")
@@ -4557,14 +4757,13 @@
           );
         }
 
-        applyTab("single");
-
         if (!parts.length) {
+          applyTab("single");
           document.getElementById("table-count").textContent =
             "No part data in this page. Run scripts/fetch-mlcc-curves.mjs to populate it.";
         } else {
           buildFilters();
-          renderAll();
+          applyTab("single");
         }
       })();
     </script>
