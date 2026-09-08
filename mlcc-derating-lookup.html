@@ -344,9 +344,20 @@
         border-bottom: 1px solid var(--panel-bg);
       }
 
-      /* The first section of a panel butts against the tab strip. */
-      [role="tabpanel"] > div:first-child > section:first-child,
-      [role="tabpanel"] > section:first-child {
+      /* A row owns the space above it, so the cards inside it are the same
+         height as each other rather than one starting a margin lower. */
+      .calculator-grid {
+        margin-top: 1rem;
+      }
+
+      .calculator-grid > section {
+        margin-top: 0;
+      }
+
+      /* The top of a panel butts against the tab strip, whether the panel
+         opens with a row of cards or with a slot holding one. */
+      [role="tabpanel"] > *:first-child,
+      [role="tabpanel"] > *:first-child > section:first-child {
         margin-top: 0;
       }
 
@@ -864,55 +875,6 @@
                     >Volts across the part in circuit</span
                   >
                 </label>
-              </div>
-              <div class="field">
-                <label>
-                  Temperature
-                  <input
-                    id="input-temp"
-                    type="number"
-                    min="-55"
-                    max="125"
-                    step="1"
-                    value="25"
-                  />
-                  <span class="field-hint">°C at the capacitor body</span>
-                </label>
-              </div>
-              <div class="field">
-                <label>
-                  Parts in parallel
-                  <input
-                    id="input-qty"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value="1"
-                  />
-                  <span class="field-hint" id="qty-hint"
-                    >Bank size for the totals below</span
-                  >
-                </label>
-              </div>
-              <div class="field">
-                <label>
-                  Frequency
-                  <input
-                    id="input-freq"
-                    type="number"
-                    min="0.1"
-                    step="1"
-                    value="500"
-                  />
-                  <span class="field-hint"
-                    >kHz, for ESR and ripple current</span
-                  >
-                </label>
-              </div>
-            </div>
-
-            <div class="two-col-fields">
-              <div class="field">
                 <span class="field-hint">DC bias presets</span>
                 <div class="filter-chips" id="bias-presets">
                   <button type="button" class="filter-chip" data-vdc="3.3">
@@ -945,6 +907,18 @@
                 </div>
               </div>
               <div class="field">
+                <label>
+                  Temperature
+                  <input
+                    id="input-temp"
+                    type="number"
+                    min="-55"
+                    max="125"
+                    step="1"
+                    value="25"
+                  />
+                  <span class="field-hint">°C at the capacitor body</span>
+                </label>
                 <span class="field-hint">Temperature presets</span>
                 <div class="filter-chips" id="temp-presets">
                   <button type="button" class="filter-chip" data-temp="0">
@@ -965,6 +939,19 @@
                 </div>
               </div>
               <div class="field">
+                <label>
+                  Parts in parallel
+                  <input
+                    id="input-qty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="1"
+                  />
+                  <span class="field-hint" id="qty-hint"
+                    >Bank size for the totals below</span
+                  >
+                </label>
                 <span class="field-hint">Land pattern density</span>
                 <div class="filter-chips" id="density-chips">
                   <button
@@ -987,6 +974,19 @@
                 </div>
               </div>
               <div class="field">
+                <label>
+                  Frequency
+                  <input
+                    id="input-freq"
+                    type="number"
+                    min="0.1"
+                    step="1"
+                    value="500"
+                  />
+                  <span class="field-hint"
+                    >kHz, for ESR and ripple current</span
+                  >
+                </label>
                 <span class="field-hint">Frequency presets</span>
                 <div class="filter-chips" id="freq-presets">
                   <button type="button" class="filter-chip" data-khz="250">
