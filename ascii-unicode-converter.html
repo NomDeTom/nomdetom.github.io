@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tab="convert">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -220,6 +220,139 @@
         gap: 0.35rem;
       }
 
+      .tabs {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .tab {
+        border: 1px solid var(--border);
+        border-bottom: 0;
+        background: var(--page-bg);
+        color: var(--muted);
+        font: inherit;
+        font-weight: 600;
+        padding: 0.55rem 1rem;
+        margin-bottom: -1px;
+        cursor: pointer;
+      }
+
+      .tab:hover {
+        color: var(--accent);
+      }
+
+      .tab[aria-selected="true"] {
+        background: var(--panel-bg);
+        color: var(--accent);
+        border-color: var(--border);
+        border-bottom: 1px solid var(--panel-bg);
+      }
+
+      /* The top of a panel butts against the tab strip rather than starting a
+         margin below it. */
+      [role="tabpanel"] > *:first-child,
+      [role="tabpanel"] > *:first-child > section:first-child {
+        margin-top: 0;
+      }
+
+      .step {
+        margin-top: 1.4rem;
+      }
+
+      .step:first-of-type {
+        margin-top: 0;
+      }
+
+      .step-title {
+        margin: 0 0 0.2rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .step-note {
+        margin: 0 0 0.6rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      /* A bit grid is only meaningful while its columns stay aligned, so it
+         scrolls sideways instead of wrapping. */
+      .bits-wrap {
+        overflow-x: auto;
+      }
+
+      .bits-table {
+        border-collapse: collapse;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.82rem;
+      }
+
+      .bits-table th,
+      .bits-table td {
+        border: 1px solid var(--border);
+        padding: 0.2rem 0.1rem;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .bits-table th.row-label {
+        text-align: left;
+        padding: 0.2rem 0.6rem 0.2rem 0.4rem;
+        color: var(--muted);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+        position: sticky;
+        left: 0;
+        background: var(--panel-bg);
+      }
+
+      .bits-table td.bit {
+        min-width: 1.35rem;
+      }
+
+      /* Bits the encoding fixes, the zeros it pads with, and the payload bits
+         carried through are three different things, so they do not look alike. */
+      .bits-table td.fixed {
+        background: var(--accent-soft);
+        color: var(--muted);
+      }
+
+      .bits-table td.pad {
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      .bits-table td.group {
+        background: var(--accent-soft);
+        font-weight: 600;
+      }
+
+      .bits-table td.empty {
+        border: 0;
+        background: transparent;
+      }
+
+      .bits-legend {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .bits-legend .swatch {
+        display: inline-block;
+        width: 0.7rem;
+        height: 0.7rem;
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        vertical-align: -1px;
+        margin-right: 0.2rem;
+      }
+
       @media (max-width: 640px) {
         main {
           padding: 1.25rem 0.9rem 2rem;
@@ -240,7 +373,7 @@
     <main>
       <header>
         <h1>ASCII and Unicode Converter</h1>
-        <p class="subtitle">Convert between plain text, code points, UTF-8 bytes, UTF-16 units, escaped representations, and Base64.</p>
+        <p class="subtitle">Convert between plain text, code points, UTF-8 bytes, UTF-16 units, escaped representations, and Base64. The second tab breaks each encoding down bit by bit.</p>
         <div class="top-actions">
           <a class="action-btn" href="index.html">Back to index</a>
           <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
@@ -258,81 +391,158 @@
         </div>
       </header>
 
-      <section>
-        <h2>Converter</h2>
-        <div class="field-grid">
-          <div class="field">
-            <label for="input-text">Text</label>
-            <textarea id="input-text" spellcheck="false">A</textarea>
-            <div class="hint">Source text. Supports full Unicode.</div>
-          </div>
+      <div class="tabs" role="tablist" aria-label="Converter view">
+        <button
+          type="button"
+          class="tab"
+          id="tab-convert"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-convert"
+        >
+          Converter
+        </button>
+        <button
+          type="button"
+          class="tab"
+          id="tab-breakdown"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-breakdown"
+        >
+          Encoding Breakdown
+        </button>
+      </div>
 
-          <div class="field">
-            <label for="input-codepoints">Code points</label>
-            <textarea id="input-codepoints" class="mono" spellcheck="false">U+0041</textarea>
-            <div class="hint">Space or comma separated. Accepts U+0041, u+0041, 0041, or 0x41.</div>
-          </div>
+      <div id="panel-convert" role="tabpanel" aria-labelledby="tab-convert">
+        <div id="slot-converter-convert">
+          <section id="card-converter">
+            <h2>Converter</h2>
+            <div class="field-grid">
+              <div class="field">
+                <label for="input-text">Text</label>
+                <textarea id="input-text" spellcheck="false">A</textarea>
+                <div class="hint">Source text. Supports full Unicode.</div>
+              </div>
 
-          <div class="field">
-            <label for="input-utf8">UTF-8 bytes (hex)</label>
-            <textarea id="input-utf8" class="mono" spellcheck="false">41</textarea>
-            <div class="hint">Space or comma separated bytes. Example: E2 82 AC</div>
-          </div>
+              <div class="field">
+                <label for="input-codepoints">Code points</label>
+                <textarea id="input-codepoints" class="mono" spellcheck="false">U+0041</textarea>
+                <div class="hint">Space or comma separated. Accepts U+0041, u+0041, 0041, or 0x41.</div>
+              </div>
 
-          <div class="field">
-            <label for="input-utf16">UTF-16 units (hex)</label>
-            <textarea id="input-utf16" class="mono" spellcheck="false">0041</textarea>
-            <div class="hint">Space or comma separated 16-bit words. Example: D83D DE00</div>
-          </div>
+              <div class="field">
+                <label for="input-utf8">UTF-8 bytes (hex)</label>
+                <textarea id="input-utf8" class="mono" spellcheck="false">41</textarea>
+                <div class="hint">Space or comma separated bytes. Example: E2 82 AC</div>
+              </div>
 
-          <div class="field">
-            <label for="input-escapes">Escaped form</label>
-            <textarea id="input-escapes" class="mono" spellcheck="false">A</textarea>
-            <div class="hint">Supports mixed text and escapes: \xNN, \uXXXX, \u{XXXXX}, \n, \t, \\</div>
-          </div>
+              <div class="field">
+                <label for="input-utf16">UTF-16 units (hex)</label>
+                <textarea id="input-utf16" class="mono" spellcheck="false">0041</textarea>
+                <div class="hint">Space or comma separated 16-bit words. Example: D83D DE00</div>
+              </div>
 
-          <div class="field">
-            <label for="input-base64">Base64 (UTF-8)</label>
-            <textarea id="input-base64" class="mono" spellcheck="false">QQ==</textarea>
-            <div class="hint">Base64 of the UTF-8 bytes. Accepts URL-safe (-_) and missing padding.</div>
-          </div>
+              <div class="field">
+                <label for="input-escapes">Escaped form</label>
+                <textarea id="input-escapes" class="mono" spellcheck="false">A</textarea>
+                <div class="hint">Supports mixed text and escapes: \xNN, \uXXXX, \u{XXXXX}, \n, \t, \\</div>
+              </div>
+
+              <div class="field">
+                <label for="input-base64">Base64 (UTF-8)</label>
+                <textarea id="input-base64" class="mono" spellcheck="false">QQ==</textarea>
+                <div class="hint">Base64 of the UTF-8 bytes. Accepts URL-safe (-_) and missing padding.</div>
+              </div>
+            </div>
+            <p id="status" class="status">Live conversion ready.</p>
+          </section>
         </div>
-        <p id="status" class="status">Live conversion ready.</p>
-      </section>
 
-      <section>
-        <h2>Character Inspector</h2>
-        <div class="inspector-wrap">
-          <table class="inspector-table">
-            <thead>
-              <tr>
-                <th>Index</th>
-                <th>Glyph</th>
-                <th>Code point</th>
-                <th>UTF-8 bytes</th>
-                <th>UTF-16 units</th>
-                <th>ASCII</th>
-                <th>Class</th>
-              </tr>
-            </thead>
-            <tbody id="inspector-rows"></tbody>
-          </table>
-        </div>
-      </section>
+        <section>
+          <h2>Character Inspector</h2>
+          <div class="inspector-wrap">
+            <table class="inspector-table">
+              <thead>
+                <tr>
+                  <th>Index</th>
+                  <th>Glyph</th>
+                  <th>Code point</th>
+                  <th>UTF-8 bytes</th>
+                  <th>UTF-16 units</th>
+                  <th>ASCII</th>
+                  <th>Class</th>
+                </tr>
+              </thead>
+              <tbody id="inspector-rows"></tbody>
+            </table>
+          </div>
+        </section>
 
-      <section>
-        <h2>Escape Quick Reference</h2>
-        <p class="formula-note mono">
-          <span>\xNN: one byte (00-FF)</span>
-          <span>\uXXXX: one UTF-16 code unit</span>
-          <span>\u{XXXXX}: one Unicode code point</span>
-          <span>Named escapes: \n \r \t \\</span>
-        </p>
-      </section>
+        <section>
+          <h2>Escape Quick Reference</h2>
+          <p class="formula-note mono">
+            <span>\xNN: one byte (00-FF)</span>
+            <span>\uXXXX: one UTF-16 code unit</span>
+            <span>\u{XXXXX}: one Unicode code point</span>
+            <span>Named escapes: \n \r \t \\</span>
+          </p>
+        </section>
+      </div>
+
+      <div id="panel-breakdown" role="tabpanel" aria-labelledby="tab-breakdown" hidden>
+        <div id="slot-converter-breakdown"></div>
+
+        <section>
+          <h2>Pipeline</h2>
+          <p class="step-note" id="pipeline-summary"></p>
+          <p class="formula-note mono">
+            <span>text &rarr; code points &rarr; UTF-8 bytes &rarr; Base64</span>
+            <span>text &rarr; UTF-16 code units</span>
+          </p>
+        </section>
+
+        <section>
+          <h2>Code Points to UTF-8</h2>
+          <p class="step-note">
+            UTF-8 splits a code point across one to four bytes. The leading byte
+            says how many bytes follow, every continuation byte starts 10, and
+            the remaining slots carry the code point's bits from the top down.
+          </p>
+          <div id="utf8-steps"></div>
+          <p class="bits-legend">
+            <span class="swatch"></span> Bits the encoding fixes. Payload slots
+            carry code point bits; <em>italic</em> zeros are padding.
+          </p>
+        </section>
+
+        <section>
+          <h2>Code Points to UTF-16</h2>
+          <p class="step-note">
+            A code point in the Basic Multilingual Plane is one 16-bit unit
+            holding its own value. Above U+FFFF, 0x10000 is subtracted and the
+            remaining 20 bits are split across a high and a low surrogate.
+          </p>
+          <div id="utf16-steps"></div>
+        </section>
+
+        <section>
+          <h2>UTF-8 Bytes to Base64</h2>
+          <p class="step-note">
+            Base64 regroups the bytes into 24-bit blocks and reads each block as
+            four 6-bit indices into the alphabet
+            <span class="mono">A&ndash;Z a&ndash;z 0&ndash;9 + /</span>. A short
+            final block is padded with zero bits to fill the last index, and
+            <span class="mono">=</span> stands in for each index the input never
+            reached.
+          </p>
+          <div id="base64-steps"></div>
+        </section>
+      </div>
     </main>
 
     <footer class="page-footer">
-      Last updated: <time datetime="2026-09-05">5 September 2026</time>
+      Last updated: <time datetime="2026-09-10">10 September 2026</time>
     </footer>
 
 
@@ -676,6 +886,7 @@
           if (sourceKey !== "escapes") escapesEl.value = toEscapes(text);
           if (sourceKey !== "base64") base64El.value = formatBase64FromText(text);
           renderInspector(text);
+          renderBreakdown(text);
         }
 
         function normalizeSourceField(sourceKey, text) {
@@ -731,6 +942,360 @@
             tr.appendChild(c6);
             inspectorRowsEl.appendChild(tr);
           }
+        }
+
+        // ==================== ENCODING BREAKDOWN ====================
+        // The breakdown is a teaching view, so it shows a bounded number of
+        // steps: past a handful the bit grids stop being readable and start
+        // being a wall.
+        var BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        var MAX_BREAKDOWN_CODE_POINTS = 8;
+        var MAX_BREAKDOWN_BLOCKS = 8;
+
+        // Leading byte, then a continuation byte per extra byte. "fixed" is the
+        // literal prefix the standard nails down; "payload" is how many code
+        // point bits that byte carries.
+        var UTF8_LAYOUTS = [
+          { max: 0x7F, fixed: ["0"], payload: [7] },
+          { max: 0x7FF, fixed: ["110", "10"], payload: [5, 6] },
+          { max: 0xFFFF, fixed: ["1110", "10", "10"], payload: [4, 6, 6] },
+          { max: 0x10FFFF, fixed: ["11110", "10", "10", "10"], payload: [3, 6, 6, 6] }
+        ];
+
+        function bitsOf(value, width) {
+          var out = "";
+          for (var i = width - 1; i >= 0; i--) out += (value >>> i) & 1;
+          return out;
+        }
+
+        function significantBits(value) {
+          return value === 0 ? 1 : value.toString(2).length;
+        }
+
+        function utf8LayoutFor(cp) {
+          for (var i = 0; i < UTF8_LAYOUTS.length; i++) {
+            if (cp <= UTF8_LAYOUTS[i].max) return UTF8_LAYOUTS[i];
+          }
+          return UTF8_LAYOUTS[UTF8_LAYOUTS.length - 1];
+        }
+
+        function makeElement(tag, className, text) {
+          var el = document.createElement(tag);
+          if (className) el.className = className;
+          if (text !== undefined) el.textContent = text;
+          return el;
+        }
+
+        function makeBitsTable() {
+          var wrap = makeElement("div", "bits-wrap");
+          var table = makeElement("table", "bits-table");
+          var tbody = document.createElement("tbody");
+          table.appendChild(tbody);
+          wrap.appendChild(table);
+          return { wrap: wrap, body: tbody };
+        }
+
+        function addRow(tbody, label) {
+          var tr = document.createElement("tr");
+          var th = makeElement("th", "row-label", label);
+          th.setAttribute("scope", "row");
+          tr.appendChild(th);
+          tbody.appendChild(tr);
+          return tr;
+        }
+
+        function addCell(tr, text, className, span) {
+          var td = makeElement("td", className, text);
+          if (span && span > 1) td.colSpan = span;
+          tr.appendChild(td);
+          return td;
+        }
+
+        function addBitCells(tr, bits, className) {
+          for (var i = 0; i < bits.length; i++) {
+            addCell(tr, bits.charAt(i), className ? "bit " + className : "bit");
+          }
+        }
+
+        function codePointLabel(cp) {
+          return cpToToken(cp) + " " + glyphForCodePoint(cp);
+        }
+
+        function renderUtf8Step(cp) {
+          var layout = utf8LayoutFor(cp);
+          var byteCount = layout.fixed.length;
+          var payloadTotal = 0;
+          for (var i = 0; i < byteCount; i++) payloadTotal += layout.payload[i];
+
+          var payloadBits = bitsOf(cp, payloadTotal);
+          var padCount = payloadTotal - significantBits(cp);
+          var bytes = textToUtf8Bytes(String.fromCodePoint(cp));
+
+          var block = makeElement("div", "step");
+          block.appendChild(
+            makeElement(
+              "p",
+              "step-title mono",
+              codePointLabel(cp) +
+                " - " +
+                cp +
+                " decimal - " +
+                byteCount +
+                (byteCount === 1 ? " byte" : " bytes")
+            )
+          );
+          block.appendChild(
+            makeElement(
+              "p",
+              "step-note",
+              "The low " +
+                payloadTotal +
+                " bits of the code point fill the payload slots, high bits first."
+            )
+          );
+
+          var t = makeBitsTable();
+          var headRow = addRow(t.body, "Byte");
+          for (var b = 0; b < byteCount; b++) addCell(headRow, "Byte " + (b + 1), "group", 8);
+
+          var cpRow = addRow(t.body, "Code point bits");
+          var takenRow = addRow(t.body, "Byte template");
+          var outRow = addRow(t.body, "Byte bits");
+          var consumed = 0;
+          for (var byteIndex = 0; byteIndex < byteCount; byteIndex++) {
+            var fixed = layout.fixed[byteIndex];
+            var width = layout.payload[byteIndex];
+            var slice = payloadBits.substr(consumed, width);
+
+            for (var f = 0; f < fixed.length; f++) addCell(cpRow, "", "bit");
+            for (var p = 0; p < width; p++) {
+              var absolute = consumed + p;
+              addCell(cpRow, slice.charAt(p), absolute < padCount ? "bit pad" : "bit");
+            }
+
+            addBitCells(takenRow, fixed, "fixed");
+            for (var x = 0; x < width; x++) addCell(takenRow, "x", "bit");
+
+            addBitCells(outRow, fixed, "fixed");
+            addBitCells(outRow, slice);
+
+            consumed += width;
+          }
+
+          var hexRow = addRow(t.body, "Byte value");
+          for (var h = 0; h < byteCount; h++) {
+            addCell(hexRow, "0x" + byteToHex(bytes[h]) + " = " + bytes[h], "group", 8);
+          }
+
+          block.appendChild(t.wrap);
+          return block;
+        }
+
+        function renderUtf16Step(cp) {
+          var block = makeElement("div", "step");
+          var units = textToUtf16Units(String.fromCodePoint(cp));
+
+          if (cp <= 0xFFFF) {
+            block.appendChild(
+              makeElement("p", "step-title mono", codePointLabel(cp) + " - BMP, 1 code unit")
+            );
+            block.appendChild(
+              makeElement("p", "step-note", "The code point is below U+10000, so the unit is its own value.")
+            );
+            var bmp = makeBitsTable();
+            var bmpHead = addRow(bmp.body, "Unit");
+            addCell(bmpHead, "Unit 1", "group", 16);
+            var bmpBits = addRow(bmp.body, "Code point bits");
+            var bmpPad = 16 - significantBits(cp);
+            var bmpString = bitsOf(cp, 16);
+            for (var i = 0; i < 16; i++) {
+              addCell(bmpBits, bmpString.charAt(i), i < bmpPad ? "bit pad" : "bit");
+            }
+            var bmpHex = addRow(bmp.body, "Unit value");
+            addCell(bmpHex, "0x" + wordToHex(units[0]), "group", 16);
+            block.appendChild(bmp.wrap);
+            return block;
+          }
+
+          var offset = cp - 0x10000;
+          block.appendChild(
+            makeElement("p", "step-title mono", codePointLabel(cp) + " - surrogate pair")
+          );
+          block.appendChild(
+            makeElement(
+              "p",
+              "step-note mono",
+              "0x" +
+                cp.toString(16).toUpperCase() +
+                " - 0x10000 = 0x" +
+                offset.toString(16).toUpperCase() +
+                ", which is 20 bits: " +
+                bitsOf(offset, 20)
+            )
+          );
+
+          var t = makeBitsTable();
+          var headRow = addRow(t.body, "Unit");
+          addCell(headRow, "High surrogate", "group", 16);
+          addCell(headRow, "Low surrogate", "group", 16);
+
+          var offsetBits = bitsOf(offset, 20);
+          var fixedParts = ["110110", "110111"];
+          var offsetRow = addRow(t.body, "Offset bits");
+          var templateRow = addRow(t.body, "Unit template");
+          var outRow = addRow(t.body, "Unit bits");
+          for (var u = 0; u < 2; u++) {
+            var fixedPart = fixedParts[u];
+            var slice = offsetBits.substr(u * 10, 10);
+            for (var f = 0; f < fixedPart.length; f++) addCell(offsetRow, "", "bit");
+            addBitCells(offsetRow, slice);
+            addBitCells(templateRow, fixedPart, "fixed");
+            for (var x = 0; x < 10; x++) addCell(templateRow, "x", "bit");
+            addBitCells(outRow, fixedPart, "fixed");
+            addBitCells(outRow, slice);
+          }
+
+          var hexRow = addRow(t.body, "Unit value");
+          addCell(hexRow, "0x" + wordToHex(units[0]), "group", 16);
+          addCell(hexRow, "0x" + wordToHex(units[1]), "group", 16);
+
+          block.appendChild(t.wrap);
+          return block;
+        }
+
+        function renderBase64Block(bytes, startIndex, blockNumber) {
+          var present = bytes.length;
+          var dataSextets = present + 1;
+          var padBits = (3 - present) * 2;
+
+          var bitString = "";
+          for (var i = 0; i < present; i++) bitString += bitsOf(bytes[i], 8);
+          for (var z = 0; z < padBits; z++) bitString += "0";
+
+          var block = makeElement("div", "step");
+          block.appendChild(
+            makeElement(
+              "p",
+              "step-title mono",
+              "Block " +
+                blockNumber +
+                (present > 1
+                  ? " - bytes " + startIndex + "-" + (startIndex + present - 1)
+                  : " - byte " + startIndex) +
+                (present === 3 ? "" : " - short block, " + padBits + " zero bits padded")
+            )
+          );
+
+          var t = makeBitsTable();
+          var byteRow = addRow(t.body, "UTF-8 byte");
+          var decRow = addRow(t.body, "Decimal");
+          for (var b = 0; b < 3; b++) {
+            if (b < present) {
+              addCell(byteRow, "0x" + byteToHex(bytes[b]), "group", 8);
+              addCell(decRow, String(bytes[b]), "group", 8);
+            } else {
+              addCell(byteRow, "", "empty", 8);
+              addCell(decRow, "", "empty", 8);
+            }
+          }
+
+          var bitRow = addRow(t.body, "Bit pattern");
+          for (var k = 0; k < bitString.length; k++) {
+            addCell(bitRow, bitString.charAt(k), k >= present * 8 ? "bit pad" : "bit");
+          }
+          for (var e = bitString.length; e < 24; e++) addCell(bitRow, "", "empty");
+
+          var indexRow = addRow(t.body, "6-bit index");
+          var charRow = addRow(t.body, "Base64 character");
+          for (var s = 0; s < 4; s++) {
+            if (s < dataSextets) {
+              var value = parseInt(bitString.substr(s * 6, 6), 2);
+              addCell(indexRow, String(value), "group", 6);
+              addCell(charRow, BASE64_ALPHABET.charAt(value), "group", 6);
+            } else {
+              addCell(indexRow, "", "empty", 6);
+              addCell(charRow, "=", "pad", 6);
+            }
+          }
+
+          block.appendChild(t.wrap);
+          return block;
+        }
+
+        function renderBreakdown(text) {
+          var utf8StepsEl = document.getElementById("utf8-steps");
+          var utf16StepsEl = document.getElementById("utf16-steps");
+          var base64StepsEl = document.getElementById("base64-steps");
+          var summaryEl = document.getElementById("pipeline-summary");
+
+          utf8StepsEl.innerHTML = "";
+          utf16StepsEl.innerHTML = "";
+          base64StepsEl.innerHTML = "";
+
+          var codePoints = textToCodePoints(text);
+          var bytes = textToUtf8Bytes(text);
+          var units = textToUtf16Units(text);
+          var base64 = bytesToBase64(bytes);
+
+          if (!codePoints.length) {
+            summaryEl.textContent = "Type into any converter field to see the breakdown.";
+            utf8StepsEl.appendChild(makeElement("p", "step-note", "Nothing to encode yet."));
+            utf16StepsEl.appendChild(makeElement("p", "step-note", "Nothing to encode yet."));
+            base64StepsEl.appendChild(makeElement("p", "step-note", "Nothing to encode yet."));
+            return;
+          }
+
+          var padding = (base64.match(/=/g) || []).length;
+          summaryEl.textContent =
+            codePoints.length +
+            (codePoints.length === 1 ? " code point" : " code points") +
+            " -> " +
+            bytes.length +
+            (bytes.length === 1 ? " UTF-8 byte" : " UTF-8 bytes") +
+            " -> " +
+            units.length +
+            (units.length === 1 ? " UTF-16 unit" : " UTF-16 units") +
+            " -> " +
+            base64.length +
+            " Base64 characters" +
+            (padding ? ", " + padding + " of them padding" : ", no padding needed");
+
+          var shownCodePoints = Math.min(codePoints.length, MAX_BREAKDOWN_CODE_POINTS);
+          for (var i = 0; i < shownCodePoints; i++) {
+            utf8StepsEl.appendChild(renderUtf8Step(codePoints[i]));
+            utf16StepsEl.appendChild(renderUtf16Step(codePoints[i]));
+          }
+          if (shownCodePoints < codePoints.length) {
+            var cpNote =
+              "Showing the first " +
+              shownCodePoints +
+              " of " +
+              codePoints.length +
+              " code points.";
+            utf8StepsEl.appendChild(makeElement("p", "step-note", cpNote));
+            utf16StepsEl.appendChild(makeElement("p", "step-note", cpNote));
+          }
+
+          var totalBlocks = Math.ceil(bytes.length / 3);
+          var shownBlocks = Math.min(totalBlocks, MAX_BREAKDOWN_BLOCKS);
+          for (var blockIndex = 0; blockIndex < shownBlocks; blockIndex++) {
+            var start = blockIndex * 3;
+            base64StepsEl.appendChild(
+              renderBase64Block(bytes.slice(start, start + 3), start, blockIndex + 1)
+            );
+          }
+          if (shownBlocks < totalBlocks) {
+            base64StepsEl.appendChild(
+              makeElement(
+                "p",
+                "step-note",
+                "Showing the first " + shownBlocks + " of " + totalBlocks + " blocks."
+              )
+            );
+          }
+          base64StepsEl.appendChild(
+            makeElement("p", "step-note mono", "Result: " + base64)
+          );
         }
 
         function setStatusOk(message) {
@@ -795,6 +1360,49 @@
           }
         });
 
+        // The converter fields are the only source of truth on either tab, so
+        // the card moves into whichever panel is showing rather than being
+        // duplicated.
+        var panels = {
+          convert: document.getElementById("panel-convert"),
+          breakdown: document.getElementById("panel-breakdown")
+        };
+        var tabButtons = {
+          convert: document.getElementById("tab-convert"),
+          breakdown: document.getElementById("tab-breakdown")
+        };
+        var converterSlots = {
+          convert: document.getElementById("slot-converter-convert"),
+          breakdown: document.getElementById("slot-converter-breakdown")
+        };
+        var converterCard = document.getElementById("card-converter");
+        var currentTab = "convert";
+
+        function applyTab(name) {
+          currentTab = name === "breakdown" ? "breakdown" : "convert";
+          converterSlots[currentTab].appendChild(converterCard);
+          Object.keys(panels).forEach(function (key) {
+            if (key === currentTab) panels[key].removeAttribute("hidden");
+            else panels[key].setAttribute("hidden", "hidden");
+            tabButtons[key].setAttribute("aria-selected", key === currentTab ? "true" : "false");
+          });
+          document.documentElement.setAttribute("data-tab", currentTab);
+        }
+
+        Object.keys(tabButtons).forEach(function (key) {
+          tabButtons[key].addEventListener("click", function () {
+            applyTab(key);
+          });
+        });
+
+        document.querySelector('[role="tablist"]').addEventListener("keydown", function (event) {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          var next = currentTab === "convert" ? "breakdown" : "convert";
+          applyTab(next);
+          tabButtons[next].focus();
+          event.preventDefault();
+        });
+
         function bindSource(sourceKey) {
           var el = SOURCE_FIELDS[sourceKey];
           el.addEventListener("focus", function () {
@@ -816,6 +1424,7 @@
         bindSource("base64");
 
         applyThemeMode(getStoredThemeMode(), false);
+        applyTab("convert");
         handleSourceInput(activeSource);
       })();
     </script>

@@ -175,6 +175,20 @@
         line-height: 1.2;
       }
 
+      /* When any card in a grid row needs a second line for its header, every
+         card in that row stacks its header, so the bodies below stay level
+         with each other. Stacking also hands the title the full card width,
+         which is usually enough for it to stop wrapping. */
+      .card.is-header-stacked .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+      }
+
+      .card.is-header-stacked .remove-card-btn {
+        white-space: nowrap;
+      }
+
       .calculator-label {
         margin: 0;
         color: var(--muted);
@@ -198,15 +212,163 @@
         gap: 0.35rem;
       }
 
-      .resistor-row-actions {
+      .component-row-actions {
         display: flex;
         gap: 0.5rem;
         flex-wrap: wrap;
       }
 
-      .resistor-row-btn {
+      .component-row-btn {
         padding: 0.4rem 0.65rem;
         font-size: 0.86rem;
+      }
+
+      /* Every row carries a fixed-width schematic column on its left, so a
+         drawn part sits beside the input it belongs to. Rows butt together
+         with no gap, which is what lets one row's wires meet the next and
+         read as a single circuit; the breathing room comes from padding
+         inside the fields instead. */
+      .component-row {
+        display: grid;
+        /* minmax(0, 1fr) rather than 1fr: a number input reports a wide
+           intrinsic minimum, and a plain 1fr track would honour it and push
+           the row wider than the card. */
+        grid-template-columns: 5rem minmax(0, 1fr);
+        column-gap: 0.6rem;
+        align-items: center;
+      }
+
+      .component-diagram {
+        position: relative;
+        align-self: stretch;
+        color: var(--muted);
+      }
+
+      .component-fields {
+        display: grid;
+        grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+        gap: 0.4rem;
+        align-items: center;
+        padding: 0.3rem 0;
+      }
+
+      .component-label {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .wire {
+        position: absolute;
+        background: currentColor;
+      }
+
+      .wire-vertical {
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        margin-left: -1px;
+      }
+
+      .wire-horizontal {
+        top: 50%;
+        height: 2px;
+        margin-top: -1px;
+      }
+
+      .wire-terminal {
+        width: 0.45rem;
+        height: 0.45rem;
+        margin: -0.225rem 0 0 -0.225rem;
+        border-radius: 50%;
+      }
+
+      /* The symbol masks the wire running behind it, so a part reads as a
+         break in the circuit rather than a line straight through it. */
+      .component-symbol {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 2.4rem;
+        height: 1.2rem;
+        background: var(--panel-bg);
+        transform: translate(-50%, -50%);
+      }
+
+      /* Series: one spine down the column with every part in line on it. */
+      [data-topology="series"] .wire-rail-left,
+      [data-topology="series"] .wire-rail-right,
+      [data-topology="series"] .wire-rung,
+      [data-topology="series"] .wire-terminal-left,
+      [data-topology="series"] .wire-terminal-right {
+        display: none;
+      }
+
+      [data-topology="series"] .wire-spine {
+        left: 50%;
+      }
+
+      /* Series parts sit in a vertical chain, so the symbol turns a quarter
+         turn to face the way the current runs. */
+      [data-topology="series"] .component-symbol {
+        transform: translate(-50%, -50%) rotate(90deg);
+      }
+
+      [data-topology="series"] .wire-terminal-top {
+        left: 50%;
+        top: 0;
+      }
+
+      [data-topology="series"] .wire-terminal-bottom {
+        left: 50%;
+        top: 100%;
+      }
+
+      /* Only the ends of the chain are terminals; the joins between rows are
+         already continuous wire. */
+      [data-topology="series"] .component-row:not(:first-child) .wire-terminal-top,
+      [data-topology="series"] .component-row:not(:last-child) .wire-terminal-bottom {
+        display: none;
+      }
+
+      /* Parallel: two rails with the parts as rungs between them. */
+      [data-topology="parallel"] .wire-spine,
+      [data-topology="parallel"] .wire-terminal-top,
+      [data-topology="parallel"] .wire-terminal-bottom {
+        display: none;
+      }
+
+      [data-topology="parallel"] .wire-rail-left {
+        left: 0.6rem;
+      }
+
+      [data-topology="parallel"] .wire-rail-right {
+        left: calc(100% - 0.6rem);
+      }
+
+      [data-topology="parallel"] .wire-rung {
+        left: 0.6rem;
+        right: 0.6rem;
+      }
+
+      /* Both rails stop at the last rung rather than dangling past it. */
+      [data-topology="parallel"] .component-row:last-child .wire-rail-left,
+      [data-topology="parallel"] .component-row:last-child .wire-rail-right {
+        bottom: 50%;
+      }
+
+      [data-topology="parallel"] .wire-terminal-left {
+        left: 0.6rem;
+        top: 0;
+      }
+
+      [data-topology="parallel"] .wire-terminal-right {
+        left: calc(100% - 0.6rem);
+        top: 0;
+      }
+
+      [data-topology="parallel"] .component-row:not(:first-child) .wire-terminal-left,
+      [data-topology="parallel"] .component-row:not(:first-child) .wire-terminal-right {
+        display: none;
       }
 
       .input-row {
@@ -336,6 +498,16 @@
           grid-template-columns: 1fr;
         }
 
+        /* The narrowest screens give the schematic less room and let the
+           unit select shrink, so the value box stays usable. */
+        .component-row {
+          grid-template-columns: 3.6rem minmax(0, 1fr);
+        }
+
+        .component-fields .unit-select {
+          min-width: 4.4rem;
+        }
+
         .add-card-btn {
           width: 100%;
         }
@@ -361,7 +533,8 @@
         <h1>Ohm's Law Calculator</h1>
         <p class="subtitle">
           Live calculator cards for V = I x R and P = I x V. Enter any two values
-          and the rest are solved in real time.
+          and the rest are solved in real time. Series and parallel cards give the
+          equivalent resistance, capacitance, or inductance of a network.
         </p>
         <div class="top-actions">
           <a class="action-btn" href="index.html">Back to index</a>
@@ -408,18 +581,52 @@
             Add Ohm's Law Calculator
           </button>
           <button
-            id="add-series-card"
-            class="action-btn add-card-btn"
+            class="action-btn add-card-btn add-network-card-btn"
             type="button"
+            data-component="resistor"
+            data-topology="series"
           >
             Add Series Resistor Calculator
           </button>
           <button
-            id="add-parallel-card"
-            class="action-btn add-card-btn"
+            class="action-btn add-card-btn add-network-card-btn"
             type="button"
+            data-component="resistor"
+            data-topology="parallel"
           >
             Add Parallel Resistor Calculator
+          </button>
+          <button
+            class="action-btn add-card-btn add-network-card-btn"
+            type="button"
+            data-component="capacitor"
+            data-topology="series"
+          >
+            Add Series Capacitor Calculator
+          </button>
+          <button
+            class="action-btn add-card-btn add-network-card-btn"
+            type="button"
+            data-component="capacitor"
+            data-topology="parallel"
+          >
+            Add Parallel Capacitor Calculator
+          </button>
+          <button
+            class="action-btn add-card-btn add-network-card-btn"
+            type="button"
+            data-component="inductor"
+            data-topology="series"
+          >
+            Add Series Inductor Calculator
+          </button>
+          <button
+            class="action-btn add-card-btn add-network-card-btn"
+            type="button"
+            data-component="inductor"
+            data-topology="parallel"
+          >
+            Add Parallel Inductor Calculator
           </button>
         </div>
       </section>
@@ -431,12 +638,17 @@
           <span>P = I x V</span>
           <span>Series equivalent resistance: R(eq) = R1 + R2 + R3 + ...</span>
           <span>Parallel equivalent resistance: 1 / R(eq) = 1/R1 + 1/R2 + 1/R3 + ...</span>
+          <span>Series equivalent capacitance: 1 / C(eq) = 1/C1 + 1/C2 + 1/C3 + ...</span>
+          <span>Parallel equivalent capacitance: C(eq) = C1 + C2 + C3 + ...</span>
+          <span>Series equivalent inductance: L(eq) = L1 + L2 + L3 + ...</span>
+          <span>Parallel equivalent inductance: 1 / L(eq) = 1/L1 + 1/L2 + 1/L3 + ...</span>
+          <span>Inductor formulas assume no mutual coupling between the parts.</span>
         </p>
       </section>
     </main>
 
     <footer class="page-footer">
-      Last updated: <time datetime="2026-07-12">12 July 2026</time>
+      Last updated: <time datetime="2026-09-10">10 September 2026</time>
     </footer>
 
 
@@ -450,8 +662,6 @@
         var cardsContainer = document.getElementById("cards");
         var addCardActions = document.getElementById("add-card-actions");
         var addOhmCardButton = document.getElementById("add-ohm-card");
-        var addSeriesCardButton = document.getElementById("add-series-card");
-        var addParallelCardButton = document.getElementById("add-parallel-card");
         var cardCount = 0;
 
         var THEME_STORAGE_KEY = "nomdetom-theme-mode";
@@ -611,6 +821,62 @@
             kW: 1e3,
             MW: 1e6,
           },
+          c: {
+            pF: 1e-12,
+            nF: 1e-9,
+            uF: 1e-6,
+            mF: 1e-3,
+            F: 1,
+          },
+          l: {
+            nH: 1e-9,
+            uH: 1e-6,
+            mH: 1e-3,
+            H: 1,
+          },
+        };
+
+        /**
+         * The three two-terminal parts that combine as a series or parallel
+         * network. `seriesRule` is how a series network combines them; the
+         * parallel rule is always the other one, so a card only needs the
+         * component and its topology to know which sum to take.
+         */
+        var NETWORK_COMPONENTS = {
+          resistor: {
+            name: "Resistor",
+            quantity: "Resistance",
+            rowPrefix: "R",
+            unitKey: "r",
+            units: ["mOhm", "Ohm", "kOhm", "MOhm"],
+            defaultUnit: "Ohm",
+            placeholder: "e.g. 100",
+            seriesRule: "sum",
+            symbol: "M0,12 H12 L15,6 L21,18 L27,6 L33,18 L36,12 H48",
+          },
+          capacitor: {
+            name: "Capacitor",
+            quantity: "Capacitance",
+            rowPrefix: "C",
+            unitKey: "c",
+            units: ["pF", "nF", "uF", "mF", "F"],
+            defaultUnit: "uF",
+            placeholder: "e.g. 10",
+            seriesRule: "reciprocal",
+            symbol: "M0,12 H20 M20,3 V21 M28,3 V21 M28,12 H48",
+          },
+          inductor: {
+            name: "Inductor",
+            quantity: "Inductance",
+            rowPrefix: "L",
+            unitKey: "l",
+            units: ["nH", "uH", "mH", "H"],
+            defaultUnit: "uH",
+            placeholder: "e.g. 10",
+            seriesRule: "sum",
+            symbol:
+              "M0,12 H12 a4,4 0 0,1 8,0 a4,4 0 0,1 8,0 a4,4 0 0,1 8,0 H48",
+          },
         };
 
         var E_SERIES = {
@@ -673,10 +939,31 @@
           return best;
         }
 
+        function trimTrailingZeros(text) {
+          if (text.indexOf(".") === -1) return text;
+          return text.replace(/\.?0+$/, "");
+        }
+
         function formatNumber(value) {
           if (!Number.isFinite(value)) return "";
-          var fixed = value.toFixed(6);
-          return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+          if (value === 0) return "0";
+          var magnitude = Math.abs(value);
+
+          // Six decimal places read well at everyday scales. Capacitance and
+          // inductance in base units run far below a millionth, though, where
+          // fixed decimals would round the whole value away, so those fall
+          // back to significant figures and keep their exponent.
+          if (magnitude >= 1e-4 && magnitude < 1e15) {
+            return trimTrailingZeros(value.toFixed(6));
+          }
+
+          var precise = value.toPrecision(6);
+          var exponentIndex = precise.indexOf("e");
+          if (exponentIndex === -1) return trimTrailingZeros(precise);
+          return (
+            trimTrailingZeros(precise.slice(0, exponentIndex)) +
+            precise.slice(exponentIndex)
+          );
         }
 
         function createDebounced(callback, delayMs) {
@@ -919,6 +1206,98 @@
           status.textContent = result.source + ".";
         }
 
+        // A card header is a single flex line that the title and the Remove
+        // button share. A long title, or a button label that wraps inside the
+        // button, pushes that header to two lines and the card bodies in the
+        // grid row stop lining up. When it happens to any card in a row, every
+        // card in the row stacks its header instead.
+        var HEADER_STACKED_CLASS = "is-header-stacked";
+
+        function isMultiLine(element) {
+          var style = window.getComputedStyle(element);
+          var lineHeight = parseFloat(style.lineHeight);
+          if (!Number.isFinite(lineHeight)) {
+            lineHeight = parseFloat(style.fontSize) * 1.2;
+          }
+          var vertical =
+            parseFloat(style.paddingTop) +
+            parseFloat(style.paddingBottom) +
+            parseFloat(style.borderTopWidth) +
+            parseFloat(style.borderBottomWidth);
+          var contentHeight = element.getBoundingClientRect().height - vertical;
+          // Half a line of slack, so rounding never reads as a second line.
+          return contentHeight > lineHeight * 1.5;
+        }
+
+        function headerNeedsStacking(card) {
+          var label = card.querySelector(".calculator-label");
+          var button = card.querySelector(".remove-card-btn");
+          return (
+            (label != null && isMultiLine(label)) ||
+            (button != null && isMultiLine(button))
+          );
+        }
+
+        /** Cards in one grid row share a top, since the grid aligns to start. */
+        function groupCardsByGridRow(cards) {
+          var rows = [];
+          cards.forEach(function (card) {
+            var top = card.getBoundingClientRect().top;
+            var row = null;
+            for (var index = 0; index < rows.length; index += 1) {
+              if (Math.abs(rows[index].top - top) < 2) {
+                row = rows[index];
+                break;
+              }
+            }
+            if (!row) {
+              row = { top: top, cards: [] };
+              rows.push(row);
+            }
+            row.cards.push(card);
+          });
+          return rows;
+        }
+
+        function syncCardHeaderLayout() {
+          var cards = Array.prototype.slice.call(
+            cardsContainer.querySelectorAll(".card"),
+          );
+          if (!cards.length) return;
+
+          // Measure the unstacked layout every time. Stacking relieves the
+          // crowding that called for it, so testing the current layout instead
+          // would flip the two states back and forth.
+          cards.forEach(function (card) {
+            card.classList.remove(HEADER_STACKED_CLASS);
+          });
+
+          groupCardsByGridRow(cards).forEach(function (row) {
+            if (!row.cards.some(headerNeedsStacking)) return;
+            row.cards.forEach(function (card) {
+              card.classList.add(HEADER_STACKED_CLASS);
+            });
+          });
+        }
+
+        var scheduleHeaderSync = createDebounced(syncCardHeaderLayout, 60);
+
+        if (typeof ResizeObserver !== "undefined") {
+          var lastCardsWidth = null;
+          new ResizeObserver(function (entries) {
+            var width = entries[0].contentRect.width;
+            // Only a width change can re-wrap a header. Ignoring height also
+            // keeps this observer from re-firing on its own class changes.
+            if (lastCardsWidth != null && Math.abs(width - lastCardsWidth) < 1) {
+              return;
+            }
+            lastCardsWidth = width;
+            scheduleHeaderSync();
+          }).observe(cardsContainer);
+        } else {
+          window.addEventListener("resize", scheduleHeaderSync);
+        }
+
         function wireRemoveCardButton(card) {
           var removeButton = card.querySelector(".remove-card-btn");
           if (!removeButton) return;
@@ -927,6 +1306,8 @@
             if (card.parentNode === cardsContainer) {
               cardsContainer.removeChild(card);
               cardsContainer.appendChild(addCardActions);
+              // Removing a card rewidens the rest, so the rows regroup.
+              syncCardHeaderLayout();
             }
           });
         }
@@ -1058,192 +1439,270 @@
           wireRemoveCardButton(card);
           cardsContainer.insertBefore(card, addCardActions);
           cardsContainer.appendChild(addCardActions);
+          syncCardHeaderLayout();
           calculateCard(card);
         }
 
-        function readResistanceValueFromRow(row) {
-          var input = row.querySelector(".input-r");
-          var unitSelect = row.querySelector(".unit-r");
+        function readComponentValueFromRow(row, component) {
+          var input = row.querySelector(".input-value");
+          var unitSelect = row.querySelector(".unit-value");
           if (!input || !unitSelect) return null;
           var rawValue = toNullableNonNegativeNumber(input.value);
           if (rawValue == null) return null;
-          return rawValue * getUnitFactor("r", unitSelect.value);
+          return rawValue * getUnitFactor(component.unitKey, unitSelect.value);
         }
 
-        function updateEquivalentResistanceOutput(card, resistanceOhm) {
-          var outputUnit = card.querySelector(".unit-r-out").value;
-          var outputFactor = getUnitFactor("r", outputUnit);
-          var output = card.querySelector(".output-r-eq");
-          output.textContent =
-            resistanceOhm == null ? "—" : formatNumber(resistanceOhm / outputFactor);
+        /**
+         * Resistors and inductors add in series; capacitors add in parallel.
+         * Whichever topology is not the additive one combines as reciprocals,
+         * so the component plus the topology fixes the rule.
+         */
+        function combinationRuleFor(component, isSeries) {
+          var seriesIsSum = component.seriesRule === "sum";
+          return (isSeries ? seriesIsSum : !seriesIsSum) ? "sum" : "reciprocal";
         }
 
-        function calculateSeriesCard(card) {
-          var values = Array.from(card.querySelectorAll(".resistor-row")).map(
-            function (row) {
-              return readResistanceValueFromRow(row);
-            },
-          ).filter(function (value) {
-            return value != null;
-          });
-          var status = card.querySelector(".status");
-          status.classList.remove("error");
-
-          if (values.length === 0) {
-            updateEquivalentResistanceOutput(card, null);
-            status.textContent = "Enter at least one resistor value.";
-            return;
+        function combineNetwork(values, rule) {
+          if (rule === "sum") {
+            return values.reduce(function (acc, value) {
+              return acc + value;
+            }, 0);
           }
 
-          var equivalent = values.reduce(function (acc, value) {
-            return acc + value;
-          }, 0);
-          updateEquivalentResistanceOutput(card, equivalent);
-          status.textContent = "Equivalent resistance calculated for series network.";
-        }
-
-        function calculateParallelCard(card) {
-          var values = Array.from(card.querySelectorAll(".resistor-row")).map(
-            function (row) {
-              return readResistanceValueFromRow(row);
-            },
-          ).filter(function (value) {
-            return value != null;
-          });
-          var status = card.querySelector(".status");
-          status.classList.remove("error");
-
-          if (values.length === 0) {
-            updateEquivalentResistanceOutput(card, null);
-            status.textContent = "Enter at least one resistor value.";
-            return;
-          }
-
-          if (values.some(function (value) { return value === 0; })) {
-            updateEquivalentResistanceOutput(card, 0);
-            status.textContent =
-              "Equivalent resistance calculated for parallel network.";
-            return;
+          // One zero-valued leg dominates a reciprocal network entirely.
+          if (
+            values.some(function (value) {
+              return value === 0;
+            })
+          ) {
+            return 0;
           }
 
           var inverseSum = values.reduce(function (acc, value) {
             return acc + 1 / value;
           }, 0);
 
-          if (!Number.isFinite(inverseSum) || inverseSum === 0) {
-            updateEquivalentResistanceOutput(card, null);
-            status.classList.add("error");
-            status.textContent = "Unable to calculate equivalent resistance.";
+          if (!Number.isFinite(inverseSum) || inverseSum === 0) return null;
+          return 1 / inverseSum;
+        }
+
+        function updateEquivalentOutput(card, component, baseValue) {
+          var outputUnit = card.querySelector(".unit-value-out").value;
+          var outputFactor = getUnitFactor(component.unitKey, outputUnit);
+          var output = card.querySelector(".output-eq");
+          output.textContent =
+            baseValue == null ? "—" : formatNumber(baseValue / outputFactor);
+        }
+
+        function calculateNetworkCard(card, component, isSeries) {
+          var values = Array.from(card.querySelectorAll(".component-row"))
+            .map(function (row) {
+              return readComponentValueFromRow(row, component);
+            })
+            .filter(function (value) {
+              return value != null;
+            });
+          var status = card.querySelector(".status");
+          status.classList.remove("error");
+
+          var quantity = component.quantity.toLowerCase();
+
+          if (values.length === 0) {
+            updateEquivalentOutput(card, component, null);
+            status.textContent =
+              "Enter at least one " + component.name.toLowerCase() + " value.";
             return;
           }
 
-          updateEquivalentResistanceOutput(card, 1 / inverseSum);
-          status.textContent = "Equivalent resistance calculated for parallel network.";
+          var equivalent = combineNetwork(
+            values,
+            combinationRuleFor(component, isSeries),
+          );
+
+          if (equivalent == null) {
+            updateEquivalentOutput(card, component, null);
+            status.classList.add("error");
+            status.textContent = "Unable to calculate equivalent " + quantity + ".";
+            return;
+          }
+
+          updateEquivalentOutput(card, component, equivalent);
+          status.textContent =
+            "Equivalent " +
+            quantity +
+            " calculated for " +
+            (isSeries ? "series" : "parallel") +
+            " network.";
         }
 
-        function buildResistorCard(type) {
+        function unitOptionsHtml(component) {
+          return component.units
+            .map(function (unit) {
+              return (
+                '<option value="' +
+                unit +
+                '"' +
+                (unit === component.defaultUnit ? " selected" : "") +
+                ">" +
+                unit +
+                "</option>"
+              );
+            })
+            .join("");
+        }
+
+        function buildNetworkCard(componentKey, type) {
+          var component = NETWORK_COMPONENTS[componentKey];
+          if (!component) return;
+
           cardCount += 1;
           var isSeries = type === "series";
+          var unitOptions = unitOptionsHtml(component);
           var card = document.createElement("section");
           card.className = "card";
+          // The schematic CSS keys off these, so a wire only needs to know
+          // which topology it is drawn for.
+          card.setAttribute("data-component", componentKey);
+          card.setAttribute("data-topology", isSeries ? "series" : "parallel");
           card.innerHTML =
             '<div class="card-header"><p class="calculator-label">' +
             (isSeries ? "Series" : "Parallel") +
-            " Resistor Calculator " +
+            " " +
+            component.name +
+            " Calculator " +
             cardCount +
             '</p><button type="button" class="action-btn remove-card-btn" aria-label="Remove this calculator">Remove calculator</button></div>' +
             '<section class="card-section">' +
             "<h2>Inputs</h2>" +
             '<div class="grid">' +
-            '<label class="field">Resistor Series Offering<select class="unit-select input-series-offering" aria-label="Resistor series offering"><option value="any" selected>Any (No Snap)</option><option value="e6">E6 Only</option><option value="e12">E12 Only</option><option value="e24">E24 Only</option></select></label>' +
-            '<div class="resistor-rows" aria-label="Resistor inputs"></div>' +
-            '<div class="resistor-row-actions">' +
-            '<button type="button" class="action-btn resistor-row-btn add-resistor-row-btn">+ Add resistor</button>' +
-            '<button type="button" class="action-btn resistor-row-btn remove-resistor-row-btn">- Remove resistor</button>' +
-            '</div>' +
+            '<label class="field">Preferred Values<select class="unit-select input-preferred-values" aria-label="' +
+            component.name +
+            ' preferred values"><option value="any" selected>Any (No Snap)</option><option value="e6">E6 Only</option><option value="e12">E12 Only</option><option value="e24">E24 Only</option></select></label>' +
+            '<div class="component-rows" aria-label="' +
+            component.name +
+            ' inputs"></div>' +
+            '<div class="component-row-actions">' +
+            '<button type="button" class="action-btn component-row-btn add-component-row-btn">+ Add ' +
+            component.name.toLowerCase() +
+            "</button>" +
+            '<button type="button" class="action-btn component-row-btn remove-component-row-btn">- Remove ' +
+            component.name.toLowerCase() +
+            "</button>" +
+            "</div>" +
             "</div>" +
             "</section>" +
             '<section class="card-section">' +
             "<h2>Outputs</h2>" +
             '<div class="field">' +
-            "<label>Equivalent resistance</label>" +
-            '<div class="input-row"><span class="output-value output-r-eq">—</span><select class="unit-select unit-r-out" aria-label="Equivalent resistance output unit"><option value="mOhm">mOhm</option><option value="Ohm" selected>Ohm</option><option value="kOhm">kOhm</option><option value="MOhm">MOhm</option></select></div>' +
+            "<label>Equivalent " +
+            component.quantity.toLowerCase() +
+            "</label>" +
+            '<div class="input-row"><span class="output-value output-eq">—</span><select class="unit-select unit-value-out" aria-label="Equivalent ' +
+            component.quantity.toLowerCase() +
+            ' output unit">' +
+            unitOptions +
+            "</select></div>" +
             "</div>" +
-            '<div class="status" aria-live="polite">Enter at least one resistor value.</div>' +
+            '<div class="status" aria-live="polite">Enter at least one ' +
+            component.name.toLowerCase() +
+            " value.</div>" +
             "</section>";
 
           var recalculate = function () {
-            if (isSeries) {
-              calculateSeriesCard(card);
-            } else {
-              calculateParallelCard(card);
-            }
+            calculateNetworkCard(card, component, isSeries);
           };
           var scheduleRecalculate = createDebounced(recalculate, 220);
 
-          var resistorRowsContainer = card.querySelector(".resistor-rows");
-          var addResistorRowButton = card.querySelector(".add-resistor-row-btn");
-          var removeResistorRowButton = card.querySelector(".remove-resistor-row-btn");
+          var componentRowsContainer = card.querySelector(".component-rows");
+          var addComponentRowButton = card.querySelector(".add-component-row-btn");
+          var removeComponentRowButton = card.querySelector(
+            ".remove-component-row-btn",
+          );
 
-          function buildResistorRow() {
-            var row = document.createElement("label");
-            row.className = "field resistor-row";
+          // Every row draws the whole set of wires and lets the topology CSS
+          // hide the ones that do not apply, so adding or removing a row never
+          // has to work out which end of the circuit it landed on.
+          function buildComponentRow() {
+            var row = document.createElement("div");
+            row.className = "component-row";
             row.innerHTML =
-              '<span class="resistor-label">R1</span>' +
-              '<span class="input-row">' +
-              '<input class="input-r" type="number" min="0" step="any" placeholder="e.g. 100" />' +
-              '<select class="unit-select unit-r" aria-label="Resistor unit">' +
-              '<option value="mOhm">mOhm</option>' +
-              '<option value="Ohm" selected>Ohm</option>' +
-              '<option value="kOhm">kOhm</option>' +
-              '<option value="MOhm">MOhm</option>' +
-              '</select>' +
-              '</span>';
+              '<div class="component-diagram" aria-hidden="true">' +
+              '<span class="wire wire-vertical wire-spine"></span>' +
+              '<span class="wire wire-vertical wire-rail-left"></span>' +
+              '<span class="wire wire-vertical wire-rail-right"></span>' +
+              '<span class="wire wire-horizontal wire-rung"></span>' +
+              '<span class="wire wire-terminal wire-terminal-top"></span>' +
+              '<span class="wire wire-terminal wire-terminal-bottom"></span>' +
+              '<span class="wire wire-terminal wire-terminal-left"></span>' +
+              '<span class="wire wire-terminal wire-terminal-right"></span>' +
+              '<svg class="component-symbol" viewBox="0 0 48 24" focusable="false">' +
+              '<path d="' +
+              component.symbol +
+              '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
+              "</svg>" +
+              "</div>" +
+              '<label class="component-fields">' +
+              '<span class="component-label">' +
+              component.rowPrefix +
+              "1</span>" +
+              '<input class="input-value" type="number" min="0" step="any" placeholder="' +
+              component.placeholder +
+              '" />' +
+              '<select class="unit-select unit-value" aria-label="' +
+              component.rowPrefix +
+              '1 unit">' +
+              unitOptions +
+              "</select>" +
+              "</label>";
             return row;
           }
 
-          function updateResistorRowLabels() {
-            var rows = card.querySelectorAll(".resistor-row");
+          function updateComponentRowLabels() {
+            var rows = card.querySelectorAll(".component-row");
             rows.forEach(function (row, index) {
-              var label = row.querySelector(".resistor-label");
-              var unit = row.querySelector(".unit-r");
+              var label = row.querySelector(".component-label");
+              var unit = row.querySelector(".unit-value");
+              var name = component.rowPrefix + (index + 1);
               if (label) {
-                label.textContent = "R" + (index + 1);
+                label.textContent = name;
               }
               if (unit) {
-                unit.setAttribute("aria-label", "R" + (index + 1) + " unit");
+                unit.setAttribute("aria-label", name + " unit");
               }
             });
 
-            removeResistorRowButton.disabled = rows.length <= 1;
+            removeComponentRowButton.disabled = rows.length <= 1;
           }
 
-          function addResistorRow() {
-            resistorRowsContainer.appendChild(buildResistorRow());
-            updateResistorRowLabels();
+          function addComponentRow() {
+            componentRowsContainer.appendChild(buildComponentRow());
+            updateComponentRowLabels();
           }
 
-          function removeResistorRow() {
-            var rows = card.querySelectorAll(".resistor-row");
+          function removeComponentRow() {
+            var rows = card.querySelectorAll(".component-row");
             if (rows.length <= 1) return;
-            resistorRowsContainer.removeChild(rows[rows.length - 1]);
-            updateResistorRowLabels();
+            componentRowsContainer.removeChild(rows[rows.length - 1]);
+            updateComponentRowLabels();
           }
 
-          function snapResistorInput(input) {
+          function snapComponentInput(input) {
             if (!input) return;
-            var row = input.closest(".resistor-row");
+            var row = input.closest(".component-row");
             if (!row) return;
-            var unitSelect = row.querySelector(".unit-r");
-            var seriesSelect = card.querySelector(".input-series-offering");
-            if (!input || !unitSelect || !seriesSelect) return;
+            var unitSelect = row.querySelector(".unit-value");
+            var preferredSelect = card.querySelector(".input-preferred-values");
+            if (!unitSelect || !preferredSelect) return;
             var rawValue = toNullableNonNegativeNumber(input.value);
             if (rawValue == null) {
               input.dataset.lastSeriesBase = "";
               return;
             }
-            var baseValue = rawValue * getUnitFactor("r", unitSelect.value);
-            var previousBase = toNullableNonNegativeNumber(input.dataset.lastSeriesBase);
+            var unitFactor = getUnitFactor(component.unitKey, unitSelect.value);
+            var baseValue = rawValue * unitFactor;
+            var previousBase = toNullableNonNegativeNumber(
+              input.dataset.lastSeriesBase,
+            );
             var mode = "nearest";
             if (previousBase != null) {
               if (baseValue > previousBase) {
@@ -1253,76 +1712,81 @@
               }
             }
 
-            var snappedBase = snapToSeries(baseValue, seriesSelect.value, mode);
-            input.value = formatNumber(snappedBase / getUnitFactor("r", unitSelect.value));
+            var snappedBase = snapToSeries(baseValue, preferredSelect.value, mode);
+            input.value = formatNumber(snappedBase / unitFactor);
             input.dataset.lastSeriesBase = formatNumber(snappedBase);
           }
 
-          function snapAllResistorInputs() {
-            var resistorInputs = card.querySelectorAll(".resistor-row .input-r");
-            resistorInputs.forEach(function (input) {
-              snapResistorInput(input);
+          function snapAllComponentInputs() {
+            var componentInputs = card.querySelectorAll(
+              ".component-row .input-value",
+            );
+            componentInputs.forEach(function (input) {
+              snapComponentInput(input);
             });
           }
 
-          var seriesOfferingSelect = card.querySelector(".input-series-offering");
-          if (seriesOfferingSelect) {
-            seriesOfferingSelect.addEventListener("change", function () {
-              snapAllResistorInputs();
+          var preferredValuesSelect = card.querySelector(".input-preferred-values");
+          if (preferredValuesSelect) {
+            preferredValuesSelect.addEventListener("change", function () {
+              snapAllComponentInputs();
               recalculate();
             });
           }
 
-          addResistorRowButton.addEventListener("click", function () {
-            addResistorRow();
+          addComponentRowButton.addEventListener("click", function () {
+            addComponentRow();
             recalculate();
           });
 
-          removeResistorRowButton.addEventListener("click", function () {
-            removeResistorRow();
+          removeComponentRowButton.addEventListener("click", function () {
+            removeComponentRow();
             recalculate();
           });
 
           card.addEventListener("input", function (event) {
             var target = event.target;
-            if (target && target.matches(".resistor-row .input-r")) {
+            if (target && target.matches(".component-row .input-value")) {
               scheduleRecalculate();
               return;
             }
 
-            if (target && target.matches(".unit-r-out")) {
+            if (target && target.matches(".unit-value-out")) {
               scheduleRecalculate();
             }
           });
 
           card.addEventListener("change", function (event) {
             var target = event.target;
-            if (target && target.matches(".resistor-row .input-r")) {
-              snapResistorInput(target);
+            if (target && target.matches(".component-row .input-value")) {
+              snapComponentInput(target);
               recalculate();
               return;
             }
 
-            if (target && target.matches(".resistor-row .unit-r")) {
-              var rowInput = target.closest(".resistor-row").querySelector(".input-r");
-              snapResistorInput(rowInput);
+            if (target && target.matches(".component-row .unit-value")) {
+              var rowInput = target
+                .closest(".component-row")
+                .querySelector(".input-value");
+              snapComponentInput(rowInput);
               recalculate();
               return;
             }
 
-            if (target && target.matches(".input-series-offering, .unit-r-out")) {
+            if (target && target.matches(".input-preferred-values, .unit-value-out")) {
               recalculate();
             }
           });
 
-          addResistorRow();
-          addResistorRow();
-          addResistorRow();
-          updateResistorRowLabels();
+          addComponentRow();
+          addComponentRow();
+          addComponentRow();
+          updateComponentRowLabels();
 
           wireRemoveCardButton(card);
           cardsContainer.insertBefore(card, addCardActions);
           cardsContainer.appendChild(addCardActions);
+          syncCardHeaderLayout();
           recalculate();
         }
 
@@ -1330,12 +1794,15 @@
           buildOhmCard();
         });
 
-        addSeriesCardButton.addEventListener("click", function () {
-          buildResistorCard("series");
-        });
-
-        addParallelCardButton.addEventListener("click", function () {
-          buildResistorCard("parallel");
+        // One delegated handler, so a new component only needs a descriptor
+        // and a button rather than another listener.
+        addCardActions.addEventListener("click", function (event) {
+          var button = event.target.closest(".add-network-card-btn");
+          if (!button) return;
+          buildNetworkCard(
+            button.getAttribute("data-component"),
+            button.getAttribute("data-topology"),
+          );
         });
 
         applyThemeMode(getStoredThemeMode(), false);
