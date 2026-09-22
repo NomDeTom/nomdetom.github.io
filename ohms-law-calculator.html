@@ -135,21 +135,29 @@
         padding: 0;
       }
 
+      .add-card-shell {
+        align-self: start;
+      }
+
+      /* Invisible but present: gives the button tile the same header
+         height as a real card, so its buttons start level with the
+         inputs of any card sharing its grid row instead of floating
+         above them. */
+      .add-card-header-spacer {
+        visibility: hidden;
+      }
+
       .add-card-actions {
         display: grid;
+        grid-template-columns: repeat(2, 1fr);
         gap: 0.6rem;
-        align-self: start;
-        justify-self: start;
-        width: 50%;
-        margin-top: calc(0.9rem * 1.5 + 1rem);
-        min-height: 21.35rem;
       }
 
       .add-card-btn {
         border-style: dashed;
         width: 100%;
-        min-width: 12rem;
-        min-height: 6.6rem;
+        min-width: 0;
+        min-height: 4.7rem;
         padding: 0.8rem 1rem;
         text-align: left;
       }
@@ -513,6 +521,7 @@
         }
 
         .add-card-actions {
+          grid-template-columns: 1fr;
           width: 100%;
         }
       }
@@ -576,58 +585,69 @@
       </header>
 
       <section id="cards" class="cards" aria-live="polite">
-        <div id="add-card-actions" class="add-card-actions">
-          <button id="add-ohm-card" class="action-btn add-card-btn" type="button">
-            Add Ohm's Law Calculator
-          </button>
-          <button
-            class="action-btn add-card-btn add-network-card-btn"
-            type="button"
-            data-component="resistor"
-            data-topology="series"
-          >
-            Add Series Resistor Calculator
-          </button>
-          <button
-            class="action-btn add-card-btn add-network-card-btn"
-            type="button"
-            data-component="resistor"
-            data-topology="parallel"
-          >
-            Add Parallel Resistor Calculator
-          </button>
-          <button
-            class="action-btn add-card-btn add-network-card-btn"
-            type="button"
-            data-component="capacitor"
-            data-topology="series"
-          >
-            Add Series Capacitor Calculator
-          </button>
-          <button
-            class="action-btn add-card-btn add-network-card-btn"
-            type="button"
-            data-component="capacitor"
-            data-topology="parallel"
-          >
-            Add Parallel Capacitor Calculator
-          </button>
-          <button
-            class="action-btn add-card-btn add-network-card-btn"
-            type="button"
-            data-component="inductor"
-            data-topology="series"
-          >
-            Add Series Inductor Calculator
-          </button>
-          <button
-            class="action-btn add-card-btn add-network-card-btn"
-            type="button"
-            data-component="inductor"
-            data-topology="parallel"
-          >
-            Add Parallel Inductor Calculator
-          </button>
+        <div id="add-card-shell" class="card add-card-shell">
+          <div class="card-header add-card-header-spacer" aria-hidden="true">
+            <p class="calculator-label">Add a calculator</p>
+            <button type="button" class="action-btn remove-card-btn" tabindex="-1" disabled>
+              Remove calculator
+            </button>
+          </div>
+          <div id="add-card-actions" class="add-card-actions">
+            <button id="add-ohm-card" class="action-btn add-card-btn" type="button">
+              Add Ohm's Law Calculator
+            </button>
+            <button id="reset-all-cards" class="action-btn add-card-btn" type="button">
+              Reset all calculators
+            </button>
+            <button
+              class="action-btn add-card-btn add-network-card-btn"
+              type="button"
+              data-component="resistor"
+              data-topology="series"
+            >
+              Add Series Resistor Calculator
+            </button>
+            <button
+              class="action-btn add-card-btn add-network-card-btn"
+              type="button"
+              data-component="resistor"
+              data-topology="parallel"
+            >
+              Add Parallel Resistor Calculator
+            </button>
+            <button
+              class="action-btn add-card-btn add-network-card-btn"
+              type="button"
+              data-component="capacitor"
+              data-topology="series"
+            >
+              Add Series Capacitor Calculator
+            </button>
+            <button
+              class="action-btn add-card-btn add-network-card-btn"
+              type="button"
+              data-component="capacitor"
+              data-topology="parallel"
+            >
+              Add Parallel Capacitor Calculator
+            </button>
+            <button
+              class="action-btn add-card-btn add-network-card-btn"
+              type="button"
+              data-component="inductor"
+              data-topology="series"
+            >
+              Add Series Inductor Calculator
+            </button>
+            <button
+              class="action-btn add-card-btn add-network-card-btn"
+              type="button"
+              data-component="inductor"
+              data-topology="parallel"
+            >
+              Add Parallel Inductor Calculator
+            </button>
+          </div>
         </div>
       </section>
 
@@ -661,7 +681,9 @@
         );
         var cardsContainer = document.getElementById("cards");
         var addCardActions = document.getElementById("add-card-actions");
+        var addCardShell = document.getElementById("add-card-shell");
         var addOhmCardButton = document.getElementById("add-ohm-card");
+        var resetAllCardsButton = document.getElementById("reset-all-cards");
         var cardCount = 0;
 
         var THEME_STORAGE_KEY = "nomdetom-theme-mode";
@@ -1263,7 +1285,7 @@
 
         function syncCardHeaderLayout() {
           var cards = Array.prototype.slice.call(
-            cardsContainer.querySelectorAll(".card"),
+            cardsContainer.querySelectorAll(".calculator-card"),
           );
           if (!cards.length) return;
 
@@ -1307,7 +1329,7 @@
           removeButton.addEventListener("click", function () {
             if (card.parentNode === cardsContainer) {
               cardsContainer.removeChild(card);
-              cardsContainer.appendChild(addCardActions);
+              cardsContainer.appendChild(addCardShell);
               // Removing a card rewidens the rest, so the rows regroup.
               syncCardHeaderLayout();
             }
@@ -1317,7 +1339,7 @@
         function buildOhmCard() {
           cardCount += 1;
           var card = document.createElement("section");
-          card.className = "card";
+          card.className = "card calculator-card";
           var scheduleCalculate = createDebounced(function () {
             calculateCard(card);
           }, 220);
@@ -1439,8 +1461,8 @@
           });
 
           wireRemoveCardButton(card);
-          cardsContainer.insertBefore(card, addCardActions);
-          cardsContainer.appendChild(addCardActions);
+          cardsContainer.insertBefore(card, addCardShell);
+          cardsContainer.appendChild(addCardShell);
           syncCardHeaderLayout();
           calculateCard(card);
         }
@@ -1561,7 +1583,7 @@
           var isSeries = type === "series";
           var unitOptions = unitOptionsHtml(component);
           var card = document.createElement("section");
-          card.className = "card";
+          card.className = "card calculator-card";
           // The schematic CSS keys off these, so a wire only needs to know
           // which topology it is drawn for.
           card.setAttribute("data-component", componentKey);
@@ -1786,14 +1808,22 @@
           updateComponentRowLabels();
 
           wireRemoveCardButton(card);
-          cardsContainer.insertBefore(card, addCardActions);
-          cardsContainer.appendChild(addCardActions);
+          cardsContainer.insertBefore(card, addCardShell);
+          cardsContainer.appendChild(addCardShell);
           syncCardHeaderLayout();
           recalculate();
         }
 
         addOhmCardButton.addEventListener("click", function () {
           buildOhmCard();
+        });
+
+        resetAllCardsButton.addEventListener("click", function () {
+          var cards = cardsContainer.querySelectorAll(".calculator-card");
+          cards.forEach(function (card) {
+            cardsContainer.removeChild(card);
+          });
+          syncCardHeaderLayout();
         });
 
         // One delegated handler, so a new component only needs a descriptor
