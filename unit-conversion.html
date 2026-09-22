@@ -510,6 +510,50 @@
         min-width: 2rem;
       }
 
+      /* Where a frequency table also carries wavelengths, the value is a
+         place on the electromagnetic spectrum, and the panel names it. */
+      .spectrum-panel {
+        display: grid;
+        gap: 0.4rem;
+        margin-top: 0.75rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        font-size: 0.92rem;
+      }
+
+      .spectrum-panel[hidden] {
+        display: none;
+      }
+
+      .spectrum-row {
+        display: grid;
+        grid-template-columns: 10rem 1fr;
+        gap: 0.5rem;
+        align-items: baseline;
+      }
+
+      .spectrum-row > span:first-child {
+        color: var(--muted);
+      }
+
+      .spectrum-swatch {
+        display: inline-block;
+        width: 1.1em;
+        height: 1.1em;
+        margin-right: 0.45em;
+        border: 1px solid var(--border);
+        border-radius: 2px;
+        vertical-align: -0.2em;
+      }
+
+      @media (max-width: 768px) {
+        .spectrum-row {
+          grid-template-columns: 1fr;
+          gap: 0.1rem;
+        }
+      }
+
       .generic-inputs {
         display: grid;
         grid-template-columns: 1fr 1fr auto;
@@ -902,15 +946,74 @@
           return Math.max(0, parsed);
         }
 
+        // Rounding is one setting for the whole page, not one per card, so a
+        // choice made on Unit Conversion is still in force after switching to
+        // Mixed Units. Auto is the historical behaviour: six decimals with the
+        // trailing zeros trimmed, which is why 1 nm read as 0 m before the
+        // significant-figure modes existed.
+        var ROUNDING_MODES = [
+          { kind: "auto" },
+          { kind: "sf", digits: 3 },
+          { kind: "sf", digits: 4 },
+          { kind: "sf", digits: 6 },
+          { kind: "sf", digits: 10 },
+          { kind: "dp", digits: 0 },
+          { kind: "dp", digits: 2 },
+          { kind: "dp", digits: 4 },
+        ];
+        var roundingIndex = 0;
+
+        function roundingLabel() {
+          var mode = ROUNDING_MODES[roundingIndex];
+          if (mode.kind === "sf") return "Rounding: " + mode.digits + " s.f.";
+          if (mode.kind === "dp") return "Rounding: " + mode.digits + " d.p.";
+          return "Rounding: Auto";
+        }
+
+        // Wires a Rounding chip: cycles the page-wide mode and asks the card to
+        // rewrite its fields. Every card that shows numbers gets one.
+        function bindRoundingChip(chip, onChange) {
+          chip.textContent = roundingLabel();
+          chip.addEventListener("click", function () {
+            roundingIndex = (roundingIndex + 1) % ROUNDING_MODES.length;
+            chip.textContent = roundingLabel();
+            onChange();
+          });
+        }
+
+        // Significant figures keep their trailing zeros (1.500 at 4 s.f. is the
+        // point), and stay in plain notation wherever the digits fit. Values
+        // beyond 1e21 or below 1e-7 fall back to exponent form, because a
+        // wavelength of 0.000000000000000000000001 m is not a readable number.
+        function roundToSignificantFigures(value, digits) {
+          if (value === 0) return "0";
+          var text = value.toPrecision(digits);
+          if (text.indexOf("e") === -1) return text;
+          var magnitude = Math.abs(value);
+          if (magnitude >= 1e21 || magnitude < 1e-7) return text;
+          var exponent = Math.floor(Math.log10(magnitude));
+          // toPrecision may have rounded up across a power of ten.
+          if (Math.abs(Number(text)) >= Math.pow(10, exponent + 1)) exponent += 1;
+          var decimals = Math.max(0, digits - 1 - exponent);
+          return Number(text).toFixed(decimals);
+        }
+
         function formatNumber(value) {
           if (!Number.isFinite(value)) return "";
+          var mode = ROUNDING_MODES[roundingIndex];
+          if (mode.kind === "sf") {
+            return roundToSignificantFigures(value, mode.digits);
+          }
+          if (mode.kind === "dp") {
+            return value.toFixed(mode.digits);
+          }
           var fixed = value.toFixed(6);
           return fixed.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
         }
 
         var CONVERSION_REFERENCES = {
           generic:
-            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. A fourth <code>Offset to base unit</code> column is optional and defaults to 0; a unit converts as <code>value \u00d7 factor + offset</code>, which is what lets Celsius and Fahrenheit sit in the same table as Kelvin. Tables with an offset accept negative values. Use import/export below to work with the active table.</span>",
+            "<span><strong>Unit Conversion:</strong> Unit groups are defined in <code>unit-conversion-custom-units.js</code> where each <code>##</code> header defines one unit type and its markdown table of factors. A fourth <code>Offset to base unit</code> column is optional and defaults to 0; a unit converts as <code>value \u00d7 factor + offset</code>, which is what lets Celsius and Fahrenheit sit in the same table as Kelvin. Tables with an offset accept negative values. A fifth <code>Reciprocal</code> column set to <code>yes</code> makes a row the inverse of the base (<code>base = factor \u00f7 value</code>), which is how wavelength rows share a table with frequency. Rounding is set from the <code>Rounding</code> chip: Auto trims to six decimals, s.f. is significant figures, d.p. is decimal places. Use import/export below to work with the active table.</span>",
           mixed:
             "<span><strong>Mixed Units:</strong> Carries one measure across the units of a scale, so 9.5 st reads as 9 st 7 lb 0 oz. A scale is a set of units that chain by remainder — stone, pounds and ounces are one weight at 14 lb to the stone and 16 oz to the pound, not three interchangeable units. Scales are defined in <code>MIXED_SCALES_CATALOG_MARKDOWN</code> in <code>unit-conversion-custom-units.js</code>, where each <code>##</code> heading names a unit type from the conversion catalog and each row lists the units it chains, largest first. Decimal systems have no scales, because 3.7 t is written 3.7 t and never 3 t 700 kg; use Unit Conversion for those. Every unit except the smallest takes a whole number and the smallest absorbs the remainder. Typing is left alone until you leave a field, so you can enter 133 in the lb box and it settles into stone and pounds on blur. <code>Zeros</code> switches the combined reading between <code>9 st 7 lb</code> and <code>9 st 7 lb 0 oz</code>; the individual fields always show every place.</span>",
           formulas:
@@ -1005,6 +1108,7 @@
               factor: rows[i].factor,
               units: rows[i].units,
               offset: rows[i].offset || 0,
+              reciprocal: !!rows[i].reciprocal,
             });
           }
           return clone;
@@ -1313,6 +1417,7 @@
           var factorHeader = "Factor to base unit";
           var unitsHeader = "Units";
           var offsetHeader = "Offset to base unit";
+          var reciprocalHeader = "Reciprocal";
           var nameWidth = nameHeader.length;
           var factorWidth = factorHeader.length;
           var unitsWidth = unitsHeader.length;
@@ -1321,6 +1426,9 @@
           var offsetTexts = [];
           // Pure-ratio tables stay three columns wide, as they were written.
           var hasOffsets = false;
+          // The reciprocal column is fifth, so a table that needs it carries
+          // the offset column too, even if every offset is 0.
+          var hasReciprocals = false;
 
           for (var i = 0; i < rows.length; i++) {
             var nameText = String(rows[i].name || "");
@@ -1329,6 +1437,7 @@
             var offsetValue = Number(rows[i].offset) || 0;
             var offsetText = formatGenericFactor(offsetValue);
             if (offsetValue !== 0) hasOffsets = true;
+            if (rows[i].reciprocal) hasReciprocals = true;
             factorTexts.push(factorText);
             offsetTexts.push(offsetText);
             if (nameText.length > nameWidth) nameWidth = nameText.length;
@@ -1338,6 +1447,8 @@
             if (offsetText.length > offsetWidth)
               offsetWidth = offsetText.length;
           }
+
+          if (hasReciprocals) hasOffsets = true;
 
           var lines = [
             "| " +
@@ -1349,7 +1460,8 @@
               " |" +
               (hasOffsets
                 ? " " + offsetHeader.padEnd(offsetWidth, " ") + " |"
-                : ""),
+                : "") +
+              (hasReciprocals ? " " + reciprocalHeader + " |" : ""),
             "| " +
               "-".repeat(nameWidth) +
               " | " +
@@ -1359,6 +1471,9 @@
               ": |" +
               (hasOffsets
                 ? " " + "-".repeat(Math.max(0, offsetWidth - 1)) + ": |"
+                : "") +
+              (hasReciprocals
+                ? " " + "-".repeat(reciprocalHeader.length) + " |"
                 : ""),
           ];
 
@@ -1377,6 +1492,14 @@
                 " |" +
                 (hasOffsets
                   ? " " + rowOffset.padStart(offsetWidth, " ") + " |"
+                  : "") +
+                (hasReciprocals
+                  ? " " +
+                    (rows[j].reciprocal ? "yes" : "").padEnd(
+                      reciprocalHeader.length,
+                      " ",
+                    ) +
+                    " |"
                   : ""),
             );
           }
@@ -1526,6 +1649,11 @@
             var offset =
               cells.length >= 4 ? parseLocalizedOffsetForMarkdown(cells[3]) : 0;
             if (offset == null) offset = 0;
+            // A reciprocal row is base = factor / value (f = c / lambda). An
+            // offset makes no sense on top of that, so the flag wins.
+            var reciprocal =
+              cells.length >= 5 && /^(yes|y|true|1|reciprocal)$/i.test(cells[4].trim());
+            if (reciprocal) offset = 0;
             if (!name || factor == null) continue;
 
             // Skip likely header rows.
@@ -1537,6 +1665,7 @@
               factor: factor,
               units: units,
               offset: offset,
+              reciprocal: reciprocal,
             });
           }
 
@@ -1616,6 +1745,310 @@
           );
         }
 
+        // ---- Electromagnetic spectrum lookups ----
+        // Each table is [lowHz, highHz, label]. The panel shows every table
+        // that has a row containing the frequency, so a value can be in the
+        // ITU UHF band, the IEEE L band and the 23 cm amateur band at once,
+        // and a value outside all of them simply shows fewer rows.
+        var SPEED_OF_LIGHT = 299792458;
+
+        // ITU Radio Regulations article 2 band numbers, with the metric
+        // wavelength names alongside, which is where "the metre band" and
+        // "centimetre band" come from.
+        var ITU_BANDS = [
+          [3, 30, "ELF — extremely low frequency, 100 Mm–10 Mm"],
+          [30, 300, "SLF — super low frequency, 10 Mm–1 Mm"],
+          [300, 3e3, "ULF — ultra low frequency, 1 Mm–100 km"],
+          [3e3, 30e3, "VLF — very low frequency, myriametric waves (100–10 km)"],
+          [30e3, 300e3, "LF — low frequency, kilometric waves (10–1 km)"],
+          [300e3, 3e6, "MF — medium frequency, hectometric waves (1 km–100 m)"],
+          [3e6, 30e6, "HF — high frequency, decametric waves (100–10 m)"],
+          [30e6, 300e6, "VHF — very high frequency, metric waves (10–1 m)"],
+          [300e6, 3e9, "UHF — ultra high frequency, decimetric waves (1 m–10 cm)"],
+          [3e9, 30e9, "SHF — super high frequency, centimetric waves (10–1 cm)"],
+          [30e9, 300e9, "EHF — extremely high frequency, millimetric waves (10–1 mm)"],
+          [300e9, 3e12, "THF — tremendously high frequency, decimillimetric waves (1–0.1 mm)"],
+        ];
+
+        // IEEE Std 521 radar-band letters.
+        var IEEE_BANDS = [
+          [3e6, 30e6, "HF"],
+          [30e6, 300e6, "VHF"],
+          [300e6, 1e9, "UHF"],
+          [1e9, 2e9, "L band"],
+          [2e9, 4e9, "S band"],
+          [4e9, 8e9, "C band"],
+          [8e9, 12e9, "X band"],
+          [12e9, 18e9, "Ku band"],
+          [18e9, 27e9, "K band"],
+          [27e9, 40e9, "Ka band"],
+          [40e9, 75e9, "V band"],
+          [75e9, 110e9, "W band"],
+          [110e9, 300e9, "mm band (G)"],
+        ];
+
+        // Amateur allocations, IARU Region 1 (UK) limits unless marked. The
+        // 33 cm and 1.25 m bands exist only in Region 2, and are listed so
+        // that a 915 MHz value is named rather than left blank.
+        var AMATEUR_BANDS = [
+          [135.7e3, 137.8e3, "2200 m"],
+          [472e3, 479e3, "630 m"],
+          [1.81e6, 2.0e6, "160 m"],
+          [3.5e6, 3.8e6, "80 m"],
+          [5.3515e6, 5.3665e6, "60 m"],
+          [7.0e6, 7.2e6, "40 m"],
+          [10.1e6, 10.15e6, "30 m"],
+          [14.0e6, 14.35e6, "20 m"],
+          [18.068e6, 18.168e6, "17 m"],
+          [21.0e6, 21.45e6, "15 m"],
+          [24.89e6, 24.99e6, "12 m"],
+          [28.0e6, 29.7e6, "10 m"],
+          [50e6, 52e6, "6 m"],
+          [70.0e6, 70.5e6, "4 m"],
+          [144e6, 146e6, "2 m"],
+          [222e6, 225e6, "1.25 m (Region 2 only)"],
+          [430e6, 440e6, "70 cm"],
+          [902e6, 928e6, "33 cm (Region 2 only)"],
+          [1240e6, 1300e6, "23 cm"],
+          [2300e6, 2450e6, "13 cm"],
+          [3400e6, 3410e6, "9 cm"],
+          [5650e6, 5850e6, "6 cm"],
+          [10.0e9, 10.5e9, "3 cm"],
+          [24.0e9, 24.25e9, "1.2 cm"],
+          [47.0e9, 47.2e9, "6 mm"],
+          [76e9, 81e9, "4 mm"],
+        ];
+
+        // Named allocations a value is likely to land in. Not exhaustive;
+        // broadcast, ISM/SRD and the LoRa channel plans, plus a few services
+        // that are recognisable by frequency.
+        var ALLOCATIONS = [
+          [148.5e3, 283.5e3, "Long-wave broadcast"],
+          [526.5e3, 1606.5e3, "Medium-wave broadcast"],
+          [13.553e6, 13.567e6, "13.56 MHz ISM (RFID / NFC)"],
+          [26.965e6, 27.405e6, "27 MHz CB"],
+          [87.5e6, 108e6, "FM broadcast"],
+          [108e6, 137e6, "Aeronautical VHF (airband)"],
+          [156e6, 162.025e6, "Marine VHF"],
+          [174e6, 240e6, "DAB / VHF band III"],
+          [433.05e6, 434.79e6, "433 MHz ISM (LoRa EU433, SRD)"],
+          [446.0e6, 446.2e6, "PMR446"],
+          [470e6, 694e6, "UHF TV broadcast"],
+          [863e6, 870e6, "863–870 MHz SRD (LoRa EU868, Meshtastic EU_868)"],
+          [902e6, 928e6, "902–928 MHz ISM (LoRa US915 / AU915)"],
+          [1164e6, 1300e6, "GNSS lower band (L2 / L5 / E5)"],
+          [1559e6, 1610e6, "GNSS upper band (GPS L1, Galileo E1, GLONASS G1)"],
+          [2400e6, 2500e6, "2.4 GHz ISM (Wi-Fi, Bluetooth, LoRa 2.4 GHz)"],
+          [5150e6, 5875e6, "5 GHz Wi-Fi (bands 1–4) and 5.8 GHz ISM"],
+          [5925e6, 7125e6, "6 GHz Wi-Fi (Wi-Fi 6E / 7)"],
+          [24.0e9, 24.25e9, "24 GHz ISM"],
+          [57e9, 71e9, "60 GHz unlicensed (802.11ad/ay)"],
+        ];
+
+        // Regions of the spectrum, by frequency. The radio/microwave line is
+        // conventional rather than physical, so microwave is a note on radio.
+        var SPECTRUM_REGIONS = [
+          [0, 300e9, "Radio"],
+          [300e9, 400e12, "Infrared"],
+          [400e12, 790e12, "Visible light"],
+          [790e12, 30e15, "Ultraviolet"],
+          [30e15, 30e18, "X-ray"],
+          [30e18, Infinity, "Gamma ray"],
+        ];
+
+        // Finer divisions, by wavelength in nanometres, high to low frequency.
+        var WAVELENGTH_SUBREGIONS = [
+          [750, 1.4e3, "Near infrared (NIR)"],
+          [1.4e3, 3e3, "Short-wave infrared (SWIR)"],
+          [3e3, 8e3, "Mid-wave infrared (MWIR)"],
+          [8e3, 15e3, "Long-wave infrared (LWIR, thermal imaging)"],
+          [15e3, 1e6, "Far infrared"],
+          [315, 400, "UV-A"],
+          [280, 315, "UV-B"],
+          [100, 280, "UV-C"],
+          [10, 121, "Extreme ultraviolet (EUV)"],
+        ];
+
+        var VISIBLE_COLOURS = [
+          [380, 450, "Violet"],
+          [450, 485, "Blue"],
+          [485, 500, "Cyan"],
+          [500, 565, "Green"],
+          [565, 590, "Yellow"],
+          [590, 625, "Orange"],
+          [625, 750, "Red"],
+        ];
+
+        function findBands(table, value) {
+          var hits = [];
+          for (var i = 0; i < table.length; i++) {
+            if (value >= table[i][0] && value <= table[i][1]) {
+              hits.push(table[i][2]);
+            }
+          }
+          return hits;
+        }
+
+        // Approximate sRGB for a visible wavelength (Dan Bruton's fit), with
+        // the intensity tapered at both ends the way the eye's response does.
+        function wavelengthToCss(nm) {
+          var r = 0,
+            g = 0,
+            b = 0;
+          if (nm < 440) {
+            r = (440 - nm) / 60;
+            b = 1;
+          } else if (nm < 490) {
+            g = (nm - 440) / 50;
+            b = 1;
+          } else if (nm < 510) {
+            g = 1;
+            b = (510 - nm) / 20;
+          } else if (nm < 580) {
+            r = (nm - 510) / 70;
+            g = 1;
+          } else if (nm < 645) {
+            r = 1;
+            g = (645 - nm) / 65;
+          } else {
+            r = 1;
+          }
+          var taper = 1;
+          if (nm < 420) taper = 0.3 + (0.7 * (nm - 380)) / 40;
+          else if (nm > 700) taper = 0.3 + (0.7 * (750 - nm)) / 50;
+          function channel(v) {
+            return Math.round(255 * Math.pow(Math.max(0, v * taper), 0.8));
+          }
+          return "rgb(" + channel(r) + "," + channel(g) + "," + channel(b) + ")";
+        }
+
+        function formatWavelength(metres) {
+          var scales = [
+            [1e3, "km"],
+            [1, "m"],
+            [1e-2, "cm"],
+            [1e-3, "mm"],
+            [1e-6, "µm"],
+            [1e-9, "nm"],
+            [1e-12, "pm"],
+          ];
+          for (var i = 0; i < scales.length; i++) {
+            if (metres >= scales[i][0] || i === scales.length - 1) {
+              return (
+                roundToSignificantFigures(metres / scales[i][0], 4) +
+                " " +
+                scales[i][1]
+              );
+            }
+          }
+          return "";
+        }
+
+        function formatFrequency(hz) {
+          var scales = [
+            [1e15, "PHz"],
+            [1e12, "THz"],
+            [1e9, "GHz"],
+            [1e6, "MHz"],
+            [1e3, "kHz"],
+            [1, "Hz"],
+          ];
+          for (var i = 0; i < scales.length; i++) {
+            if (hz >= scales[i][0] || i === scales.length - 1) {
+              return (
+                roundToSignificantFigures(hz / scales[i][0], 4) +
+                " " +
+                scales[i][1]
+              );
+            }
+          }
+          return "";
+        }
+
+        function spectrumRowHtml(label, value) {
+          return (
+            '<div class="spectrum-row"><span>' +
+            escapeHTML(label) +
+            "</span><span>" +
+            value +
+            "</span></div>"
+          );
+        }
+
+        // Everything the panel says about a frequency, as HTML. Empty when
+        // there is nothing sensible to say.
+        function describeSpectrum(hz) {
+          if (!(hz > 0) || !Number.isFinite(hz)) return "";
+          var metres = SPEED_OF_LIGHT / hz;
+          var nm = metres * 1e9;
+          var out = [];
+
+          out.push(
+            spectrumRowHtml(
+              "Wavelength / frequency",
+              escapeHTML(formatWavelength(metres)) +
+                " at " +
+                escapeHTML(formatFrequency(hz)),
+            ),
+          );
+
+          var region = findBands(SPECTRUM_REGIONS, hz);
+          var regionText = region.length ? region[0] : "";
+          if (regionText === "Radio" && hz >= 1e9) {
+            regionText = "Radio — microwave (1–300 GHz)";
+          }
+          var sub = findBands(WAVELENGTH_SUBREGIONS, nm);
+          if (sub.length) regionText += " — " + sub.join(", ");
+          if (regionText) {
+            out.push(spectrumRowHtml("Spectrum", escapeHTML(regionText)));
+          }
+
+          var colours = findBands(VISIBLE_COLOURS, nm);
+          if (colours.length) {
+            out.push(
+              spectrumRowHtml(
+                "Visible colour",
+                '<span class="spectrum-swatch" style="background:' +
+                  wavelengthToCss(nm) +
+                  '" aria-hidden="true"></span>' +
+                  escapeHTML(colours[0]) +
+                  " (" +
+                  escapeHTML(roundToSignificantFigures(nm, 4)) +
+                  " nm; the swatch is an approximate sRGB rendering)",
+              ),
+            );
+          }
+
+          var itu = findBands(ITU_BANDS, hz);
+          if (itu.length) {
+            out.push(spectrumRowHtml("ITU band", escapeHTML(itu[0])));
+          }
+          var ieee = findBands(IEEE_BANDS, hz);
+          if (ieee.length) {
+            out.push(spectrumRowHtml("IEEE radar band", escapeHTML(ieee[0])));
+          }
+          var amateur = findBands(AMATEUR_BANDS, hz);
+          if (amateur.length) {
+            out.push(
+              spectrumRowHtml(
+                "Amateur band",
+                escapeHTML(amateur.join(", ")) +
+                  (amateur[0].indexOf("Region 2") === -1
+                    ? " (IARU Region 1 limits)"
+                    : ""),
+              ),
+            );
+          }
+          var allocations = findBands(ALLOCATIONS, hz);
+          if (allocations.length) {
+            out.push(
+              spectrumRowHtml("Allocations", escapeHTML(allocations.join("; "))),
+            );
+          }
+
+          return out.join("");
+        }
+
         function buildGenericConverter() {
           loadGenericCatalogFromMarkdownFile();
 
@@ -1624,12 +2057,15 @@
           card.innerHTML =
             '<div class="card-header"><p class="converter-label">Unit Conversion</p></div>' +
             "<section>" +
-            '<div class="section-header"><h2>Table and Values</h2><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
+            '<div class="section-header"><h2>Table and Values</h2><button type="button" class="chip rounding-chip">Rounding: Auto</button><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
             '<div class="field"><label>Preset family<select class="generic-preset"></select></label></div>' +
             '<div class="generic-inputs"></div>' +
+            '<div class="spectrum-panel" hidden></div>' +
             '<div class="status">Choose a preset or generate fields from markdown.</div>' +
             "</section>";
 
+          var roundingChip = card.querySelector(".rounding-chip");
+          var spectrumPanel = card.querySelector(".spectrum-panel");
           var groupingChip = card.querySelector(".grouping-chip");
           var decimalChip = card.querySelector(".decimal-chip");
           var resetChip = card.querySelector(".reset-chip");
@@ -1725,13 +2161,63 @@
             return Number.isFinite(offset) ? offset : 0;
           }
 
+          function inputIsReciprocal(input) {
+            return input.getAttribute("data-reciprocal") === "1";
+          }
+
+          // The spectrum panel belongs to a table whose base is the hertz and
+          // which also carries wavelengths: that is a frequency being read as
+          // a place on the spectrum, not a rotation speed or a clock rate. The
+          // plain Frequency table, with its rpm row, does not qualify.
+          function rowsDescribeSpectrum() {
+            var hasHertzBase = false;
+            var hasWavelength = false;
+            for (var i = 0; i < rows.length; i++) {
+              if (rows[i].reciprocal) hasWavelength = true;
+              else if (rows[i].units === "Hz" && Number(rows[i].factor) === 1) {
+                hasHertzBase = true;
+              }
+            }
+            return hasHertzBase && hasWavelength;
+          }
+
+          function updateSpectrumPanel(baseValue) {
+            if (baseValue == null || !rowsDescribeSpectrum()) {
+              spectrumPanel.hidden = true;
+              spectrumPanel.innerHTML = "";
+              return;
+            }
+            var html = describeSpectrum(baseValue);
+            spectrumPanel.innerHTML = html;
+            spectrumPanel.hidden = !html;
+          }
+
+          // Base from a field: value * factor + offset, or factor / value for
+          // a reciprocal row. A zero wavelength has no frequency, so a zero
+          // in a reciprocal field reads as empty rather than as infinity.
+          function fieldToBase(input, parsed) {
+            var factor = parseFloat(input.getAttribute("data-factor"));
+            if (inputIsReciprocal(input)) {
+              return parsed > 0 ? factor / parsed : null;
+            }
+            return parsed * factor + inputOffset(input);
+          }
+
+          function baseToField(input, baseValue) {
+            var factor = parseFloat(input.getAttribute("data-factor"));
+            if (inputIsReciprocal(input)) {
+              return baseValue > 0 ? factor / baseValue : NaN;
+            }
+            return (baseValue - inputOffset(input)) / factor;
+          }
+
           function findCurrentBaseValue() {
             var inputs = inputsWrap.querySelectorAll(".input-generic");
             for (var i = 0; i < inputs.length; i++) {
               var parsed = parseGenericFieldValue(inputs[i].value);
               if (parsed == null) continue;
-              var factor = parseFloat(inputs[i].getAttribute("data-factor"));
-              return parsed * factor + inputOffset(inputs[i]);
+              var base = fieldToBase(inputs[i], parsed);
+              if (base != null) return base;
             }
             return null;
           }
@@ -1741,6 +2227,7 @@
             for (var i = 0; i < inputs.length; i++) {
               inputs[i].value = "";
             }
+            updateSpectrumPanel(null);
             status.textContent = "Enter a value in any field to convert.";
           }
 
@@ -1752,13 +2239,13 @@
                 inputs[i].value = "";
                 continue;
               }
-              var factor = parseFloat(inputs[i].getAttribute("data-factor"));
               inputs[i].value = formatNumberWithGrouping(
-                (baseValue - inputOffset(inputs[i])) / factor,
+                baseToField(inputs[i], baseValue),
                 groupingMode,
                 decimalSeparator,
               );
             }
+            updateSpectrumPanel(baseValue);
           }
 
           function calculateFrom(sourceInput) {
@@ -1766,10 +2253,7 @@
             if (sourceInput) {
               var parsed = parseGenericFieldValue(sourceInput.value);
               if (parsed != null) {
-                baseValue =
-                  parsed *
-                    parseFloat(sourceInput.getAttribute("data-factor")) +
-                  inputOffset(sourceInput);
+                baseValue = fieldToBase(sourceInput, parsed);
               }
             }
 
@@ -1834,6 +2318,8 @@
                 rows[i].factor +
                 '" data-offset="' +
                 (Number(rows[i].offset) || 0) +
+                '" data-reciprocal="' +
+                (rows[i].reciprocal ? "1" : "0") +
                 '" type="text" inputmode="decimal" placeholder="Enter value" /></span>' +
                 '<span class="generic-unit-units">' +
                 escapeHTML(displayUnits) +
@@ -1925,6 +2411,13 @@
             }
           });
 
+          bindRoundingChip(roundingChip, function () {
+            var baseValue = findCurrentBaseValue();
+            if (baseValue != null) {
+              syncInputs(baseValue);
+            }
+          });
+
           decimalChip.addEventListener("click", function () {
             var baseValue = findCurrentBaseValue();
             decimalSeparator = getNextDecimalSeparator(decimalSeparator);
@@ -1997,7 +2490,7 @@
           card.innerHTML =
             '<div class="card-header"><p class="converter-label">Mixed Units</p></div>' +
             "<section>" +
-            '<div class="section-header"><h2>Mixed Breakdown</h2><button type="button" class="chip zeros-chip">Zeros: Hide</button><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
+            '<div class="section-header"><h2>Mixed Breakdown</h2><button type="button" class="chip zeros-chip">Zeros: Hide</button><button type="button" class="chip rounding-chip">Rounding: Auto</button><button type="button" class="chip grouping-chip">Grouping: Off</button><button type="button" class="chip decimal-chip">Decimal: .</button><button type="button" class="chip reset-chip">Reset</button></div>' +
             '<div class="field"><label>Scale<select class="mixed-scale"></select></label></div>' +
             '<div class="generic-inputs mixed-inputs"></div>' +
             '<div class="field"><label>Combined<input class="input-generic mixed-combined" type="text" readonly placeholder="Enter a value in any field" /></label></div>' +
@@ -2005,6 +2498,7 @@
             "</section>";
 
           var zerosChip = card.querySelector(".zeros-chip");
+          var roundingChip = card.querySelector(".rounding-chip");
           var groupingChip = card.querySelector(".grouping-chip");
           var decimalChip = card.querySelector(".decimal-chip");
           var resetChip = card.querySelector(".reset-chip");
@@ -2373,6 +2867,10 @@
             status.textContent = describeScale();
           });
 
+          bindRoundingChip(roundingChip, function () {
+            if (currentBase != null) writeDecomposition(currentBase);
+          });
+
           scaleSelect.addEventListener("change", loadScaleFromSelection);
 
           updateZerosChipLabel();
@@ -2401,6 +2899,7 @@
             '<div class="card-header"><p class="converter-label">Formula Calculator</p></div>' +
             "<section>" +
             '<div class="section-header"><h2>Variables</h2>' +
+            '<button type="button" class="chip rounding-chip">Rounding: Auto</button>' +
             '<button type="button" class="chip reset-chip">Reset</button></div>' +
             '<div class="field"><label>Formula group<select class="formulas-preset"></select></label></div>' +
             '<div class="formula-inputs"></div>' +
@@ -2840,6 +3339,9 @@
 
           function formatFormulaValue(value) {
             if (!isFinite(value)) return "";
+            if (ROUNDING_MODES[roundingIndex].kind !== "auto") {
+              return formatNumber(value);
+            }
             var s = value.toPrecision(10).replace(/\.?0+$/, "");
             if (parseFloat(s) !== value) s = String(value);
             return s;
@@ -3053,6 +3555,8 @@
             }
             status.textContent = "Enter values to calculate.";
           });
+
+          bindRoundingChip(card.querySelector(".rounding-chip"), updateFields);
 
           function formulaRowsToMarkdown(rows) {
             var headers = [

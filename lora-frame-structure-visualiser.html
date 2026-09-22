@@ -1,0 +1,2643 @@
+<!doctype html>
+<!-- Agentic tools: calculator-template.html, 3-state theme system, accessibility patterns, attribution infrastructure -->
+<!-- Data: symbol values for the two shipped defaults come from MeshBench's own LoRa encoder (MeshBench/meshbench, internal/rf/lora), verified by demodulating them back and decoding to a matching payload -->
+<!-- LLMs: Claude Opus 5 (via Claude Code) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>LoRa Frame Structure Visualiser (SX1262)</title>
+    <style>
+      /* ============================================================
+       CSS VARIABLES - customize colors here for your calculator
+       ============================================================ */
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+        --error-text: #ffb4b4;
+      }
+
+      /* ============================================================
+       SHARED BASE STYLES - do not modify
+       ============================================================ */
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* Sized to their longer label so the row does not reflow when they toggle. */
+      #overlay-btn {
+        min-width: 12.5rem;
+        text-align: center;
+      }
+
+      #bw-scale-btn {
+        min-width: 14.5rem;
+        text-align: center;
+      }
+
+      .action-btn:disabled {
+        color: var(--disabled);
+        border-color: var(--border);
+        cursor: default;
+      }
+      .action-btn:disabled:hover {
+        color: var(--disabled);
+        border-color: var(--border);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      /* Optional multi-card layout (matches solar/ohms style) */
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        align-items: start;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .calculator-grid-wrapper {
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+
+      .calculator-card {
+        display: grid;
+        gap: 1rem;
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+
+      .calculator-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .add-calculator-actions {
+        display: grid;
+        gap: 0.6rem;
+        align-self: start;
+        justify-self: start;
+        width: 50%;
+        margin-top: calc(0.9rem * 1.5 + 1rem);
+        min-height: 21.35rem;
+      }
+
+      .add-calculator-btn {
+        border-style: dashed;
+        width: 100%;
+        min-width: 12rem;
+        min-height: 6.6rem;
+        padding: 0.8rem 1rem;
+        text-align: left;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .formulas-section {
+        margin-top: 1.5rem;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .export-panel textarea {
+        font-family: monospace;
+      }
+
+      .results {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.85rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-align: right;
+      }
+
+      /* Hero / primary result — larger accent-coloured value.
+         Use for the one or two numbers the user cares about most. */
+      .result-primary .result-value {
+        font-size: 1.5rem;
+        color: var(--accent);
+      }
+
+      /* Muted parenthetical annotation inside a result-label.
+         e.g. <span class="result-label">Throughput <span class="optional">(payload / ToA)</span></span> */
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
+      .formula-note {
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .formula-note span {
+        display: block;
+      }
+
+      .optional {
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 0.88em;
+      }
+
+      .output-value {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+        min-height: 2.65rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* -------- checkbox field -------- */
+      .checkbox-field {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .checkbox-field input[type="checkbox"] {
+        width: auto;
+        flex-shrink: 0;
+        margin-top: 0.2rem;
+        padding: 0;
+        accent-color: var(--accent);
+      }
+
+      .checkbox-field-text {
+        display: grid;
+        gap: 0.2rem;
+      }
+
+      .checkbox-field-label {
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      /* -------- pill toggle switch -------- */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 2.75rem;
+        height: 1.4rem;
+        flex-shrink: 0;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: var(--border);
+        transition: background 0.18s;
+        border: 1px solid var(--border);
+      }
+
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        height: 1rem;
+        width: 1rem;
+        left: 0.15rem;
+        bottom: 0.15rem;
+        background: var(--panel-bg);
+        transition: transform 0.18s;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .toggle-switch input:checked + .toggle-slider::before {
+        transform: translateX(1.35rem);
+      }
+
+      .toggle-switch input:disabled + .toggle-slider {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .toggle-switch input:focus + .toggle-slider {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* Flanking labels — bold and accent the currently-active side */
+      .toggle-switch-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .switch-label { font-size: 0.95rem; }
+      .switch-label.active { font-weight: 700; color: var(--accent); }
+
+      /* -------- view switcher (joined tab bar) -------- */
+      .view-switch {
+        display: flex;
+        gap: 0;
+        margin-bottom: 0.9rem;
+      }
+
+      .view-switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .view-switch-btn + .view-switch-btn {
+        border-left: none;
+      }
+
+      .view-switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      /* -------- status / feedback line -------- */
+      .status {
+        margin-top: 0.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error { color: var(--error-text); }
+      .status.ok    { color: var(--accent); }
+
+      /* -------- section-header: heading + right-aligned inline chip controls -------- */
+      /* Used in Unit Converter/Calculator for grouping, decimal, and reset chips. */
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .section-header h2 {
+        margin: 0;
+      }
+
+      /* -------- field hint text -------- */
+      .field-hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 400;
+      }
+
+      /* -------- two-column field grid (matching heights) -------- */
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 1rem;
+        row-gap: 0.9rem;
+        margin-bottom: 0.9rem;
+      }
+
+      .two-col-fields .field {
+        margin-bottom: 0;
+      }
+
+      /* Hint + button row sits directly under the columns it annotates */
+      .hint-button-row {
+        margin-top: -0.4rem;
+        align-items: start;
+      }
+
+      /* -------- inline preset / advanced editor panel -------- */
+      .preset-editor-inline {
+        border: 1px solid var(--border);
+        padding: 0.85rem;
+        background: var(--field-bg);
+        margin-bottom: 0.9rem;
+      }
+
+      .preset-editor-inline textarea {
+        font-family: monospace;
+        font-size: 0.85rem;
+        resize: vertical;
+        min-height: 10rem;
+      }
+
+      .preset-error {
+        color: var(--error-text);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        display: none;
+      }
+
+      .preset-error.visible {
+        display: block;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: 0.6rem;
+        margin-top: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      /* -------- chip / toggle-button group -------- */
+      .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chip.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .chip.selected:hover {
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .chip:disabled {
+        color: var(--disabled);
+        border-color: var(--border);
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      /* -------- expanding help / field-help (from Datatype Byte Converter)
+         Native <details>/<summary> wrapper with soft background.
+         Used inline near a control or group to explain behaviour in detail. -------- */
+      .field-help {
+        border: 1px solid var(--border);
+        background: var(--accent-soft);
+        padding: 0.4rem 0.55rem;
+        color: var(--muted);
+      }
+
+      .field-help summary {
+        cursor: pointer;
+        font-size: 0.84rem;
+        color: var(--text);
+      }
+
+      .field-help-content {
+        margin-top: 0.45rem;
+        font-size: 0.84rem;
+        display: grid;
+        gap: 0.25rem;
+      }
+
+      .field-help-content p {
+        margin: 0;
+      }
+
+      /* -------- status pills (from Datatype Byte Converter)
+         Small inline badges for row-level status — live inside a result-label
+         or table cell. All share the same base shape; colour carries meaning.
+         warn and wrap have dark-mode overrides via --error-text / custom values. -------- */
+      .ok-pill,
+      .warn-pill,
+      .wrap-pill,
+      .bad-pill {
+        display: inline-block;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid;
+        padding: 0.1rem 0.35rem;
+      }
+
+      .ok-pill   { color: var(--accent);     border-color: var(--accent); }
+      .warn-pill { color: #8a6500;            border-color: #8a6500; }
+      .wrap-pill { color: #875400;            border-color: #875400; }
+      .bad-pill  { color: var(--error-text);  border-color: var(--error-text); }
+
+      :root[data-theme="dark"] .warn-pill { color: #f2cf70; border-color: #f2cf70; }
+      :root[data-theme="dark"] .wrap-pill { color: #f8bf65; border-color: #f8bf65; }
+
+      /* -------- self-labeling toggle button (from Datatype Byte Converter)
+         A single standalone button whose text announces its own state.
+         Soft-fill active style — same visual as filter chips but for a
+         binary on/off setting rather than filtering a group.
+         No pill shape, no transition, no companion buttons. -------- */
+      .chip-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.84rem;
+        padding: 0.4rem 0.65rem;
+        cursor: pointer;
+      }
+
+      .chip-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .chip-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* -------- soft-fill filter chips (from protobuf encoding demonstrator)
+         Active state uses accent-soft background + accent text — never a solid fill.
+         Inactive text is var(--muted), not var(--text), to de-emphasise unchosen options.
+         Use for filtering a table or list rather than committing to a value.
+         Compare with .chip (solid fill) and .toggle-btn (solid fill + transition). -------- */
+      .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .filter-chip {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.82rem;
+        padding: 0.35rem 0.6rem;
+        cursor: pointer;
+      }
+
+      .filter-chip.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .filter-chip:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* -------- toggle-btn group — good colour scheme (from Discord timestamp generator)
+         Key improvements over .chip:
+           • --chip-selected-text flips to dark text in dark mode so selected
+             state stays readable against the light accent colour
+           • 2 px border + transition give more tactile feedback
+           • .primary marks the most-used choices with accent colour before
+             they are selected, so the eye finds them instantly            -------- */
+      .toggle-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .toggle-btn {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 2px solid var(--border);
+        padding: 0.5rem 1rem;
+        font: inherit;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-radius: 20px;
+        transition: all 0.2s;
+      }
+
+      .toggle-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* .primary — accented border/text before selection */
+      .toggle-btn.primary {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn.primary:hover:not(:disabled):not(.selected) {
+        background: var(--accent-soft);
+      }
+
+      /* selected — filled accent background, text flips via --chip-selected-text */
+      .toggle-btn.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .toggle-btn:disabled {
+        color: var(--disabled);
+        border-color: var(--disabled);
+        background: var(--field-bg);
+        cursor: not-allowed;
+      }
+
+      /* -------- spinner (▲/▼ inside the field) -------- */
+      .spin-wrap {
+        position: relative;
+      }
+
+      .spin-wrap input {
+        padding-right: 1.8rem;
+        width: 100%;
+      }
+
+      .spin-wrap input::-webkit-inner-spin-button,
+      .spin-wrap input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .spin-wrap input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      .spin-btns {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 1.6rem;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid var(--border);
+      }
+
+      .spin-up,
+      .spin-dn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.5rem;
+        line-height: 1;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .spin-dn {
+        border-top: 1px solid var(--border);
+      }
+
+      .spin-up:hover,
+      .spin-dn:hover {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      /* -------- jog buttons (− input +) -------- */
+      .jog-wrap {
+        display: flex;
+      }
+
+      .jog-wrap input {
+        flex: 1;
+        border-left: 0;
+        border-right: 0;
+        text-align: center;
+        min-width: 0;
+      }
+
+      .jog-wrap input::-webkit-inner-spin-button,
+      .jog-wrap input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .jog-wrap input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      .jog-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.75rem 0.85rem;
+        cursor: pointer;
+        font: inherit;
+        font-size: 1rem;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+
+      .jog-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value {
+          text-align: left;
+        }
+
+        .add-calculator-actions {
+          width: 100%;
+        }
+
+        .two-col-fields {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+
+      /* ============================================================
+       FRAME VISUALISER - part colours and the waterfall plot
+       The five part colours are a validated categorical set, used
+       unmodified: worst adjacent CVD delta-E 9.1 light / 8.4 dark
+       against an 8 target, worst normal-vision 19.6 / 19.3 against a
+       15 floor. Three of the light steps sit below 3:1 against white,
+       which is why no text is ever tinted with them - band labels and
+       values wear ink tokens, the colours mark only the chirps and the
+       key swatches, and the table below repeats every part in words.
+       ============================================================ */
+      :root {
+        --pc-preamble: #2a78d6;
+        --pc-sync: #eb6834;
+        --pc-sfd: #1baf7a;
+        --pc-header: #eda100;
+        --pc-payload: #e87ba4;
+        --band-alpha: 0.13;
+      }
+      :root[data-theme="dark"] {
+        --pc-preamble: #3987e5;
+        --pc-sync: #d95926;
+        --pc-sfd: #199e70;
+        --pc-header: #c98500;
+        --pc-payload: #d55181;
+        --band-alpha: 0.2;
+      }
+
+      .three-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        column-gap: 1rem;
+        row-gap: 0.9rem;
+        margin-bottom: 0.9rem;
+        align-items: start;
+      }
+      .three-col-fields .field {
+        margin-bottom: 0;
+      }
+
+      .mono {
+        font-family: "Courier New", monospace;
+      }
+
+      .frame-h {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .partkey {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0 0 1rem;
+        padding: 0;
+        list-style: none;
+      }
+      .partkey li {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        padding: 0.4rem 0.7rem;
+        font-size: 0.85rem;
+      }
+      .vx-swatch {
+        width: 0.7rem;
+        height: 0.7rem;
+        flex: none;
+        transform: translateY(1px);
+      }
+
+      .vx-panel {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        padding: 0.9rem 0.9rem 0.4rem;
+        margin-bottom: 1rem;
+      }
+      .vx-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.35rem 0.9rem;
+        margin-bottom: 0.35rem;
+      }
+      .vx-set {
+        color: var(--muted);
+        font-family: "Courier New", monospace;
+        font-size: 0.82rem;
+      }
+      .vx-plot {
+        position: relative;
+      }
+      .vx-plot svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .vx-chirp {
+        fill: none;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+      }
+      .vx-hit {
+        fill: transparent;
+        cursor: crosshair;
+      }
+      .vx-sym.on .vx-chirp {
+        stroke-width: 3;
+      }
+      .vx-band {
+        font-family: "Courier New", monospace;
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        fill: var(--muted);
+      }
+      .vx-axis {
+        font-family: "Courier New", monospace;
+        font-size: 0.66rem;
+        fill: var(--muted);
+      }
+      .vx-axist {
+        font-family: "Courier New", monospace;
+        font-size: 0.66rem;
+        fill: var(--muted);
+      }
+
+      .vx-tip {
+        position: absolute;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.09s;
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 0.45rem 0.6rem;
+        font-family: "Courier New", monospace;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        z-index: 5;
+      }
+      .vx-tip.on {
+        opacity: 1;
+      }
+      .vx-tipsec {
+        font-weight: 700;
+      }
+      .vx-tip dl {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 0 0.6rem;
+        margin: 0.3rem 0 0;
+      }
+      .vx-tip dt {
+        color: var(--muted);
+      }
+      .vx-tip dd {
+        margin: 0;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .cmp-scroll {
+        overflow-x: auto;
+      }
+      table.cmp {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 30rem;
+      }
+      table.cmp th,
+      table.cmp td {
+        text-align: right;
+        padding: 0.45rem 0.6rem;
+        border-bottom: 1px solid var(--border);
+      }
+      table.cmp thead th {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+      table.cmp tbody th {
+        text-align: left;
+        font-weight: 400;
+        color: var(--muted);
+      }
+      table.cmp td {
+        font-family: "Courier New", monospace;
+        font-variant-numeric: tabular-nums;
+      }
+      table.cmp tr.vx-strong td {
+        font-weight: 700;
+      }
+      table.cmp tr.vx-spacer th,
+      table.cmp tr.vx-spacer td {
+        border-bottom: 0;
+        height: 0.35rem;
+        padding: 0;
+      }
+
+      .symbol-dump {
+        margin-top: 1rem;
+      }
+      .symbol-dump h4 {
+        margin: 0.9rem 0 0.2rem;
+        font-size: 0.92rem;
+      }
+      .vx-dumplabel {
+        margin: 0.4rem 0 0.2rem;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .symbol-dump pre {
+        margin: 0;
+        padding: 0.6rem 0.7rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        font-family: "Courier New", monospace;
+        font-size: 0.78rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        padding: 0;
+        accent-color: var(--accent);
+      }
+
+      /* A list of parts reads badly when the last one wraps alone; balance the
+         lines instead of letting a two-character tail drop to its own row. */
+      .wrap-balanced {
+        text-wrap: balance;
+        display: inline-block;
+        max-width: 22rem;
+      }
+
+      /* One notes box under both cards, rather than the same paragraphs twice. */
+      .notes-box {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        padding: 0.9rem 1rem;
+        margin-top: 1rem;
+      }
+      .notes-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .notes-head h3 {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      #settings-notes p {
+        margin: 0.7rem 0 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        max-width: 78ch;
+      }
+      #settings-notes strong {
+        color: var(--text);
+      }
+      .notes-warn {
+        border-left: 3px solid var(--error-text);
+        padding-left: 0.7rem;
+      }
+
+      .view-switch {
+        display: flex;
+        gap: 0;
+        margin-bottom: 1.2rem;
+      }
+      .view-switch-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.55rem 0.75rem;
+        cursor: pointer;
+        text-align: center;
+      }
+      .view-switch-btn + .view-switch-btn {
+        border-left: none;
+      }
+      .view-switch-btn.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      /* The playhead: a line that walks the trace in step with the sound. */
+      .vx-head-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--accent);
+        pointer-events: none;
+        display: none;
+      }
+
+      .vx-window {
+        display: block;
+        font-family: "Courier New", monospace;
+        font-size: 0.95rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .vx-plot.dragging {
+        cursor: col-resize;
+        user-select: none;
+      }
+      .vx-sel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        background: var(--accent);
+        opacity: 0.18;
+        pointer-events: none;
+        display: none;
+      }
+
+      .vx-rulerlab {
+        font-family: "Courier New", monospace;
+        font-size: 0.62rem;
+        font-weight: 700;
+        fill: var(--muted);
+      }
+      .vx-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem 1rem;
+        margin: 0 0 0.6rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      .vx-legend svg {
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>LoRa frame structure visualiser — SX1262</h1>
+        <p class="subtitle">
+          Two LoRa frames side by side, drawn symbol by symbol on a shared time axis: what the
+          preamble, the sync word, the start-of-frame delimiter, the header and the payload each
+          cost in microseconds, and where a mesh spends its airtime. One part only: everything
+          here is an SX1262 in standard interleaving, at the bandwidths it actually has.
+        </p>
+
+        <!-- STANDARD HEADER CONTROLS - do not modify structure -->
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <!-- ADD YOUR CUSTOM BUTTONS HERE (e.g., Show parser, Export results) -->
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <!-- ATTRIBUTION BLOCK - required for licensing -->
+        <div id="attribution-block" class="attribution-block">
+          <p id="hosted-note" class="hosted-note">
+            Did you know: this calculator can be saved and used locally!
+          </p>
+          <p class="hosted-note">
+            Airtime is RadioLib's <span class="mono">getTimeOnAir()</span>, which is what MeshCore's
+            <span class="mono">getEstAirtimeFor()</span> returns. The two shipped presets carry real
+            symbol values from
+            <a class="attribution-link" href="https://github.com/MeshBench/meshbench">MeshBench</a>'s
+            LoRa encoder; any other parameter set has no encoder here, so its payload diagonals are
+            marked illustrative. Preset tables are MeshCore's community list and Meshtastic's
+            <span class="mono">modemPresetToParams</span>.
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+      </header>
+
+      <div class="view-switch" role="tablist" aria-label="View">
+        <button type="button" class="view-switch-btn active" id="tab-compare" role="tab"
+          aria-selected="true" aria-controls="view-compare">Compare two frames</button>
+        <button type="button" class="view-switch-btn" id="tab-listen" role="tab"
+          aria-selected="false" aria-controls="view-listen">Listen to one</button>
+      </div>
+
+      <div id="view-listen" role="tabpanel" aria-labelledby="tab-listen" hidden>
+        <section class="calculator-grid-wrapper">
+          <div class="section-header">
+            <h2>One frame, played as pitch</h2>
+            <span class="field-hint" id="listen-which"></span>
+          </div>
+          <p class="field-hint">
+            The chirp's frequency becomes the note. A LoRa symbol sweeps the whole channel, so each
+            one is a rising glide that snaps back at the symbol's value; the preamble is the same
+            glide thirty-odd times, the start-of-frame delimiter runs the other way, and the payload
+            is where the pitch starts to scatter. Nothing about the audio is a measurement, it is
+            the same geometry the trace is drawn from, mapped onto a range you can hear.
+          </p>
+          <div class="three-col-fields">
+            <div class="field">
+              <label for="listen-frame">Frame</label>
+              <select id="listen-frame">
+                <option value="0" selected>A</option>
+                <option value="1">B</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="listen-speed">Speed</label>
+              <input id="listen-speed" type="range" min="1" max="100" step="1" value="12" />
+              <span class="field-hint" id="listen-speed-note"></span>
+            </div>
+            <div class="field">
+              <label for="listen-wave">Timbre</label>
+              <select id="listen-wave">
+                <option value="sine" selected>Sine</option>
+                <option value="triangle">Triangle</option>
+                <option value="square">Square</option>
+                <option value="sawtooth">Sawtooth</option>
+              </select>
+            </div>
+          </div>
+          <div class="two-col-fields" style="align-items: start">
+            <div class="field">
+              <label for="listen-low">Lowest pitch</label>
+              <input id="listen-low" type="range" min="50" max="800" step="10" value="160" />
+              <span class="field-hint" id="listen-low-note"></span>
+            </div>
+            <div class="field">
+              <label for="listen-high">Highest pitch</label>
+              <input id="listen-high" type="range" min="200" max="4000" step="20" value="1600" />
+              <span class="field-hint" id="listen-high-note"></span>
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button id="listen-play" class="action-btn" type="button">Play</button>
+            <button id="listen-stop" class="action-btn" type="button" disabled>Stop</button>
+          </div>
+          <div id="listen-plot"></div>
+        </section>
+      </div>
+
+      <div id="view-compare" role="tabpanel" aria-labelledby="tab-compare">
+      <section class="calculator-grid-wrapper">
+        <div class="section-header">
+          <h2>Frame A and Frame B</h2>
+          <button id="reset-btn" class="action-btn" type="button">Reset</button>
+          <button id="swap-btn" class="action-btn" type="button">Swap A and B</button>
+        </div>
+        <div class="calculator-grid" id="grid"></div>
+        <div class="notes-box">
+          <div class="notes-head">
+            <h3>About these settings</h3>
+            <button id="toggle-notes-btn" class="chip-btn active" type="button" aria-expanded="true"
+              aria-controls="settings-notes">Hide notes</button>
+          </div>
+          <div id="settings-notes"></div>
+        </div>
+      </section>
+
+      <section class="calculator-grid-wrapper" style="margin-top: 1.5rem">
+        <div class="section-header">
+          <h2>On the air</h2>
+          <button id="overlay-btn" class="action-btn" type="button" aria-pressed="false">
+            Overlay both frames
+          </button>
+          <button id="bw-scale-btn" class="action-btn" type="button" aria-pressed="false">
+            Bandwidth: equal height
+          </button>
+          <button id="zoom-out-btn" class="action-btn" type="button">Zoom out</button>
+          <button id="zoom-reset-btn" class="action-btn" type="button">Reset zoom</button>
+          <button id="toggle-key-btn" class="action-btn" type="button" aria-expanded="true">
+            Hide key
+          </button>
+        </div>
+        <div class="two-col-fields" style="align-items: start">
+          <div class="field">
+            <label for="trace-height">Trace height</label>
+            <input
+              id="trace-height"
+              type="range"
+              min="180"
+              max="760"
+              step="20"
+              value="230"
+            />
+            <span class="field-hint" id="trace-height-note">230 px</span>
+          </div>
+          <div class="field">
+            <label for="zoom-note-label" id="zoom-note-label">Time window</label>
+            <output class="vx-window" id="zoom-note" for="zoom-note-label"></output>
+            <span class="field-hint">
+              Drag across a trace to zoom, scroll to zoom about the pointer, drag with the
+              right button or shift held to pan.
+            </span>
+          </div>
+        </div>
+        <ul class="partkey" id="partkey"></ul>
+        <div id="plots"></div>
+        <p class="field-hint" id="axis-note"></p>
+      </section>
+
+      <section class="calculator-grid-wrapper" style="margin-top: 1.5rem">
+        <div class="section-header">
+          <h2>Side by side</h2>
+          <button id="toggle-symbols-btn" class="action-btn" type="button" aria-expanded="false">
+            Show symbol values
+          </button>
+        </div>
+        <div class="cmp-scroll">
+          <table class="cmp" id="cmp"></table>
+        </div>
+        <div id="symbol-dump" class="symbol-dump" hidden></div>
+      </section>
+
+      </div>
+
+      <section class="formulas-section" style="margin-top: 1.5rem">
+        <h2>How the frame is built</h2>
+        <p>
+          A LoRa symbol is one chirp sweeping the whole bandwidth in
+          <span class="mono">Tsym = 2^SF / BW</span>. The symbol's <em>value</em> is the point at
+          which the sweep wraps, so a payload reads as diagonals broken at different heights. Four
+          parts go on the air in order:
+        </p>
+        <ul>
+          <li>
+            <strong>Preamble</strong> &mdash; unmodulated upchirps. MeshCore sends
+            <span class="mono">sf &lt;= 8 ? 32 : 16</span>; Meshtastic sends 16. Both are far more
+            than RadioLib's default of 8, and at a fast spreading factor the preamble can cost more
+            airtime than the payload.
+          </li>
+          <li>
+            <strong>Sync word</strong> &mdash; two modulated upchirps, one per nibble, each nibble
+            times eight. This is the only thing separating two meshes that share a frequency.
+          </li>
+          <li>
+            <strong>SFD</strong> &mdash; two and a quarter downchirps. The reversal is what lets a
+            receiver separate timing error from frequency error: an upchirp moves one way under
+            both, a downchirp moves opposite ways.
+          </li>
+          <li>
+            <strong>Header and payload</strong> &mdash; the header is always 8 symbols at SF&minus;2
+            bits per symbol whatever low-data-rate optimisation says, which is why the airtime
+            formula carries a lone <span class="mono">+8</span>. The payload is
+            <span class="mono">ceil(bits / d) &times; (CR+4)</span> symbols, so airtime is a
+            staircase in payload length rather than a line.
+          </li>
+        </ul>
+        <p class="formula-note">
+          Airtime is RadioLib's <span class="mono">getTimeOnAir()</span> truncated to whole
+          milliseconds, because that is what the firmware itself computes and polices its
+          duty cycle with. Low-data-rate optimisation switches on at a symbol duration of 16 ms,
+          which is a property of <span class="mono">2^SF / BW</span> and not of SF alone: SF11
+          crosses it at 125 kHz and does not at 250 kHz.
+        </p>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-09-22">22 September 2026</time>
+    </footer>
+
+
+    <!-- ============================================================
+       JAVASCRIPT - Theme system (do not modify) + calculator logic
+       ============================================================ -->
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById(
+          "toggle-attribution-btn",
+        );
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode =
+            mode === "light" || mode === "dark" || mode === "auto"
+              ? mode
+              : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute(
+            "aria-pressed",
+            themeMode === "dark" ? "true" : "false",
+          );
+          updateThemeButton(themeMode);
+
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(function () {
+              if (themeMode === "auto") {
+                applyThemeMode("auto", false);
+              }
+            });
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        // ==================== FRAME STRUCTURE VISUALISER ====================
+        // ---- the LoRa transmit chain, ported from MeshBench internal/rf/lora ----
+        //
+        // Gray, whitening, the header and its checksum, Hamming, the diagonal
+        // interleaver and the CRC: the layers a real SX126x applies. Ported so the
+        // page can encode any parameter set rather than carrying two frozen symbol
+        // arrays. Verified symbol-for-symbol against the Go across a matrix of
+        // SF 7..12, CR 1..4, LDRO on and off, and payloads 1..255 bytes.
+        //
+        // SF5 and SF6 use a different frame arrangement on the SX126x and are out of
+        // scope here, exactly as they are in the Go.
+
+        function grayInverse(g) { var v = 0; for (; g !== 0; g >>= 1) v ^= g; return v; }
+
+        function whiten(b) {
+          var state = 0xff;
+          for (var i = 0; i < b.length; i++) {
+            b[i] ^= state;
+            var next = ((state >> 7) ^ (state >> 5) ^ (state >> 4) ^ (state >> 3)) & 1;
+            state = ((state << 1) | next) & 0xff;
+          }
+          return b;
+        }
+
+        function crc16(b) {
+          var n = b.length, split = Math.max(n - 2, 0), crc = 0;
+          for (var i = 0; i < split; i++) {
+            crc ^= b[i] << 8;
+            for (var k = 0; k < 8; k++) {
+              crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+            }
+          }
+          if (n >= 1) crc ^= b[n - 1];
+          if (n >= 2) crc ^= b[n - 2] << 8;
+          return crc & 0xffff;
+        }
+
+        function headerChecksum(n0, n1, n2) {
+          function b(n, i) { return (n >> i) & 1; }
+          var c4 = b(n0,3) ^ b(n0,2) ^ b(n0,1) ^ b(n0,0);
+          var c3 = b(n0,3) ^ b(n1,3) ^ b(n1,2) ^ b(n1,1) ^ b(n2,3);
+          var c2 = b(n0,2) ^ b(n1,3) ^ b(n1,0) ^ b(n2,3) ^ b(n2,1);
+          var c1 = b(n0,1) ^ b(n1,2) ^ b(n1,0) ^ b(n2,2) ^ b(n2,1) ^ b(n2,0);
+          var c0 = b(n0,0) ^ b(n1,1) ^ b(n2,3) ^ b(n2,2) ^ b(n2,1) ^ b(n2,0);
+          return (c4 << 4) | (c3 << 3) | (c2 << 2) | (c1 << 1) | c0;
+        }
+
+        function headerNibbles(length, cr, crcOn) {
+          var n0 = (length >> 4) & 0xf, n1 = length & 0xf;
+          var n2 = ((cr << 1) & 0xf) | (crcOn ? 1 : 0);
+          var chk = headerChecksum(n0, n1, n2);
+          return [n0, n1, n2, (chk >> 4) & 1, chk & 0xf];
+        }
+
+        // The parity equations are the real SX126x's, and they agree exactly with
+        // EPFL's gr-lora_sdr once its MSB-first bit order is unwound.
+        function hammingEncode(nibble, cr) {
+          var d0 = nibble & 1, d1 = (nibble >> 1) & 1, d2 = (nibble >> 2) & 1, d3 = (nibble >> 3) & 1;
+          var p0 = d0 ^ d1 ^ d2, p1 = d1 ^ d2 ^ d3, p2 = d0 ^ d1 ^ d3, p3 = d0 ^ d2 ^ d3;
+          var cw = nibble;
+          if (cr === 1) cw |= (d0 ^ d1 ^ d2 ^ d3) << 4;
+          else if (cr === 2) cw |= (p0 << 4) | (p1 << 5);
+          else if (cr === 3) cw |= (p0 << 4) | (p1 << 5) | (p2 << 6);
+          else if (cr === 4) cw |= (p0 << 4) | (p1 << 5) | (p2 << 6) | (p3 << 7);
+          return cw;
+        }
+
+        function encodeBlock(nibbles, cr, ppm) {
+          var cws = new Array(ppm).fill(0);
+          for (var i = 0; i < nibbles.length && i < ppm; i++) cws[i] = hammingEncode(nibbles[i], cr);
+          var syms = [];
+          for (var c = 0; c < cr + 4; c++) {
+            var v = 0;
+            for (var r = 0; r < ppm; r++) v |= (((cws[(r + c) % ppm] >> c) & 1) << r);
+            syms.push(grayInverse(v));
+          }
+          return syms;
+        }
+
+        // Returns the chirp shifts, or null for a parameter set this chain does not
+        // cover (SF outside 7..12, CR outside 1..4, payload over 255).
+        function encodeFrame(sf, cr, ldroOn, payload) {
+          if (sf < 7 || sf > 12 || cr < 1 || cr > 4 || payload.length > 255) return null;
+          var white = whiten(payload.slice());
+          var nibbles = headerNibbles(payload.length, cr, true);
+          for (var i = 0; i < white.length; i++) { nibbles.push(white[i] & 0xf); nibbles.push(white[i] >> 4); }
+          var crc = crc16(payload);
+          nibbles.push(crc & 0xf, (crc >> 4) & 0xf, (crc >> 8) & 0xf, (crc >> 12) & 0xf);
+
+          var hn = sf - 2;                       // the header block is always SF-2 at 4/8
+          var dn = ldroOn ? sf - 2 : sf;
+          function pad(a, to) { var o = a.slice(0, to); while (o.length < to) o.push(0); return o; }
+
+          var syms = encodeBlock(pad(nibbles, hn), 4, hn);
+          var rest = nibbles.slice(Math.min(hn, nibbles.length));
+          while (rest.length > 0) {
+            syms = syms.concat(encodeBlock(pad(rest, dn), cr, dn));
+            rest = rest.slice(Math.min(dn, rest.length));
+          }
+          // Reduced-rate symbols sit in the top bits of the shift: the dropped bits
+          // are the fine ones a timing error would smear.
+          var shift = [];
+          for (var j = 0; j < syms.length; j++) shift.push(syms[j] << (sf - (j < 8 ? hn : dn)));
+          return shift;
+        }
+
+        // The ten bandwidth codes of SX126x datasheet table 13-46, and no more: the
+        // wider steps belong to parts this page does not model.
+        var BW_CODES = [7.81, 10.42, 15.63, 20.83, 31.25, 41.67, 62.5, 125, 250, 500];
+
+        // Ordered as the dropdown reads: Meshtastic sub-GHz first, MeshCore next,
+        // anything above a gigahertz last. Group order here is group order there -
+        // panelHtml opens a new optgroup whenever the group name changes.
+        var PRESETS = [
+          { g: "Meshtastic", n: "LongFast",   sf: 11, bw: 250, cr: 1, pre: 16, sync: 0x2b },
+          { g: "Meshtastic", n: "LongSlow",   sf: 12, bw: 125, cr: 1, pre: 16, sync: 0x2b },
+          { g: "Meshtastic", n: "MediumSlow", sf: 10, bw: 250, cr: 1, pre: 16, sync: 0x2b },
+          { g: "Meshtastic", n: "MediumFast", sf: 9,  bw: 250, cr: 1, pre: 16, sync: 0x2b },
+          { g: "Meshtastic", n: "ShortFast",  sf: 7,  bw: 250, cr: 1, pre: 16, sync: 0x2b },
+          { g: "Meshtastic", n: "ShortTurbo", sf: 7,  bw: 500, cr: 1, pre: 16, sync: 0x2b },
+
+          { g: "MeshCore", n: "EU/UK (Narrow)",     sf: 8,  bw: 62.5, cr: 4, pre: 32, sync: 0x12 },
+          { g: "MeshCore", n: "USA/Canada (Rec)",   sf: 7,  bw: 62.5, cr: 1, pre: 32, sync: 0x12 },
+          { g: "MeshCore", n: "Australia",          sf: 10, bw: 250,  cr: 1, pre: 16, sync: 0x12 },
+          { g: "MeshCore", n: "EU/UK (Deprecated)", sf: 11, bw: 250,  cr: 1, pre: 16, sync: 0x12 },
+          { g: "MeshCore", n: "Portugal 433",       sf: 9,  bw: 62.5, cr: 2, pre: 16, sync: 0x12 }
+        ];
+
+        // What an SX1262 writes for a LoRa sync word.
+        //
+        // The byte lives in two registers, 0x0740 and 0x0741, and RadioLib expands
+        // it with control bits 0x44: the low nibble of each written byte is always 4,
+        // which is why the private word 0x12 is written 0x1424 and the public one
+        // 0x34 is written 0x3444.
+        //
+        // The two sync SYMBOLS are each nibble times eight. That is what MeshBench
+        // measured off a real SX1262 and what gr-lora_sdr implements, and it is a
+        // measurement, not an inference from the register layout.
+        function syncRegs(w) {
+          return "0x0740 = 0x" + hex2((w & 0xf0) | 0x04) +
+            ", 0x0741 = 0x" + hex2(((w & 0x0f) << 4) | 0x04);
+        }
+
+        // Modulo the symbol space, which only bites below SF5: a nibble of 15 is
+        // symbol 120, and the smallest space this page draws is 32.
+        function syncSymbols(word, sf) {
+          var n = 1 << sf;
+          return [(((word >> 4) & 0xf) * 8) % n, ((word & 0xf) * 8) % n];
+        }
+
+        function hex2(v) { return (v & 0xff).toString(16).toUpperCase().padStart(2, "0"); }
+
+        // Semtech blesses two values and no others; the gateway basebands enforce it.
+        function syncIsStandard(w) { return w === 0x12 || w === 0x34; }
+
+        var PARTS = [
+          { id: "preamble", name: "Preamble",  note: "unmodulated upchirps" },
+          { id: "sync",     name: "Sync word", note: "2 modulated upchirps" },
+          { id: "sfd",      name: "SFD",       note: "2.25 downchirps" },
+          { id: "header",   name: "Header",    note: "8 symbols at SF-2" },
+          { id: "payload",  name: "Payload",   note: "coded data" }
+        ];
+
+        var STATE = [
+          { sf: 11, bw: 250,  cr: 1, pre: 16, sync: 0x2b, bytes: 32, preset: "Meshtastic|LongFast" },
+          { sf: 8,  bw: 62.5, cr: 4, pre: 32, sync: 0x12, bytes: 32, preset: "MeshCore|EU/UK (Narrow)" }
+        ];
+
+        // Taken before any handler can mutate STATE, and deep so that restoring it
+        // cannot hand back the same objects the page has been editing in place.
+        var DEFAULTS = JSON.parse(JSON.stringify(STATE));
+
+        function tsymMs(sf, bw) { return Math.pow(2, sf) / bw; }
+        function ldro(sf, bw) { return tsymMs(sf, bw) >= 16; }
+
+        // RadioLib getTimeOnAir(), which is what MeshCore's getEstAirtimeFor() returns.
+        function frameOf(s) {
+          var ms = tsymMs(s.sf, s.bw);
+          var c1 = (s.sf === 5 || s.sf === 6) ? 6.25 : 4.25;
+          var c2 = (s.sf === 5 || s.sf === 6) ? 0 : 8;
+          var d = ldro(s.sf, s.bw) ? 4 * (s.sf - 2) : 4 * s.sf;
+          var bits = Math.max(8 * s.bytes + 16 - 4 * s.sf + c2 + 20, 0);
+          // CR 4/4 carries no parity at all, so a codeword is four symbols rather
+          // than five to eight. The header block is always 4/8 whatever this says.
+          var payload = Math.ceil(bits / d) * (s.cr + 4);
+          var total = s.pre + c1 + 8 + payload;
+          return {
+            tsymMs: ms, c1: c1, ldro: ldro(s.sf, s.bw), payloadSyms: payload,
+            dataSyms: 8 + payload, totalSyms: total,
+            airMs: ms * total, truncMs: Math.trunc(ms * total),
+            samples: Math.round(total * Math.pow(2, s.sf)),
+            sampleUs: 1000 / s.bw
+          };
+        }
+
+        // A payload to encode. Real content would come from the mesh; this is a
+        // deterministic fill so the same settings always draw the same frame.
+        function samplePayload(n) {
+          var out = [];
+          for (var i = 0; i < n; i++) out.push((i * 31 + 7) & 0xff);
+          return out;
+        }
+
+        function symbolsFor(s, f) {
+          var syms = encodeFrame(s.sf, s.cr, f.ldro, samplePayload(s.bytes));
+          if (syms) return syms;
+          // Outside the chain's range (SF5/6, CR 4/4): draw the structure with the
+          // right symbol count and say plainly that the values are not encoded.
+          var n = Math.pow(2, s.sf), out = [], v = (s.sync * 7 + s.bytes * 13 + 1) % n;
+          for (var i = 0; i < f.dataSyms; i++) { v = (v * 1103515245 + 12345) % n; out.push(Math.abs(v)); }
+          return out;
+        }
+
+        function symbolsAreEncoded(s, f) {
+          return !!encodeFrame(s.sf, s.cr, f.ldro, samplePayload(s.bytes));
+        }
+
+        // ---- input panels ----
+        function panelHtml(i) {
+          var s = STATE[i];
+          var opts = "";
+          var lastG = "";
+          PRESETS.forEach(function (p) {
+            if (p.g !== lastG) { if (lastG) opts += "</optgroup>"; opts += '<optgroup label="' + p.g + '">'; lastG = p.g; }
+            var val = p.g + "|" + p.n;
+            opts += '<option value="' + val + '"' + (s.preset === val ? " selected" : "") + ">" + p.n + "</option>";
+          });
+          opts += "</optgroup>";
+          opts += '<option value="custom"' + (s.preset === "custom" ? " selected" : "") + ">Custom</option>";
+
+          var sfOpts = "";
+          for (var sf = 5; sf <= 12; sf++) sfOpts += '<option value="' + sf + '"' + (s.sf === sf ? " selected" : "") + ">SF" + sf + "</option>";
+          var crOpts = "";
+          for (var cr = 0; cr <= 4; cr++) {
+            var lbl = cr === 0 ? "4/4 (no FEC)" : "4/" + (cr + 4);
+            crOpts += '<option value="' + cr + '"' + (s.cr === cr ? " selected" : "") + ">" + lbl + "</option>";
+          }
+          var bwOptsAll = BW_CODES.map(function (b) {
+            return '<option value="' + b + '"' + (s.bw === b ? " selected" : "") + ">" + b + " kHz</option>";
+          }).join("");
+          return (
+            '<div class="calculator-card" data-i="' + i + '">' +
+              '<h3 class="frame-h">Frame ' + (i ? "B" : "A") + '</h3>' +
+              '<div class="field"><label for="preset-' + i + '">Preset</label>' +
+                '<select id="preset-' + i + '" data-k="preset">' + opts + "</select></div>" +
+              '<div class="three-col-fields">' +
+                '<div class="field"><label for="sf-' + i + '">Spreading factor</label>' +
+                  '<select id="sf-' + i + '" data-k="sf">' + sfOpts + "</select></div>" +
+                '<div class="field"><label for="bw-' + i + '">Bandwidth</label>' +
+                  '<select id="bw-' + i + '" data-k="bw">' + bwOptsAll + "</select></div>" +
+                '<div class="field"><label for="cr-' + i + '">Coding rate</label>' +
+                  '<select id="cr-' + i + '" data-k="cr">' + crOpts + "</select></div>" +
+              "</div>" +
+              '<div class="three-col-fields">' +
+                '<div class="field"><label for="pre-' + i + '">Preamble <span class="optional">symbols</span></label>' +
+                  '<input id="pre-' + i + '" data-k="pre" type="number" inputmode="numeric" min="4" max="64" step="1" value="' + s.pre + '" /></div>' +
+                '<div class="field"><label for="sync-' + i + '">Sync word <span class="optional">hex</span></label>' +
+                  '<input id="sync-' + i + '" data-k="sync" type="text" inputmode="latin" value="0x' + s.sync.toString(16).toUpperCase() + '" /></div>' +
+                '<div class="field"><label for="bytes-' + i + '">Payload <span class="optional">bytes</span></label>' +
+                  '<input id="bytes-' + i + '" data-k="bytes" type="number" inputmode="numeric" min="0" max="255" step="1" value="' + s.bytes + '" /></div>' +
+              "</div>" +
+              '<div class="field"><span class="field-hint">' + syncRegs(s.sync) +
+                " &rarr; sync symbols " + syncSymbols(s.sync, s.sf).join(" and ") +
+                (syncIsStandard(s.sync) ? "" : " &middot; not one of Semtech&rsquo;s two") +
+                "</span></div>" +
+            "</div>"
+          );
+        }
+
+        // ---- the waterfall ----
+        var H = 230, M = { l: 54, r: 14, t: 26, b: 34 };
+        var DEFAULT_HEIGHT = H;
+        var OVERLAY = false;
+        // Equal height draws each channel across the full trace, so a 62.5 kHz
+        // frame and a 250 kHz frame look the same size. To scale draws both on
+        // one kHz axis, the narrow one a quarter as tall, which is what a
+        // waterfall would show.
+        var BW_SCALE = false;
+
+        // The frequency-axis scale of frame i: 1 when equal height, its share of
+        // the wider channel when to scale.
+        function bwScale(i) {
+          if (!BW_SCALE) return 1;
+          var widest = Math.max(STATE[0].bw, STATE[1].bw);
+          return STATE[i].bw / widest;
+        }
+        // The visible time window. null means the whole of the longer frame.
+        var ZOOM = null;
+
+        // The SVG is drawn at the pixel width it will occupy, so one user unit is
+        // one CSS pixel and the labels keep their intended size. Scaling a fixed
+        // viewBox down to a phone would shrink the type with it; a horizontal
+        // scrollbar would hide half the frame. Redrawing on resize does neither.
+        function plotWidth() {
+          var host = document.getElementById("plots");
+          var w = host ? host.clientWidth : 0;
+          return Math.max(Math.round(w) || 960, 300);
+        }
+
+        function chirpSegs(shift, n, down, span) {
+          if (down) return [[0, 0.5, span, 0.5 - span]];
+          var s = shift / n;
+          if (shift === 0) return [[0, -0.5, 1, 0.5]];
+          return [[0, s - 0.5, 1 - s, 0.5], [1 - s, -0.5, 1, s - 0.5]];
+        }
+
+        // The symbols of one frame, laid out in time. Shared by both views.
+        function runOf(i) {
+          var s = STATE[i], f = frameOf(s), ms = f.tsymMs, syms = symbolsFor(s, f), run = [], k;
+          for (k = 0; k < s.pre; k++) run.push({ part: "preamble", shift: 0, span: 1, down: false, idx: k });
+          var sy = syncSymbols(s.sync, s.sf);
+          run.push({ part: "sync", shift: sy[0], span: 1, down: false, idx: 0, lab: "A" });
+          run.push({ part: "sync", shift: sy[1], span: 1, down: false, idx: 1, lab: "B" });
+          run.push({ part: "sfd", shift: 0, span: 1, down: true, idx: 0 });
+          run.push({ part: "sfd", shift: 0, span: 1, down: true, idx: 1 });
+          run.push({ part: "sfd", shift: 0, span: 0.25, down: true, idx: 2 });
+          syms.forEach(function (v, j) { run.push({ part: j < 8 ? "header" : "payload", shift: v, span: 1, down: false, idx: j }); });
+          var t = 0, bands = {};
+          run.forEach(function (r) {
+            r.t0 = t; t += r.span * ms; r.t1 = t;
+            if (!bands[r.part]) bands[r.part] = { t0: r.t0, t1: r.t1 };
+            bands[r.part].t0 = Math.min(bands[r.part].t0, r.t0);
+            bands[r.part].t1 = Math.max(bands[r.part].t1, r.t1);
+          });
+          return { run: run, bands: bands, f: f, s: s, ms: ms, n: Math.pow(2, s.sf) };
+        }
+
+        var NICE = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+
+        function niceStep(span) {
+          for (var i = 0; i < NICE.length; i++) {
+            if (span / NICE[i] <= 9) return NICE[i];
+          }
+          return NICE[NICE.length - 1];
+        }
+
+        function tickLabel(v, step) {
+          return step < 0.1 ? v.toFixed(2) : step < 1 ? v.toFixed(1) : String(Math.round(v));
+        }
+
+        function timeAxis(x, t0, t1, PH) {
+          var step = niceStep(t1 - t0);
+          var out = "";
+          var first = Math.ceil(t0 / step) * step;
+          for (var tv = first; tv <= t1 + step * 0.001; tv += step) {
+            out += '<line x1="' + x(tv).toFixed(1) + '" y1="' + (M.t + PH) + '" x2="' + x(tv).toFixed(1) +
+              '" y2="' + (M.t + PH + 4) + '" stroke="var(--muted)"></line>' +
+              '<text class="vx-axis" x="' + x(tv).toFixed(1) + '" y="' + (M.t + PH + 17) +
+              '" text-anchor="middle">' + tickLabel(tv, step) + "</text>";
+          }
+          return out;
+        }
+
+        // The window actually drawn, clamped to something a chirp is still visible in.
+        function windowOf(tMax) {
+          if (!ZOOM) return { t0: 0, t1: tMax };
+          var t0 = Math.max(0, ZOOM.t0), t1 = Math.min(tMax, ZOOM.t1);
+          if (t1 - t0 < 0.02) t1 = t0 + 0.02;
+          return { t0: t0, t1: t1 };
+        }
+
+        // Both frames on one pair of axes.
+        //
+        // Frequency is drawn as a fraction of each frame's own channel, because the
+        // two channels are not the same width and a shared kHz axis would be a lie.
+        // Frame identity is carried by line style as well as position - A solid, B
+        // dashed - so the five part colours keep meaning what they mean, and the
+        // part bands become a ruler along each edge rather than a wash behind both.
+        function overlayHtml(win, W) {
+          var PW = W - M.l - M.r, PH = H - M.t - M.b, RH = 13;
+          var span = win.t1 - win.t0;
+          var x = function (t) { return M.l + ((t - win.t0) / span) * PW; };
+          var clip = "clip-ov-" + Math.round(W) + "-" + Math.round(H);
+          var yOf = function (fr, k) { return M.t + RH + (0.5 - fr * k) * (PH - 2 * RH); };
+          var y = function (fr) { return yOf(fr, 1); };
+          var widest = Math.max(STATE[0].bw, STATE[1].bw);
+          var svg = "", grid = "";
+          [0.5, 0, -0.5].forEach(function (fv) {
+            // Equal height has no common unit, so the axis reads in halves of
+            // each channel; to scale it is one kHz axis for both.
+            var lab = fv === 0 ? "0"
+              : BW_SCALE ? (fv > 0 ? "+" : "\u2212") + widest / 2
+              : (fv > 0 ? "+\u00bd" : "\u2212\u00bd");
+            grid += '<line x1="' + (M.l - 4) + '" y1="' + y(fv).toFixed(1) + '" x2="' + (M.l + PW) +
+              '" y2="' + y(fv).toFixed(1) + '" stroke="var(--border)"' +
+              (fv === 0 ? ' stroke-dasharray="3 3"' : "") + "></line>" +
+              '<text class="vx-axis" x="' + (M.l - 9) + '" y="' + (y(fv) + 3.5).toFixed(1) +
+              '" text-anchor="end">' + lab + "</text>";
+          });
+          [0, 1].forEach(function (i) {
+            var d = runOf(i), top = i === 0 ? M.t : M.t + PH - RH;
+            PARTS.forEach(function (p) {
+              var b = d.bands[p.id]; if (!b) return;
+              var x0 = x(b.t0), w = Math.max(x(b.t1) - x(b.t0), 0.6);
+              svg += '<rect x="' + x0.toFixed(1) + '" y="' + top + '" width="' + w.toFixed(1) +
+                '" height="' + RH + '" fill="var(--pc-' + p.id + ')" fill-opacity="0.85"></rect>';
+              if (w > 54) {
+                svg += '<text class="vx-band" x="' + (x0 + w / 2).toFixed(1) + '" y="' + (top + RH - 4) +
+                  '" text-anchor="middle" fill="var(--panel-bg)">' + p.name.toUpperCase() + "</text>";
+              }
+            });
+            svg += '<text class="vx-rulerlab" x="' + (M.l - 9) + '" y="' + (top + RH - 4) +
+              '" text-anchor="end">' + (i ? "B" : "A") + "</text>";
+            var k = bwScale(i);
+            d.run.forEach(function (r) {
+              var seg = chirpSegs(r.shift, d.n, r.down, r.span).map(function (g) {
+                return "M " + x(r.t0 + g[0] * d.ms).toFixed(2) + " " + yOf(g[1], k).toFixed(2) +
+                  " L " + x(r.t0 + g[2] * d.ms).toFixed(2) + " " + yOf(g[3], k).toFixed(2);
+              }).join(" ");
+              var meta = [r.part, r.idx, r.down ? "down" : r.shift, r.t0.toFixed(2),
+                (d.ms * r.span * 1000).toFixed(0), r.lab || "", i ? "B" : "A"].join("~");
+              svg += '<g class="vx-sym" data-meta="' + meta + '">' +
+                '<rect class="vx-hit" x="' + x(r.t0).toFixed(2) + '" y="' + (M.t + RH) + '" width="' +
+                Math.max(x(r.t1) - x(r.t0), 1.4).toFixed(2) + '" height="' + (PH - 2 * RH) + '"></rect>' +
+                '<path class="vx-chirp" d="' + seg + '" stroke="var(--pc-' + r.part + ')"' +
+                (i ? ' stroke-dasharray="3 2.5" opacity="0.95"' : "") + "></path></g>";
+            });
+          });
+          svg = '<clipPath id="' + clip + '"><rect x="' + M.l + '" y="' + M.t + '" width="' +
+            PW + '" height="' + PH + '"></rect></clipPath><g clip-path="url(#' + clip + ')">' +
+            svg + "</g>" + grid;
+          svg += timeAxis(x, win.t0, win.t1, PH);
+          svg += '<text class="vx-axist" x="' + M.l + '" y="' + (H - 4) + '">time, ms</text>' +
+            '<text class="vx-axist" x="' + (M.l - 9) + '" y="' + (M.t - 10) +
+            '" text-anchor="end">' + (BW_SCALE ? "kHz" : "\u00d7BW") + "</text>";
+          var fa = frameOf(STATE[0]), fb = frameOf(STATE[1]);
+          return '<div class="vx-panel"><div class="vx-head"><strong>Overlaid</strong>' +
+            '<span class="vx-set">A ' + STATE[0].bw + " kHz \u00b7 " + fa.airMs.toFixed(2) +
+            " ms \u00b7 B " + STATE[1].bw + " kHz \u00b7 " + fb.airMs.toFixed(2) + " ms</span></div>" +
+            '<p class="vx-legend"><span><svg width="26" height="8" aria-hidden="true">' +
+            '<line x1="1" y1="4" x2="25" y2="4" stroke="currentColor" stroke-width="1.5"></line></svg> ' +
+            'Frame A</span><span><svg width="26" height="8" aria-hidden="true">' +
+            '<line x1="1" y1="4" x2="25" y2="4" stroke="currentColor" stroke-width="1.5" ' +
+            'stroke-dasharray="3 2.5"></line></svg> Frame B</span>' +
+            '<span>Part ruler: A along the top, B along the bottom</span></p>' +
+            '<div class="vx-plot" data-ml="' + M.l + '" data-pw="' + PW + '" data-w="' + W +
+            '" data-t0="' + win.t0 + '" data-t1="' + win.t1 + '"><svg viewBox="0 0 ' + W + " " + H +
+            '" role="img" aria-label="Frames A and B overlaid on one time axis, frequency as a ' +
+            'fraction of each frame\u2019s own channel width">' + svg +
+            '</svg><div class="vx-sel"></div><div class="vx-tip"></div></div></div>';
+        }
+
+        function plotHtml(i, win, W) {
+          var PW = W - M.l - M.r, PH = H - M.t - M.b;
+          var s = STATE[i], f = frameOf(s), n = Math.pow(2, s.sf), ms = f.tsymMs;
+          var d = runOf(i), run = d.run, bands = d.bands;
+          var span = win.t1 - win.t0;
+          var x = function (t) { return M.l + ((t - win.t0) / span) * PW; };
+          var clip = "clip-" + i + "-" + Math.round(W) + "-" + Math.round(H);
+          var k = bwScale(i);
+          var y = function (fr) { return M.t + (0.5 - fr * k) * PH; };
+          var svg = "", grid = "";
+          [0.5, 0, -0.5].forEach(function (fv) {
+            var lab = fv === 0 ? "0" : (fv > 0 ? "+" : "−") + (s.bw / 2);
+            grid += '<line x1="' + (M.l - 4) + '" y1="' + y(fv).toFixed(1) + '" x2="' + (M.l + PW) +
+              '" y2="' + y(fv).toFixed(1) + '" stroke="var(--border)"' +
+              (fv === 0 ? ' stroke-dasharray="3 3"' : "") + "></line>" +
+              '<text class="vx-axis" x="' + (M.l - 9) + '" y="' + (y(fv) + 3.5).toFixed(1) +
+              '" text-anchor="end">' + lab + "</text>";
+          });
+          if (k < 1) {
+            // The plot is as tall as the wider channel; say so at its edges.
+            var widest = Math.max(STATE[0].bw, STATE[1].bw);
+            [[M.t, "+" + widest / 2], [M.t + PH, "−" + widest / 2]].forEach(function (e) {
+              grid += '<line x1="' + (M.l - 4) + '" y1="' + e[0] + '" x2="' + (M.l + PW) +
+                '" y2="' + e[0] + '" stroke="var(--border)" stroke-dasharray="1.5 3"></line>' +
+                '<text class="vx-axis" x="' + (M.l - 9) + '" y="' + (e[0] + 3.5).toFixed(1) +
+                '" text-anchor="end" fill="var(--disabled)">' + e[1] + "</text>";
+            });
+          }
+          PARTS.forEach(function (p) {
+            var b = bands[p.id]; if (!b) return;
+            var x0 = x(b.t0), w = x(b.t1) - x(b.t0);
+            svg += '<rect x="' + x0.toFixed(1) + '" y="' + M.t + '" width="' + Math.max(w, 0.6).toFixed(1) +
+              '" height="' + PH + '" fill="var(--pc-' + p.id + ')" fill-opacity="var(--band-alpha)"></rect>';
+            if (w > 46) {
+              svg += '<text class="vx-band" x="' + (x0 + w / 2).toFixed(1) + '" y="' + (M.t - 8) +
+                '" text-anchor="middle">' + p.name.toUpperCase() + "</text>";
+            }
+          });
+          run.forEach(function (r) {
+            var d = chirpSegs(r.shift, n, r.down, r.span).map(function (g) {
+              return "M " + x(r.t0 + g[0] * ms).toFixed(2) + " " + y(g[1]).toFixed(2) +
+                " L " + x(r.t0 + g[2] * ms).toFixed(2) + " " + y(g[3]).toFixed(2);
+            }).join(" ");
+            var meta = [r.part, r.idx, r.down ? "down" : r.shift, r.t0.toFixed(2),
+              (ms * r.span * 1000).toFixed(0), r.lab || "", i ? "B" : "A"].join("~");
+            svg += '<g class="vx-sym" data-meta="' + meta + '">' +
+              '<rect class="vx-hit" x="' + x(r.t0).toFixed(2) + '" y="' + M.t + '" width="' +
+              Math.max(x(r.t1) - x(r.t0), 1.4).toFixed(2) + '" height="' + PH + '"></rect>' +
+              '<path class="vx-chirp" d="' + d + '" stroke="var(--pc-' + r.part + ')"></path></g>';
+          });
+          svg = '<clipPath id="' + clip + '"><rect x="' + M.l + '" y="' + M.t + '" width="' +
+            PW + '" height="' + PH + '"></rect></clipPath><g clip-path="url(#' + clip + ')">' +
+            svg + "</g>" + grid;
+          svg += timeAxis(x, win.t0, win.t1, PH);
+          svg += '<text class="vx-axist" x="' + M.l + '" y="' + (H - 4) + '">time, ms</text>' +
+            '<text class="vx-axist" x="' + (M.l - 9) + '" y="' + (M.t - 10) + '" text-anchor="end">kHz</text>';
+          var provenance = symbolsAreEncoded(s, f)
+            ? '<span class="ok-pill">encoded</span>'
+            : '<span class="bad-pill">structure only</span>';
+          return '<div class="vx-panel"><div class="vx-head"><strong>Frame ' + (i ? "B" : "A") + "</strong>" +
+            '<span class="vx-set">SF' + s.sf + " · " + s.bw + " kHz · 4/" + (s.cr + 4) +
+            " · sync 0x" + s.sync.toString(16).toUpperCase() + " · " +
+            f.airMs.toFixed(2) + " ms" + (f.ldro ? " · LDRO on" : "") +
+            "</span>" + provenance + "</div>" +
+            '<div class="vx-plot" data-ml="' + M.l + '" data-pw="' + PW + '" data-w="' + W +
+            '" data-t0="' + win.t0 + '" data-t1="' + win.t1 + '"><svg viewBox="0 0 ' + W + " " + H +
+            '" role="img" aria-label="Frame ' + (i ? "B" : "A") + ": " + run.length +
+            " LoRa symbols over " + f.airMs.toFixed(0) +
+            ' milliseconds, coloured by frame part">' + svg +
+            '</svg><div class="vx-sel"></div><div class="vx-tip"></div></div></div>';
+        }
+
+        // ---- table ----
+        function notesHtml() {
+          var odd = [0, 1].filter(function (i) { return !syncIsStandard(STATE[i].sync); });
+          var out = "";
+          if (odd.length) {
+            var which = odd.length === 2
+              ? "Both frames use"
+              : "Frame " + (odd[0] ? "B" : "A") + " uses";
+            var words = odd.map(function (i) { return "0x" + hex2(STATE[i].sync); })
+              .filter(function (v, i, a) { return a.indexOf(v) === i; }).join(" and ");
+            out += '<p class="notes-warn">' + which + " " + words +
+              ", which is not one of Semtech&rsquo;s two. The SX1302 and SX1303 gateway basebands " +
+              "refuse anything but 0x12 and 0x34, so a frame sent with this word is invisible to a " +
+              "commercial gateway however strongly it arrives.</p>";
+          }
+          out += "<p><strong>Sync word.</strong> 0x12 is the private network, 0x34 is reserved " +
+            "for LoRaWAN, and 0x2B is Meshtastic&rsquo;s own. Each nibble becomes one sync symbol " +
+            "at eight times its value, and those two modulated upchirps are the only thing " +
+            "separating two meshes that share a frequency. The figure is a measurement: MeshBench " +
+            "took it off a real SX1262, and gr-lora_sdr implements the same.</p>";
+          out += "<p><strong>Two registers, not one.</strong> The SX1262 holds the word in 0x0740 " +
+            "and 0x0741, and RadioLib spreads the byte across them with control bits 0x44, so the " +
+            "low nibble of each written byte is always 4. That is why the private word reads " +
+            "0x1424 in a register dump and the public one 0x3444; anything else in those low " +
+            "nibbles is a driver writing the registers itself.</p>";
+          return out;
+        }
+
+        function cmpHtml() {
+          var A = STATE[0], B = STATE[1], fa = frameOf(A), fb = frameOf(B);
+          function row(label, va, vb, primary) {
+            return "<tr" + (primary ? ' class="vx-strong"' : "") + "><th>" + label +
+              "</th><td>" + va + "</td><td>" + vb + "</td></tr>";
+          }
+          function sp() { return '<tr class="vx-spacer"><th></th><td></td><td></td></tr>'; }
+          var out = "<thead><tr><th>Property</th><th>Frame A</th><th>Frame B</th></tr></thead><tbody>";
+          out += row("Spreading factor", "SF" + A.sf, "SF" + B.sf);
+          out += row("Bandwidth", A.bw + " kHz", B.bw + " kHz");
+          out += row("Coding rate", "4/" + (A.cr + 4), "4/" + (B.cr + 4));
+          out += row("Sync word", "0x" + A.sync.toString(16).toUpperCase() + " → (" + (A.sync >> 4) * 8 + ", " + (A.sync & 15) * 8 + ")",
+                                  "0x" + B.sync.toString(16).toUpperCase() + " → (" + (B.sync >> 4) * 8 + ", " + (B.sync & 15) * 8 + ")");
+          out += row("Low data rate opt.", fa.ldro ? "on" : "off", fb.ldro ? "on" : "off");
+          out += row("Sync word registers", syncRegs(A.sync), syncRegs(B.sync));
+          out += sp();
+          out += row("Symbol duration", (fa.tsymMs * 1000).toFixed(1) + " µs", (fb.tsymMs * 1000).toFixed(1) + " µs");
+          out += row("Samples per symbol", Math.pow(2, A.sf).toLocaleString(), Math.pow(2, B.sf).toLocaleString());
+          out += row("One sample", fa.sampleUs.toFixed(3) + " µs", fb.sampleUs.toFixed(3) + " µs");
+          out += sp();
+          function part(lbl, n, f) { return n + " sym · " + (n * f.tsymMs).toFixed(2) + " ms"; }
+          out += row("Preamble", part(0, A.pre, fa), part(0, B.pre, fb));
+          out += row("Sync + SFD", part(0, fa.c1, fa), part(0, fb.c1, fb));
+          out += row("Header", part(0, 8, fa), part(0, 8, fb));
+          out += row("Payload", part(0, fa.payloadSyms, fa), part(0, fb.payloadSyms, fb));
+          out += sp();
+          out += row("Total symbols", fa.totalSyms.toFixed(2), fb.totalSyms.toFixed(2));
+          out += row("Time on air", fa.airMs.toFixed(2) + " ms", fb.airMs.toFixed(2) + " ms", true);
+          out += row("Airtime the firmware sees", fa.truncMs + " ms", fb.truncMs + " ms");
+          out += row("Complex samples", fa.samples.toLocaleString(), fb.samples.toLocaleString(), true);
+          out += row("Preamble share of airtime",
+            (100 * A.pre * fa.tsymMs / fa.airMs).toFixed(1) + "%",
+            (100 * B.pre * fb.tsymMs / fb.airMs).toFixed(1) + "%");
+          return out + "</tbody>";
+        }
+
+        function symbolDumpHtml() {
+          return STATE.map(function (s, i) {
+            var f = frameOf(s), syms = symbolsFor(s, f);
+            return "<h4>Frame " + (i ? "B" : "A") +
+              (symbolsAreEncoded(s, f) ? "" : " <span class=\"optional\">(not encoded)</span>") + "</h4>" +
+              "<p class=\"vx-dumplabel\">header, 8 symbols at SF-2</p><pre>[" + syms.slice(0, 8).join(", ") + "]</pre>" +
+              "<p class=\"vx-dumplabel\">payload, " + f.payloadSyms + " symbols</p><pre>[" + syms.slice(8).join(", ") + "]</pre>";
+          }).join("");
+        }
+
+        // ---- render ----
+        var FULL_MAX = 0;
+
+        function setZoom(t0, t1) {
+          var lo = Math.max(0, Math.min(t0, t1)), hi = Math.min(FULL_MAX, Math.max(t0, t1));
+          if (hi - lo < 0.02) { hi = lo + 0.02; }
+          ZOOM = (lo <= 0 && hi >= FULL_MAX) ? null : { t0: lo, t1: hi };
+          render();
+        }
+
+        function render() {
+          document.getElementById("grid").innerHTML = panelHtml(0) + panelHtml(1);
+          var tMax = Math.max(frameOf(STATE[0]).airMs, frameOf(STATE[1]).airMs);
+          tMax = Math.ceil(tMax / 20) * 20;
+          var W = plotWidth(), win = windowOf(tMax);
+          document.getElementById("plots").innerHTML = OVERLAY
+            ? overlayHtml(win, W)
+            : plotHtml(0, win, W) + plotHtml(1, win, W);
+          FULL_MAX = tMax;
+          var span = win.t1 - win.t0;
+          document.getElementById("zoom-note").textContent =
+            win.t0.toFixed(span < 1 ? 3 : 2) + " \u2013 " + win.t1.toFixed(span < 1 ? 3 : 2) +
+            " ms  (" + span.toFixed(span < 1 ? 3 : 2) + " ms" +
+            (ZOOM ? ", " + (tMax / span).toFixed(1) + "\u00d7" : ", full frame") + ")";
+          document.getElementById("zoom-reset-btn").disabled = !ZOOM;
+          document.getElementById("zoom-out-btn").disabled = !ZOOM;
+          document.getElementById("cmp").innerHTML = cmpHtml();
+          document.getElementById("settings-notes").innerHTML = notesHtml();
+          document.getElementById("symbol-dump").innerHTML = symbolDumpHtml();
+          var bwNote = BW_SCALE
+            ? "Frequency is one kHz axis for both, so the narrower channel is drawn shorter, as " +
+              "a waterfall would show it: A is " + STATE[0].bw + " kHz and B is " + STATE[1].bw + " kHz."
+            : "Frequency is a fraction of each frame's own channel, because the two are not the " +
+              "same width: A is " + STATE[0].bw + " kHz and B is " + STATE[1].bw + " kHz.";
+          document.getElementById("axis-note").textContent = OVERLAY
+            ? "Both frames share one time axis running 0 to " + tMax + " ms. " + bwNote +
+              " A is solid, B is dashed."
+            : "Both time axes run 0 to " + tMax + " ms on the same scale, so the bands can be " +
+              "compared directly. " + bwNote;
+          wireInputs();
+          wireTips();
+          wireZoom();
+        }
+
+        function wireInputs() {
+          document.querySelectorAll("#grid [data-k]").forEach(function (el) {
+            el.addEventListener("change", function () {
+              var i = +el.closest("[data-i]").dataset.i, k = el.dataset.k, s = STATE[i];
+              if (k === "preset") {
+                if (el.value === "custom") { s.preset = "custom"; }
+                else {
+                  var p = PRESETS.filter(function (q) { return q.g + "|" + q.n === el.value; })[0];
+                  if (p) {
+                    s.sf = p.sf; s.bw = p.bw; s.cr = p.cr; s.pre = p.pre; s.sync = p.sync;
+                    s.preset = el.value;
+                  }
+                }
+              } else if (k === "sync") {
+                var v = parseInt(String(el.value).replace(/^0x/i, ""), 16);
+                s.sync = isFinite(v) ? Math.max(0, Math.min(255, v)) : s.sync;
+                s.preset = "custom";
+              } else {
+                var num = parseFloat(el.value);
+                if (!isFinite(num)) return;
+                if (k === "pre") num = Math.max(4, Math.min(64, Math.round(num)));
+                if (k === "bytes") num = Math.max(0, Math.min(255, Math.round(num)));
+                s[k] = num;
+                s.preset = "custom";
+              }
+              render();
+            });
+          });
+        }
+
+        // Drag a range to zoom into it, shift-drag or right-drag to pan, wheel to
+        // zoom about the pointer. The window is shared: both frames sit on one time
+        // axis, so zooming one has to zoom the other or the comparison breaks.
+        function wireZoom() {
+          document.querySelectorAll(".vx-plot").forEach(function (box) {
+            var sel = box.querySelector(".vx-sel");
+            var ml = +box.dataset.ml, pw = +box.dataset.pw, vw = +box.dataset.w;
+            var t0 = +box.dataset.t0, t1 = +box.dataset.t1;
+
+            function timeAt(clientX) {
+              var r = box.getBoundingClientRect();
+              var scale = r.width / vw;                    // CSS px per user unit
+              var ux = (clientX - r.left) / scale;         // back into user units
+              var frac = (ux - ml) / pw;
+              return t0 + Math.max(0, Math.min(1, frac)) * (t1 - t0);
+            }
+            function pxOf(clientX) {
+              var r = box.getBoundingClientRect();
+              return Math.max(0, Math.min(r.width, clientX - r.left));
+            }
+
+            var dragging = false, panning = false, startX = 0, startT = 0, panPx = 0;
+
+            box.addEventListener("pointerdown", function (e) {
+              if (e.button !== 0 && e.button !== 2) return;
+              startT = timeAt(e.clientX);
+              startX = pxOf(e.clientX);
+              panning = e.shiftKey || e.button === 2;
+              dragging = !panning;
+              box.setPointerCapture(e.pointerId);
+              box.classList.add("dragging");
+              if (dragging) {
+                sel.style.display = "block";
+                sel.style.left = startX + "px";
+                sel.style.width = "0px";
+              }
+              e.preventDefault();
+            });
+
+            box.addEventListener("pointermove", function (e) {
+              if (dragging) {
+                var nx = pxOf(e.clientX);
+                sel.style.left = Math.min(startX, nx) + "px";
+                sel.style.width = Math.abs(nx - startX) + "px";
+              } else if (panning) {
+                panPx = pxOf(e.clientX) - startX;
+                var gfx = box.querySelector("svg");
+                if (gfx) gfx.style.transform = "translateX(" + panPx + "px)";
+              }
+            });
+
+            function finish(e) {
+              if (!dragging && !panning) return;
+              box.classList.remove("dragging");
+              try { box.releasePointerCapture(e.pointerId); } catch (err) {}
+              if (dragging) {
+                var w = parseFloat(sel.style.width) || 0;
+                sel.style.display = "none";
+                dragging = false;
+                if (w > 4) setZoom(startT, timeAt(e.clientX));
+              } else if (panning) {
+                var gfx = box.querySelector("svg");
+                if (gfx) gfx.style.transform = "";
+                var span = t1 - t0;
+                var dt = -panPx / (box.getBoundingClientRect().width / vw) / pw * span;
+                var lo = Math.max(0, Math.min(Math.max(0, FULL_MAX - span), t0 + dt));
+                panPx = 0;
+                if (ZOOM) setZoom(lo, lo + span);
+              }
+              panning = false;
+            }
+            box.addEventListener("pointerup", finish);
+            box.addEventListener("pointercancel", finish);
+            box.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+            box.addEventListener("wheel", function (e) {
+              e.preventDefault();
+              var at = timeAt(e.clientX);
+              var span = t1 - t0;
+              var next = e.deltaY > 0 ? span * 1.25 : span * 0.8;
+              next = Math.max(0.02, Math.min(FULL_MAX, next));
+              var frac = (at - t0) / span;
+              setZoom(at - frac * next, at + (1 - frac) * next);
+            }, { passive: false });
+          });
+        }
+
+        function wireTips() {
+          var names = {};
+          PARTS.forEach(function (p) { names[p.id] = p.name; });
+          document.querySelectorAll(".vx-plot").forEach(function (box) {
+            var tip = box.querySelector(".vx-tip");
+            box.querySelectorAll(".vx-sym").forEach(function (g) {
+              function show() {
+                var m = g.dataset.meta.split("~");
+                var part = m[0], idx = +m[1], shift = m[2], t0 = m[3], us = m[4], lab = m[5], frame = m[6];
+                var isData = part === "header" || part === "payload";
+                var rows = [];
+                if (OVERLAY) rows.push(["frame", frame]);
+                rows = rows.concat([
+                  [part === "sync" ? "symbol" : "index", part === "sync" ? lab : (isData ? "#" + idx : String(idx + 1))],
+                  ["shift", shift],
+                  ["starts", t0 + " ms"],
+                  ["lasts", us + " µs"]
+                ]);
+                tip.innerHTML = '<span class="vx-tipsec">' +
+                  names[part] + "</span><dl>" + rows.map(function (r) {
+                    return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>";
+                  }).join("") + "</dl>";
+                var br = box.getBoundingClientRect(), gr = g.getBoundingClientRect();
+                tip.style.left = Math.min(Math.max(gr.left - br.left + gr.width / 2 - 62, 4), Math.max(br.width - 136, 4)) + "px";
+                tip.style.top = Math.max(gr.top - br.top + 6, 4) + "px";
+                tip.classList.add("on");
+                g.classList.add("on");
+              }
+              g.addEventListener("pointerenter", show);
+              g.addEventListener("focus", show);
+              g.addEventListener("pointerleave", function () { tip.classList.remove("on"); g.classList.remove("on"); });
+              g.addEventListener("blur", function () { tip.classList.remove("on"); g.classList.remove("on"); });
+            });
+          });
+        }
+
+        document.getElementById("partkey").innerHTML = PARTS.map(function (p) {
+          return '<li><span class="vx-swatch" style="background:var(--pc-' + p.id + ')"></span>' +
+            "<span>" + p.name + '</span><span class="optional">' + p.note + "</span></li>";
+        }).join("");
+
+        document.getElementById("reset-btn").addEventListener("click", function () {
+          // STATE is mutated in place elsewhere (swap reverses it), so put the
+          // defaults back field by field rather than rebinding the array.
+          var fresh = JSON.parse(JSON.stringify(DEFAULTS));
+          for (var i = 0; i < STATE.length; i++) {
+            STATE[i] = fresh[i];
+          }
+          ZOOM = null;
+          OVERLAY = false;
+          BW_SCALE = false;
+          H = DEFAULT_HEIGHT;
+
+          overlayBtn.textContent = "Overlay both frames";
+          overlayBtn.setAttribute("aria-pressed", "false");
+          updateBwScaleBtn();
+          heightInput.value = String(H);
+          document.getElementById("trace-height-note").textContent = H + " px";
+          stopAudio();
+          render();
+        });
+
+        document.getElementById("swap-btn").addEventListener("click", function () {
+          STATE.reverse();
+          render();
+        });
+
+        var bwScaleBtn = document.getElementById("bw-scale-btn");
+        function updateBwScaleBtn() {
+          bwScaleBtn.textContent = BW_SCALE ? "Bandwidth: to scale" : "Bandwidth: equal height";
+          bwScaleBtn.setAttribute("aria-pressed", BW_SCALE ? "true" : "false");
+        }
+        bwScaleBtn.addEventListener("click", function () {
+          BW_SCALE = !BW_SCALE;
+          updateBwScaleBtn();
+          render();
+        });
+
+        var overlayBtn = document.getElementById("overlay-btn");
+        overlayBtn.addEventListener("click", function () {
+          OVERLAY = !OVERLAY;
+          overlayBtn.textContent = OVERLAY ? "Separate frames" : "Overlay both frames";
+          overlayBtn.setAttribute("aria-pressed", OVERLAY ? "true" : "false");
+          render();
+        });
+
+        // Redraw at the new width rather than scaling the old drawing, so the
+        // labels stay the size they were designed at and nothing overflows.
+        var resizeTimer = null, lastWidth = 0;
+        window.addEventListener("resize", function () {
+          var w = plotWidth();
+          if (Math.abs(w - lastWidth) < 8) return;
+          lastWidth = w;
+          if (resizeTimer) clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(render, 120);
+        });
+
+        document.getElementById("zoom-reset-btn").addEventListener("click", function () {
+          ZOOM = null;
+          render();
+        });
+        document.getElementById("zoom-out-btn").addEventListener("click", function () {
+          if (!ZOOM) return;
+          var mid = (ZOOM.t0 + ZOOM.t1) / 2, span = Math.min(FULL_MAX, (ZOOM.t1 - ZOOM.t0) * 2.5);
+          setZoom(mid - span / 2, mid + span / 2);
+        });
+
+        var heightInput = document.getElementById("trace-height");
+        heightInput.addEventListener("input", function () {
+          H = Math.max(180, Math.min(760, parseInt(heightInput.value, 10) || 230));
+          document.getElementById("trace-height-note").textContent = H + " px";
+          render();
+        });
+
+        var notesBtn = document.getElementById("toggle-notes-btn");
+        notesBtn.addEventListener("click", function () {
+          var box = document.getElementById("settings-notes");
+          var hidden = box.hasAttribute("hidden");
+          if (hidden) {
+            box.removeAttribute("hidden");
+            notesBtn.textContent = "Hide notes";
+            notesBtn.classList.add("active");
+            notesBtn.setAttribute("aria-expanded", "true");
+          } else {
+            box.setAttribute("hidden", "hidden");
+            notesBtn.textContent = "Show notes";
+            notesBtn.classList.remove("active");
+            notesBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        var keyBtn = document.getElementById("toggle-key-btn");
+        keyBtn.addEventListener("click", function () {
+          var key = document.getElementById("partkey");
+          var hidden = key.hasAttribute("hidden");
+          if (hidden) { key.removeAttribute("hidden"); keyBtn.textContent = "Hide key"; keyBtn.setAttribute("aria-expanded", "true"); }
+          else { key.setAttribute("hidden", "hidden"); keyBtn.textContent = "Show key"; keyBtn.setAttribute("aria-expanded", "false"); }
+        });
+
+        var symBtn = document.getElementById("toggle-symbols-btn");
+        symBtn.addEventListener("click", function () {
+          var dump = document.getElementById("symbol-dump");
+          var hidden = dump.hasAttribute("hidden");
+          if (hidden) { dump.removeAttribute("hidden"); symBtn.textContent = "Hide symbol values"; symBtn.setAttribute("aria-expanded", "true"); }
+          else { dump.setAttribute("hidden", "hidden"); symBtn.textContent = "Show symbol values"; symBtn.setAttribute("aria-expanded", "false"); }
+        });
+
+        render();
+
+        // ==================== LISTEN: one frame, as pitch ====================
+        //
+        // The same segments the trace is drawn from drive the sound. chirpSegs gives
+        // each symbol as one or two straight runs in (time, frequency); scheduling an
+        // oscillator along those runs is the audio equivalent of drawing them, so what
+        // you hear and what you see cannot drift apart.
+        //
+        // Frequency is mapped exponentially rather than linearly: equal ratios sound
+        // like equal intervals, so a linear sweep across the channel reads as an even
+        // glide instead of bunching at the bottom.
+
+        var AUDIO = { ctx: null, osc: null, gain: null, raf: 0, startedAt: 0, durS: 0 };
+
+        function listenState() {
+          // Clamped hard rather than trusted. exponentialRampToValueAtTime throws on a
+          // non-positive target, and a zero or empty speed makes the duration infinite,
+          // which schedules an oscillator that never stops.
+          function num(id, dflt, lo, hi) {
+            var v = parseFloat(document.getElementById(id).value);
+            if (!isFinite(v)) v = dflt;
+            return Math.max(lo, Math.min(hi, v));
+          }
+          var i = +document.getElementById("listen-frame").value || 0;
+          var speed = num("listen-speed", 12, 1, 100);
+          var lo = num("listen-low", 160, 50, 800);
+          var hi = num("listen-high", 1600, 200, 4000);
+          if (hi <= lo + 20) hi = lo + 20;
+          return {
+            i: i, lo: lo, hi: hi,
+            wave: document.getElementById("listen-wave").value,
+            // Slider 1 is the slowest. A whole frame stretched over 20 s at one end,
+            // played at something near real time at the other.
+            stretch: 200 / speed
+          };
+        }
+
+        function listenDurationS(st) {
+          return frameOf(STATE[st.i]).airMs / 1000 * st.stretch;
+        }
+
+        function stopAudio() {
+          if (AUDIO.raf) cancelAnimationFrame(AUDIO.raf);
+          AUDIO.raf = 0;
+          if (AUDIO.gain && AUDIO.ctx) {
+            try {
+              AUDIO.gain.gain.cancelScheduledValues(AUDIO.ctx.currentTime);
+              AUDIO.gain.gain.setTargetAtTime(0, AUDIO.ctx.currentTime, 0.01);
+            } catch (e) {}
+          }
+          if (AUDIO.osc) {
+            try { AUDIO.osc.stop(AUDIO.ctx.currentTime + 0.06); } catch (e) {}
+            AUDIO.osc = null;
+          }
+          document.getElementById("listen-stop").disabled = true;
+          document.getElementById("listen-play").disabled = false;
+          var line = document.querySelector("#listen-plot .vx-head-line");
+          if (line) line.style.display = "none";
+        }
+
+        function playFrame() {
+          stopAudio();
+          var st = listenState(), s = STATE[st.i], f = frameOf(s);
+          var d = runOf(st.i), n = Math.pow(2, s.sf), ms = f.tsymMs;
+          if (!AUDIO.ctx) {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            AUDIO.ctx = new AC();
+          }
+          var ctx = AUDIO.ctx;
+          if (ctx.state === "suspended") ctx.resume();
+
+          var osc = ctx.createOscillator(), gain = ctx.createGain();
+          osc.type = st.wave;
+          gain.gain.value = 0;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          var t0 = ctx.currentTime + 0.06;
+          var scale = st.stretch / 1000;                  // ms of frame -> seconds of audio
+          var pitch = function (fr) {
+            // fr is -0.5..+0.5 of the channel; map it onto the chosen range in log space.
+            var u = Math.min(1, Math.max(0, fr + 0.5));
+            return st.lo * Math.pow(st.hi / st.lo, u);
+          };
+
+          osc.frequency.setValueAtTime(pitch(-0.5), t0);
+          d.run.forEach(function (r) {
+            chirpSegs(r.shift, n, r.down, r.span).forEach(function (g) {
+              var a = t0 + (r.t0 + g[0] * ms) * scale;
+              var b = t0 + (r.t0 + g[2] * ms) * scale;
+              osc.frequency.setValueAtTime(pitch(g[1]), a);
+              if (b > a + 0.0005) osc.frequency.exponentialRampToValueAtTime(pitch(g[3]), b);
+            });
+          });
+
+          var dur = listenDurationS(st);
+          // A short fade at each end: an oscillator started and stopped at full
+          // amplitude clicks, and the click is louder than the frame.
+          gain.gain.setValueAtTime(0, t0);
+          gain.gain.linearRampToValueAtTime(0.18, t0 + 0.02);
+          gain.gain.setValueAtTime(0.18, t0 + dur - 0.03);
+          gain.gain.linearRampToValueAtTime(0, t0 + dur);
+
+          osc.start(t0);
+          osc.stop(t0 + dur + 0.02);
+          osc.onended = function () { stopAudio(); };
+          AUDIO.osc = osc;
+          AUDIO.gain = gain;
+          AUDIO.startedAt = t0;
+          AUDIO.durS = dur;
+
+          document.getElementById("listen-play").disabled = true;
+          document.getElementById("listen-stop").disabled = false;
+
+          var box = document.querySelector("#listen-plot .vx-plot");
+          var line = box && box.querySelector(".vx-head-line");
+          if (line) {
+            line.style.display = "block";
+            var step = function () {
+              var el = (ctx.currentTime - AUDIO.startedAt) / AUDIO.durS;
+              if (el >= 0 && el <= 1) {
+                var r = box.getBoundingClientRect(), vw = +box.dataset.w;
+                var sc = r.width / vw;
+                line.style.left = (( +box.dataset.ml + el * (+box.dataset.pw)) * sc) + "px";
+              }
+              if (el < 1) AUDIO.raf = requestAnimationFrame(step);
+            };
+            AUDIO.raf = requestAnimationFrame(step);
+          }
+        }
+
+        function renderListen() {
+          var st = listenState(), s = STATE[st.i], f = frameOf(s);
+          var host = document.getElementById("listen-plot");
+          var W = Math.max(Math.round(host.clientWidth) || 960, 300);
+          var savedH = H;
+          H = Math.max(260, Math.min(520, savedH + 60));
+          host.innerHTML = plotHtml(st.i, { t0: 0, t1: Math.ceil(f.airMs / 20) * 20 }, W);
+          H = savedH;
+          var box = host.querySelector(".vx-plot");
+          if (box) box.insertAdjacentHTML("beforeend", '<div class="vx-head-line"></div>');
+          document.getElementById("listen-which").textContent =
+            "Frame " + (st.i ? "B" : "A") + " \u00b7 SF" + s.sf + " \u00b7 " + s.bw +
+            " kHz \u00b7 " + f.totalSyms.toFixed(2) + " symbols";
+          document.getElementById("listen-speed-note").textContent =
+            listenDurationS(st).toFixed(1) + " s for " + f.airMs.toFixed(0) + " ms of air";
+          document.getElementById("listen-low-note").textContent = st.lo + " Hz at the bottom of the channel";
+          document.getElementById("listen-high-note").textContent = st.hi + " Hz at the top";
+          wireTips();
+        }
+
+        ["listen-frame", "listen-speed", "listen-low", "listen-high", "listen-wave"].forEach(function (id) {
+          document.getElementById(id).addEventListener("input", function () {
+            stopAudio();
+            renderListen();
+          });
+        });
+        document.getElementById("listen-play").addEventListener("click", playFrame);
+        document.getElementById("listen-stop").addEventListener("click", stopAudio);
+
+        // ---- tabs ----
+        function showView(which) {
+          var compare = which === "compare";
+          document.getElementById("view-compare").hidden = !compare;
+          document.getElementById("view-listen").hidden = compare;
+          document.getElementById("tab-compare").classList.toggle("active", compare);
+          document.getElementById("tab-listen").classList.toggle("active", !compare);
+          document.getElementById("tab-compare").setAttribute("aria-selected", compare ? "true" : "false");
+          document.getElementById("tab-listen").setAttribute("aria-selected", compare ? "false" : "true");
+          if (compare) { stopAudio(); render(); } else { renderListen(); }
+        }
+        document.getElementById("tab-compare").addEventListener("click", function () { showView("compare"); });
+        document.getElementById("tab-listen").addEventListener("click", function () { showView("listen"); });
+      })();
+    </script>
+  </body>
+</html>

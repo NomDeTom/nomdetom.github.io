@@ -874,8 +874,10 @@
             defaultUnit: "uH",
             placeholder: "e.g. 10",
             seriesRule: "sum",
+            // Humps of radius 5.5 rather than 4: at 4 the coil sat so close
+            // to the wire it read as a wobble in the line, not as a part.
             symbol:
-              "M0,12 H12 a4,4 0 0,1 8,0 a4,4 0 0,1 8,0 a4,4 0 0,1 8,0 H48",
+              "M0,12 H7.5 a5.5,5.5 0 0,1 11,0 a5.5,5.5 0 0,1 11,0 a5.5,5.5 0 0,1 11,0 H48",
           },
         };
 

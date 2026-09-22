@@ -4,6 +4,9 @@
 // A fourth "Offset to base unit" column is optional and defaults to 0. A unit converts as
 // value * factor + offset, which is how Celsius and Fahrenheit share a table with Kelvin.
 // Types that use an offset accept negative input; factor-only types still clamp at zero.
+// A fifth "Reciprocal" column, "yes" on a row, makes that unit the inverse of the base:
+// base = factor / value. That is how a wavelength in metres sits in a frequency table,
+// since f = c / lambda, and it is the only non-linear relation the converter knows.
 // This file is loaded as a <script> tag so it works when the page is opened as a local file:// URL.
 //
 // Two catalogs live here:
@@ -236,6 +239,29 @@ window.GENERIC_UNITS_CATALOG_MARKDOWN = `
 | Radian per second     |  0.15915494309189535 | rad/s |
 | Degree per second     | 0.002777777777777778 | deg/s |
 
+## Wavelength and frequency
+
+| Name                    | Factor to base unit | Units | Offset to base unit | Reciprocal |
+| ----------------------- | ------------------: | ----- | ------------------: | ---------- |
+| Hertz                   |                   1 | Hz    |                   0 |            |
+| Kilohertz               |                1000 | kHz   |                   0 |            |
+| Megahertz               |             1000000 | MHz   |                   0 |            |
+| Gigahertz               |          1000000000 | GHz   |                   0 |            |
+| Terahertz               |       1000000000000 | THz   |                   0 |            |
+| Petahertz               |    1000000000000000 | PHz   |                   0 |            |
+| Wavelength (kilometres) |         299792.458 | km    |                   0 | yes        |
+| Wavelength (metres)     |           299792458 | m     |                   0 | yes        |
+| Wavelength (centimetres)|         29979245800 | cm    |                   0 | yes        |
+| Wavelength (millimetres)|        299792458000 | mm    |                   0 | yes        |
+| Wavelength (micrometres)|     299792458000000 | um    |                   0 | yes        |
+| Wavelength (nanometres) |  299792458000000000 | nm    |                   0 | yes        |
+| Wavelength (angstroms)  | 2997924580000000000 | Å     |                   0 | yes        |
+| Wavelength (feet)       |   983571056.4304461 | ft    |                   0 | yes        |
+| Wavelength (inches)     |  11802852677.165354 | in    |                   0 | yes        |
+| Photon energy           |   241798924262506.78 | eV    |                   0 |            |
+| Wavenumber              |         29979245800 | cm⁻¹  |                   0 |            |
+| Period                  |                   1 | s     |                   0 | yes        |
+
 ## Data
 
 | Name     | Factor to base unit | Units |
@@ -272,6 +298,73 @@ window.GENERIC_UNITS_CATALOG_MARKDOWN = `
 | Kibibyte per second |                8192 | KiB/s  |
 | Mebibyte per second |             8388608 | MiB/s  |
 | Gibibyte per second |          8589934592 | GiB/s  |
+
+## Radiation dose (equivalent and effective)
+
+| Name                   | Factor to base unit | Units |
+| ---------------------- | ------------------: | ----- |
+| Sievert                |                   1 | Sv    |
+| Millisievert           |               0.001 | mSv   |
+| Microsievert           |            0.000001 | uSv   |
+| Nanosievert            |         0.000000001 | nSv   |
+| Rem                    |                0.01 | rem   |
+| Millirem               |             0.00001 | mrem  |
+| Microrem               |          0.00000001 | urem  |
+| Banana equivalent dose |           0.0000001 | BED   |
+
+## Radiation dose rate
+
+| Name                            | Factor to base unit | Units  |
+| ------------------------------- | ------------------: | ------ |
+| Sievert per hour                |                   1 | Sv/h   |
+| Millisievert per hour           |               0.001 | mSv/h  |
+| Microsievert per hour           |            0.000001 | uSv/h  |
+| Nanosievert per hour            |         0.000000001 | nSv/h  |
+| Sievert per second              |                3600 | Sv/s   |
+| Microsievert per second         |              0.0036 | uSv/s  |
+| Millisievert per year           | 0.00000011407711613 | mSv/y  |
+| Rem per hour                    |                0.01 | rem/h  |
+| Millirem per hour               |             0.00001 | mrem/h |
+| Microrem per hour               |          0.00000001 | urem/h |
+| Banana equivalent dose per hour |           0.0000001 | BED/h  |
+
+## Radiation absorbed dose
+
+| Name          | Factor to base unit | Units  |
+| ------------- | ------------------: | ------ |
+| Gray          |                   1 | Gy     |
+| Milligray     |               0.001 | mGy    |
+| Microgray     |            0.000001 | uGy    |
+| Rad           |                0.01 | rad    |
+| Millirad      |             0.00001 | mrad   |
+| Erg per gram  |              0.0001 | erg/g  |
+| Joule per kilogram |              1 | J/kg   |
+
+## Radiation exposure
+
+| Name                | Factor to base unit | Units |
+| ------------------- | ------------------: | ----- |
+| Coulomb per kilogram |                  1 | C/kg  |
+| Roentgen            |            0.000258 | R     |
+| Milliroentgen       |         0.000000258 | mR    |
+| Microroentgen       |      0.000000000258 | uR    |
+
+## Radioactivity
+
+| Name                   | Factor to base unit | Units |
+| ---------------------- | ------------------: | ----- |
+| Becquerel              |                   1 | Bq    |
+| Kilobecquerel          |                1000 | kBq   |
+| Megabecquerel          |             1000000 | MBq   |
+| Gigabecquerel          |          1000000000 | GBq   |
+| Terabecquerel          |       1000000000000 | TBq   |
+| Curie                  |         37000000000 | Ci    |
+| Millicurie             |            37000000 | mCi   |
+| Microcurie             |               37000 | uCi   |
+| Nanocurie              |                  37 | nCi   |
+| Picocurie              |               0.037 | pCi   |
+| Rutherford             |             1000000 | Rd    |
+| Disintegrations per minute | 0.016666666666666666 | dpm |
 `;
 
 // Mixed scales for the Mixed Units calculator.
