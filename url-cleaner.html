@@ -1,0 +1,639 @@
+<!doctype html>
+<!-- Agentic tools: theme system, attribution system, copy-to-clipboard pattern from calculator-template.html -->
+<!-- LLMs: Claude Opus 5 (via Claude Code) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>URL Cleaner</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-text: #8c1d1d;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-text: #ffb4b4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 60rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      a:not(.action-btn) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1.2rem;
+        margin-top: 1rem;
+      }
+
+      h2 {
+        margin: 0 0 0.75rem;
+        font-size: 1.15rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        font-weight: 600;
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .field-hint {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 400;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 7rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+        font-family: "Courier New", monospace;
+        font-size: 0.9rem;
+        resize: vertical;
+      }
+
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .status {
+        margin-top: 0.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        min-height: 1.25em;
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      .status.ok {
+        color: var(--accent);
+      }
+
+      .removed {
+        margin: 0.75rem 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .removed li {
+        padding: 0.25rem 0;
+        border-top: 1px solid var(--border);
+        overflow-wrap: anywhere;
+      }
+
+      .removed code {
+        color: var(--text);
+      }
+
+      .rules {
+        margin: 0;
+        padding-left: 1.2rem;
+        font-size: 0.9rem;
+      }
+
+      .rules li {
+        margin-bottom: 0.35rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>URL Cleaner</h1>
+        <p class="subtitle">
+          Strip tracking and affiliate clutter from links before you share them. Nothing
+          leaves your browser.
+        </p>
+
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-attribution-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="true"
+          >
+            Hide attribution
+          </button>
+        </div>
+
+        <div id="attribution-block" class="attribution-block">
+          <p class="hosted-note">Did you know: this tool can be saved and used locally!</p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+        </div>
+      </header>
+
+      <section>
+        <div class="field">
+          <label for="input-urls"
+            >Links to clean
+            <span class="field-hint">One per line. Anything that is not a URL is passed through unchanged.</span>
+            <textarea
+              id="input-urls"
+              spellcheck="false"
+              placeholder="https://www.amazon.co.uk/Some-Product-Name/dp/B0EXAMPLE1/ref=sr_1_3?keywords=widget&amp;tag=affiliate-21"
+            ></textarea>
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="paste-btn" class="action-btn" type="button">Paste &amp; clean</button>
+          <button id="reset-btn" class="action-btn" type="button">Reset</button>
+        </div>
+        <div class="status" id="input-status"></div>
+      </section>
+
+      <section>
+        <div class="field">
+          <label for="output-urls"
+            >Cleaned
+            <textarea id="output-urls" spellcheck="false" readonly></textarea>
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="copy-btn" class="action-btn" type="button">Copy to clipboard</button>
+        </div>
+        <div class="status" id="copy-status"></div>
+        <ul class="removed" id="removed-list"></ul>
+      </section>
+
+      <section>
+        <h2>What it removes</h2>
+        <ul class="rules">
+          <li>
+            <strong>Amazon</strong> — reduced to <code>/dp/ASIN</code>. Drops the product-name slug,
+            <code>ref=</code>, <code>tag=</code> (affiliate), search keywords and everything else.
+          </li>
+          <li>
+            <strong>AliExpress</strong> — reduced to <code>/item/ID.html</code>. Drops
+            <code>spm</code>, <code>algo_pvid</code>, <code>pdp_npi</code> and the rest of the query.
+          </li>
+          <li><strong>eBay</strong> — reduced to <code>/itm/ID</code>.</li>
+          <li>
+            <strong>YouTube</strong> — keeps <code>v</code>, <code>t</code> and <code>list</code>; drops
+            <code>si</code>, <code>feature</code>, <code>pp</code>.
+          </li>
+          <li><strong>Google search</strong> — keeps only <code>q</code>.</li>
+          <li>
+            <strong>Everywhere</strong> — <code>utm_*</code>, <code>fbclid</code>, <code>gclid</code>,
+            <code>msclkid</code>, <code>mc_cid</code>/<code>mc_eid</code>, <code>igshid</code>,
+            <code>ttclid</code>, <code>twclid</code>, <code>yclid</code>, <code>_ga</code>,
+            <code>_gl</code>, <code>_hsenc</code>/<code>_hsmi</code>, <code>ref_src</code>,
+            <code>srsltid</code>, <code>spm</code>, <code>scm</code> and similar.
+          </li>
+          <li>
+            Short links (<code>a.aliexpress.com/_…</code>, <code>amzn.to</code>,
+            <code>s.click.aliexpress.com</code>) redirect through a tracker and cannot be
+            cleaned without following them; they are flagged, not changed.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        // ==================== THEME SYSTEM (DO NOT MODIFY) ====================
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var toggleAttributionButton = document.getElementById("toggle-attribution-btn");
+
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+
+        function capitalizeWord(value) {
+          return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") {
+            return stored;
+          }
+          return "auto";
+        }
+
+        function getResolvedTheme(mode) {
+          if (mode === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light";
+          }
+          return mode === "dark" ? "dark" : "light";
+        }
+
+        function getNextThemeMode(mode) {
+          if (mode === "light") return "dark";
+          if (mode === "dark") return "auto";
+          return "light";
+        }
+
+        function updateThemeButton(mode) {
+          toggleThemeButton.textContent = "Theme: " + capitalizeWord(mode);
+          toggleThemeButton.setAttribute(
+            "aria-label",
+            "Theme mode " + mode + ". Activate to switch mode.",
+          );
+        }
+
+        function applyThemeMode(mode, shouldPersist) {
+          themeMode = mode === "light" || mode === "dark" || mode === "auto" ? mode : "auto";
+          var resolved = getResolvedTheme(themeMode);
+          document.documentElement.setAttribute("data-theme", resolved);
+          toggleThemeButton.setAttribute("aria-pressed", themeMode === "dark" ? "true" : "false");
+          updateThemeButton(themeMode);
+          if (shouldPersist) {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          }
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyThemeMode(getNextThemeMode(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          var onSchemeChange = function () {
+            if (themeMode === "auto") applyThemeMode("auto", false);
+          };
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", onSchemeChange);
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(onSchemeChange);
+          }
+        }
+
+        // ==================== ATTRIBUTION TOGGLE (DO NOT MODIFY) ====================
+        toggleAttributionButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          if (isHidden) {
+            attributionBlock.removeAttribute("hidden");
+            toggleAttributionButton.textContent = "Hide attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "true");
+          } else {
+            attributionBlock.setAttribute("hidden", "hidden");
+            toggleAttributionButton.textContent = "Show attribution";
+            toggleAttributionButton.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        applyThemeMode(getStoredThemeMode(), false);
+
+        // ==================== CLEANER LOGIC ====================
+        var inputEl = document.getElementById("input-urls");
+        var outputEl = document.getElementById("output-urls");
+        var inputStatus = document.getElementById("input-status");
+        var copyStatus = document.getElementById("copy-status");
+        var removedList = document.getElementById("removed-list");
+
+        // Query parameters that only ever identify a campaign, a click or a visitor.
+        var TRACKING_EXACT = [
+          "fbclid", "gclid", "gclsrc", "dclid", "gbraid", "wbraid", "msclkid", "yclid",
+          "ttclid", "twclid", "igshid", "igsh", "mc_cid", "mc_eid", "_ga", "_gl", "_gac",
+          "_hsenc", "_hsmi", "hsa_acc", "hsa_cam", "hsa_grp", "hsa_ad", "hsa_src", "hsa_tgt",
+          "hsa_kw", "hsa_mt", "hsa_net", "hsa_ver", "vero_id", "vero_conv", "wickedid",
+          "s_kwcid", "ef_id", "srsltid", "ref_src", "ref_url", "spm", "scm", "cmpid",
+          "mkt_tok", "trk", "trkCampaign", "sc_campaign", "sc_channel", "sc_content",
+          "sc_medium", "sc_outcome", "sc_geo", "sc_country", "_branch_match_id",
+          "_branch_referrer", "click_id", "clickid", "affiliate", "aff_id", "affid",
+        ];
+        var TRACKING_PREFIX = ["utm_", "oly_", "pk_", "mtm_", "piwik_", "matomo_", "ncid", "nr_"];
+
+        function isTrackingParam(name) {
+          var lower = name.toLowerCase();
+          if (TRACKING_EXACT.indexOf(lower) !== -1) return true;
+          for (var i = 0; i < TRACKING_PREFIX.length; i++) {
+            if (lower.indexOf(TRACKING_PREFIX[i]) === 0) return true;
+          }
+          return false;
+        }
+
+        // Short/redirect links carry the tracking in the path; only the tracker can expand them.
+        var OPAQUE_HOSTS = /(^|\.)(amzn\.to|amzn\.eu|a\.aliexpress\.com|s\.click\.aliexpress\.com|bit\.ly|t\.co|lnkd\.in|ebay\.us|fb\.me|goo\.gl)$/i;
+
+        // Returns { url: string, removed: string[], note?: string }
+        function cleanOne(raw) {
+          var url;
+          try {
+            url = new URL(raw);
+          } catch (e) {
+            return null;
+          }
+          if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+
+          var host = url.hostname.toLowerCase();
+          var removed = [];
+          var m;
+
+          if (OPAQUE_HOSTS.test(host)) {
+            return { url: raw, removed: [], note: "short link — opens via a tracker; cannot be cleaned offline" };
+          }
+
+          // Amazon: the ASIN is the only thing that identifies the product.
+          if (/(^|\.)amazon\.[a-z.]+$/.test(host)) {
+            m = url.pathname.match(/\/(?:dp|gp\/product|gp\/aw\/d|product)\/([A-Z0-9]{10})(?:[/?]|$)/i);
+            if (m) {
+              var before = url.pathname + url.search;
+              url.pathname = "/dp/" + m[1].toUpperCase();
+              url.search = "";
+              url.hash = "";
+              removed.push("path and query → /dp/" + m[1].toUpperCase() + "  (was " + before + ")");
+              return { url: url.toString(), removed: removed };
+            }
+          }
+
+          // AliExpress: /item/<digits>.html is the product; the query is entirely tracking.
+          if (/(^|\.)aliexpress\.[a-z.]+$/.test(host)) {
+            m = url.pathname.match(/\/item\/(\d+)\.html/);
+            if (m) {
+              var hadQuery = url.search.length > 1;
+              url.hostname = "www.aliexpress.com";
+              url.pathname = "/item/" + m[1] + ".html";
+              url.search = "";
+              url.hash = "";
+              if (hadQuery) removed.push("entire query (spm, algo_pvid, pdp_npi, …)");
+              return { url: url.toString(), removed: removed };
+            }
+          }
+
+          // eBay: /itm/<digits>; the slug before it and the query are noise.
+          if (/(^|\.)ebay\.[a-z.]+$/.test(host)) {
+            m = url.pathname.match(/\/itm\/(?:[^/]+\/)?(\d{9,})/);
+            if (m) {
+              url.pathname = "/itm/" + m[1];
+              if (url.search.length > 1) removed.push("entire query");
+              url.search = "";
+              url.hash = "";
+              return { url: url.toString(), removed: removed };
+            }
+          }
+
+          // YouTube: keep only what selects the video/playlist/time.
+          if (/(^|\.)(youtube\.com|youtu\.be)$/.test(host)) {
+            var keep = { v: 1, t: 1, list: 1, index: 1 };
+            var yt = new URLSearchParams();
+            url.searchParams.forEach(function (value, name) {
+              if (keep[name]) yt.set(name, value);
+              else removed.push(name);
+            });
+            url.search = yt.toString();
+            return { url: url.toString(), removed: removed };
+          }
+
+          // Google search: q is the search; everything else is session state.
+          if (/(^|\.)google\.[a-z.]+$/.test(host) && url.pathname === "/search") {
+            var q = url.searchParams.get("q");
+            url.searchParams.forEach(function (value, name) {
+              if (name !== "q") removed.push(name);
+            });
+            url.search = q ? "q=" + encodeURIComponent(q) : "";
+            return { url: url.toString(), removed: removed };
+          }
+
+          // Everything else: drop the known trackers, keep the rest untouched.
+          var kept = new URLSearchParams();
+          url.searchParams.forEach(function (value, name) {
+            if (isTrackingParam(name)) removed.push(name);
+            else kept.append(name, value);
+          });
+          url.search = kept.toString();
+          return { url: url.toString(), removed: removed };
+        }
+
+        function clean() {
+          var lines = inputEl.value.split(/\r?\n/);
+          var out = [];
+          var notes = [];
+          var urlCount = 0;
+          var removedCount = 0;
+
+          lines.forEach(function (line) {
+            var trimmed = line.trim();
+            if (!trimmed) {
+              out.push("");
+              return;
+            }
+            var result = cleanOne(trimmed);
+            if (!result) {
+              out.push(line);
+              return;
+            }
+            urlCount++;
+            out.push(result.url);
+            if (result.note) {
+              notes.push({ url: result.url, text: result.note });
+            } else if (result.removed.length) {
+              removedCount += result.removed.length;
+              notes.push({ url: result.url, text: "removed " + result.removed.join(", ") });
+            }
+          });
+
+          outputEl.value = out.join("\n");
+          removedList.innerHTML = "";
+          notes.forEach(function (n) {
+            var li = document.createElement("li");
+            var code = document.createElement("code");
+            code.textContent = n.url;
+            li.appendChild(code);
+            li.appendChild(document.createTextNode(" — " + n.text));
+            removedList.appendChild(li);
+          });
+
+          inputStatus.className = "status";
+          if (!urlCount) {
+            inputStatus.textContent = inputEl.value.trim() ? "No URLs found." : "";
+          } else {
+            inputStatus.textContent =
+              urlCount + (urlCount === 1 ? " link" : " links") + ", " +
+              removedCount + (removedCount === 1 ? " parameter" : " parameters") + " removed.";
+          }
+          copyStatus.textContent = "";
+          copyStatus.className = "status";
+        }
+
+        inputEl.addEventListener("input", clean);
+
+        document.getElementById("paste-btn").addEventListener("click", function () {
+          if (!navigator.clipboard || !navigator.clipboard.readText) {
+            inputStatus.className = "status error";
+            inputStatus.textContent = "Clipboard read is not available here — paste into the box instead.";
+            return;
+          }
+          navigator.clipboard.readText().then(
+            function (text) {
+              inputEl.value = text;
+              clean();
+            },
+            function () {
+              inputStatus.className = "status error";
+              inputStatus.textContent = "Clipboard read was refused — paste into the box instead.";
+            },
+          );
+        });
+
+        document.getElementById("reset-btn").addEventListener("click", function () {
+          inputEl.value = "";
+          clean();
+          inputEl.focus();
+        });
+
+        document.getElementById("copy-btn").addEventListener("click", function () {
+          var text = outputEl.value;
+          if (!text.trim()) {
+            copyStatus.className = "status error";
+            copyStatus.textContent = "Nothing to copy yet.";
+            return;
+          }
+          var done = function () {
+            copyStatus.className = "status ok";
+            copyStatus.textContent = "Copied.";
+          };
+          var fail = function () {
+            outputEl.select();
+            copyStatus.className = "status error";
+            copyStatus.textContent = "Copy failed — the text is selected, press Ctrl+C.";
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, fail);
+          } else {
+            fail();
+          }
+        });
+
+        clean();
+      })();
+    </script>
+  </body>
+</html>
