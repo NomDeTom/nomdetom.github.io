@@ -685,6 +685,13 @@
             against a V3 unit.
           </p>
           <p class="hosted-note">
+            Another client for the V3, for macOS:
+            <a class="attribution-link" href="https://github.com/a-li3n/rf-power-meter"
+              >a-li3n/rf-power-meter</a
+            >, a Node serial daemon with a React dashboard, built from the same vendor protocol
+            document.
+          </p>
+          <p class="hosted-note">
             MIT licence, matching the companion repo • Copyright (c) 2026 NomDeTom; portions
             derived from work copyright (c) 2026 Novo • By NomDeTom •
             <a
@@ -983,6 +990,7 @@
             <div class="row"><span id="sState" class="pill">rate not set this session</span></div>
             <p class="hint">
               Measured on a V3: S0 about 1 record/s, S1 (default) about 5/s, S2 about 2,500/s.
+              S2 differs between units: another V3 client reports about 7,400/s.
               At S2 a LoRa packet gets hundreds of records, so packets can be measured directly.
               The meter cannot report its rate: the page checks the measured rate 3 s after each
               send. S2 turns the meter's own display off, and the manual warns that commands are
@@ -1174,8 +1182,10 @@ a+25838194mA   =  +25.8 dBm, 381.94 mW
           <h3>V3 behaviour found on the bench</h3>
           <ul>
             <li>
-              <b>Silent at open.</b> Nothing arrives until the first command. Raising DTR does
-              not start it; only a write does.
+              <b>Silent at open.</b> After plugging in, nothing arrives until the first command.
+              Raising DTR does not start it; only a write does. Once started, the stream appears to
+              keep running until the meter is unplugged: another V3 client finds it already
+              streaming when it reopens the port.
             </li>
             <li>
               <b>Settings persist.</b> Pages survive unplugging, so the value you see on first
@@ -2244,9 +2254,12 @@ while True:
           if (Number.isFinite(inp) && inp >= 5) {
             bn.className = "bad";
             bn.textContent = `Detector input ${fmtD(inp)} dBm. The absolute maximum is about +12 dBm and damage is instant. Add attenuation.`;
-          } else if (pegged >= 5) {
+          } else if (pegged >= 5 && model === "v5") {
             bn.className = "bad";
-            bn.textContent = "Stream stuck at −99.9 dBm: the corrupted-offset state. Send a full-form page command (Set on page A).";
+            bn.textContent = "Stream stuck at −99.9 dBm: the V5's corrupted-offset state. Send a full-form page command (Set on page A).";
+          } else if (pegged >= 5) {
+            bn.className = "warn";
+            bn.textContent = "Readings at −99.9 dBm: the V3's no-signal / out-of-range value. Check the input and the page offset.";
           } else if (stale && !paused) {
             bn.className = "warn";
             bn.textContent = `No records for 3 s. ${silentHint}`;
