@@ -976,6 +976,12 @@
       .vx-sym.on .vx-chirp {
         stroke-width: 3;
       }
+      abbr[title] {
+        text-decoration: underline dotted;
+        text-underline-offset: 0.15em;
+        cursor: help;
+      }
+
       .vx-band {
         font-family: "Courier New", monospace;
         font-size: 0.66rem;
@@ -1220,7 +1226,7 @@
         <h1>LoRa frame structure visualiser — SX1262</h1>
         <p class="subtitle">
           Two LoRa frames side by side, drawn symbol by symbol on a shared time axis: what the
-          preamble, the sync word, the start-of-frame delimiter, the header and the payload each
+          preamble, the sync word, the start-of-frame delimiter (SFD), the header and the payload each
           cost in microseconds, and where a mesh spends its airtime. One part only: everything
           here is an SX1262 in standard interleaving, at the bandwidths it actually has.
         </p>
@@ -1418,8 +1424,10 @@
         <h2>How the frame is built</h2>
         <p>
           A LoRa symbol is one chirp sweeping the whole bandwidth in
-          <span class="mono">Tsym = 2^SF / BW</span>. The symbol's <em>value</em> is the point at
-          which the sweep wraps, so a payload reads as diagonals broken at different heights. Four
+          <span class="mono">Tsym = 2^SF / BW</span>. The symbol's <em>value</em> sets the point at
+          which the sweep wraps, so a payload reads as diagonals broken at different heights. A
+          header or payload symbol of value <span class="mono">s</span> starts
+          <span class="mono">s + 1</span> bins up, and the receiver takes the one back off. Four
           parts go on the air in order:
         </p>
         <ul>
@@ -1431,11 +1439,12 @@
           </li>
           <li>
             <strong>Sync word</strong> &mdash; two modulated upchirps, one per nibble, each nibble
-            times eight. This is the only thing separating two meshes that share a frequency.
+            times eight, with nibbles 8&ndash;F counting as negative. This is the only thing
+            separating two meshes that share a frequency.
           </li>
           <li>
-            <strong>SFD</strong> &mdash; two and a quarter downchirps. The reversal is what lets a
-            receiver separate timing error from frequency error: an upchirp moves one way under
+            <strong>SFD</strong> (start-of-frame delimiter) &mdash; two and a quarter downchirps.
+            The reversal is what lets a receiver separate timing error from frequency error: an upchirp moves one way under
             both, a downchirp moves opposite ways.
           </li>
           <li>
@@ -1572,8 +1581,11 @@
         // Gray, whitening, the header and its checksum, Hamming, the diagonal
         // interleaver and the CRC: the layers a real SX126x applies. Ported so the
         // page can encode any parameter set rather than carrying two frozen symbol
-        // arrays. Verified symbol-for-symbol against the Go across a matrix of
-        // SF 7..12, CR 1..4, LDRO on and off, and payloads 1..255 bytes.
+        // arrays. Verified symbol-for-symbol against gr-lora_sdr's transmit blocks
+        // (whitening, header, add_crc, hamming_enc, interleaver, gray_demap) across
+        // SF 7..12, CR 1..4, LDRO on and off, and payloads 1..255 bytes: 864 cases.
+        // The header checksum's c3 takes n2 bit 0, as gr-lora_sdr and silicon do;
+        // MeshBench had bit 3 until a509754, which only CR 4/8 headers hide.
         //
         // SF5 and SF6 use a different frame arrangement on the SX126x and are out of
         // scope here, exactly as they are in the Go.
@@ -1606,7 +1618,7 @@
         function headerChecksum(n0, n1, n2) {
           function b(n, i) { return (n >> i) & 1; }
           var c4 = b(n0,3) ^ b(n0,2) ^ b(n0,1) ^ b(n0,0);
-          var c3 = b(n0,3) ^ b(n1,3) ^ b(n1,2) ^ b(n1,1) ^ b(n2,3);
+          var c3 = b(n0,3) ^ b(n1,3) ^ b(n1,2) ^ b(n1,1) ^ b(n2,0);
           var c2 = b(n0,2) ^ b(n1,3) ^ b(n1,0) ^ b(n2,3) ^ b(n2,1);
           var c1 = b(n0,1) ^ b(n1,2) ^ b(n1,0) ^ b(n2,2) ^ b(n2,1) ^ b(n2,0);
           var c0 = b(n0,0) ^ b(n1,1) ^ b(n2,3) ^ b(n2,2) ^ b(n2,1) ^ b(n2,0);
@@ -1701,19 +1713,23 @@
         // which is why the private word 0x12 is written 0x1424 and the public one
         // 0x34 is written 0x3444.
         //
-        // The two sync SYMBOLS are each nibble times eight. That is what MeshBench
-        // measured off a real SX1262 and what gr-lora_sdr implements, and it is a
-        // measurement, not an inference from the register layout.
+        // The two sync SYMBOLS are each nibble times eight, with the nibble read as a
+        // signed 4-bit value. For 0x12 and 0x34 (no nibble of 8 or more) that is
+        // plain n * 8, which MeshBench measured off a real SX1262 and gr-lora_sdr
+        // implements. For 0x2B, SDR captures of an SX1262 and an LR1110 at SF9
+        // (2026-09-18) put the second symbol at -40, not 88: nibble 0xB counts as -5.
+        // One high nibble at one SF, so "signed" and "128 bins low" are not yet told
+        // apart; gr-lora_sdr's receiver expects 88 and would reject it.
         function syncRegs(w) {
           return "0x0740 = 0x" + hex2((w & 0xf0) | 0x04) +
             ", 0x0741 = 0x" + hex2(((w & 0x0f) << 4) | 0x04);
         }
 
-        // Modulo the symbol space, which only bites below SF5: a nibble of 15 is
-        // symbol 120, and the smallest space this page draws is 32.
+        // Wrapped into the symbol space, so a negative symbol lands at 2^SF minus it.
         function syncSymbols(word, sf) {
           var n = 1 << sf;
-          return [(((word >> 4) & 0xf) * 8) % n, ((word & 0xf) * 8) % n];
+          function sym(nib) { var v = nib >= 8 ? nib - 16 : nib; return (((v * 8) % n) + n) % n; }
+          return [sym((word >> 4) & 0xf), sym(word & 0xf)];
         }
 
         function hex2(v) { return (v & 0xff).toString(16).toUpperCase().padStart(2, "0"); }
@@ -1721,17 +1737,24 @@
         // Semtech blesses two values and no others; the gateway basebands enforce it.
         function syncIsStandard(w) { return w === 0x12 || w === 0x34; }
 
+        // Tooltip definitions for the acronyms the page uses before "How the frame is built".
+        var ABBR = {
+          SF: '<abbr title="spreading factor">SF</abbr>',
+          SFD: '<abbr title="start-of-frame delimiter">SFD</abbr>',
+          LDRO: '<abbr title="low-data-rate optimisation">LDRO</abbr>'
+        };
+
         var PARTS = [
           { id: "preamble", name: "Preamble",  note: "unmodulated upchirps" },
           { id: "sync",     name: "Sync word", note: "2 modulated upchirps" },
-          { id: "sfd",      name: "SFD",       note: "2.25 downchirps" },
+          { id: "sfd",      name: "SFD",       note: "2.25 downchirps", full: "start-of-frame delimiter" },
           { id: "header",   name: "Header",    note: "8 symbols at SF-2" },
           { id: "payload",  name: "Payload",   note: "coded data" }
         ];
 
         var STATE = [
-          { sf: 11, bw: 250,  cr: 1, pre: 16, sync: 0x2b, bytes: 32, preset: "Meshtastic|LongFast" },
-          { sf: 8,  bw: 62.5, cr: 4, pre: 32, sync: 0x12, bytes: 32, preset: "MeshCore|EU/UK (Narrow)" }
+          { sf: 11, bw: 250,  cr: 1, pre: 16, sync: 0x2b, bytes: 32, content: "fill", preset: "Meshtastic|LongFast" },
+          { sf: 8,  bw: 62.5, cr: 4, pre: 32, sync: 0x12, bytes: 32, content: "fill", preset: "MeshCore|EU/UK (Narrow)" }
         ];
 
         // Taken before any handler can mutate STATE, and deep so that restoring it
@@ -1761,16 +1784,51 @@
           };
         }
 
-        // A payload to encode. Real content would come from the mesh; this is a
-        // deterministic fill so the same settings always draw the same frame.
-        function samplePayload(n) {
-          var out = [];
-          for (var i = 0; i < n; i++) out.push((i * 31 + 7) & 0xff);
+        // What the payload bytes are. Whitening XORs every byte with a fixed sequence
+        // before coding, so even all zeros comes out scattered: on the air, a zero
+        // payload is the whitening sequence itself.
+        var CONTENTS = [
+          { id: "fill",       name: "Counting pattern" },
+          { id: "zeros",      name: "All 0x00" },
+          { id: "ones",       name: "All 0xFF" },
+          { id: "random",     name: "Random (fixed seed)" },
+          { id: "meshtastic", name: "Meshtastic text packet" }
+        ];
+
+        // A real Meshtastic broadcast, 32 bytes, built as the firmware builds it:
+        // the 16-byte clear header (to, from, id little-endian; flags; channel hash;
+        // next hop; relay node), then the Data protobuf {portnum 1 TEXT_MESSAGE_APP,
+        // payload "Hello mesh", bitfield 0} under AES-128-CTR with the default
+        // LongFast key (PSK index 1). Nonce: packet id as 8 bytes LE, from as 4 bytes
+        // LE, 4 zero bytes; counter in the last 4 bytes. Channel hash 0x08 is
+        // xor("LongFast") ^ xor(key). Cross-checked with openssl, which decrypts it
+        // back to 08 01 12 0a "Hello mesh" 48 00.
+        var MT_PACKET = [
+          0xff, 0xff, 0xff, 0xff, 0x4d, 0x3c, 0x2b, 0x1a, 0x01, 0x00, 0xed, 0x5e, 0x63, 0x08, 0x00, 0x4d,
+          0x2e, 0x99, 0x20, 0xd3, 0x8a, 0xfc, 0x17, 0x95, 0x90, 0xa0, 0x3a, 0xfb, 0x19, 0x4b, 0x4c, 0x77
+        ];
+        var MT_FIELDS =
+          "to ^all (broadcast) &middot; from !1a2b3c4d &middot; id 0x5eed0001 &middot; hop limit 3 of 3 &middot; " +
+          "channel hash 0x08 (LongFast, default key) &middot; next hop none &middot; relay 0x4d &middot; then 16 bytes " +
+          "of AES-CTR ciphertext: a text message, &ldquo;Hello mesh&rdquo;";
+
+        // Deterministic, so the same settings always draw the same frame.
+        function payloadOf(s) {
+          var n = s.bytes, out = [], i;
+          if (s.content === "meshtastic") return MT_PACKET.slice();
+          if (s.content === "zeros") { for (i = 0; i < n; i++) out.push(0); return out; }
+          if (s.content === "ones") { for (i = 0; i < n; i++) out.push(0xff); return out; }
+          if (s.content === "random") {
+            var x = 0x2545f491;
+            for (i = 0; i < n; i++) { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; out.push((x >>> 24) & 0xff); }
+            return out;
+          }
+          for (i = 0; i < n; i++) out.push((i * 31 + 7) & 0xff);
           return out;
         }
 
         function symbolsFor(s, f) {
-          var syms = encodeFrame(s.sf, s.cr, f.ldro, samplePayload(s.bytes));
+          var syms = encodeFrame(s.sf, s.cr, f.ldro, payloadOf(s));
           if (syms) return syms;
           // Outside the chain's range (SF5/6, CR 4/4): draw the structure with the
           // right symbol count and say plainly that the values are not encoded.
@@ -1780,7 +1838,7 @@
         }
 
         function symbolsAreEncoded(s, f) {
-          return !!encodeFrame(s.sf, s.cr, f.ldro, samplePayload(s.bytes));
+          return !!encodeFrame(s.sf, s.cr, f.ldro, payloadOf(s));
         }
 
         // ---- input panels ----
@@ -1825,7 +1883,14 @@
                 '<div class="field"><label for="sync-' + i + '">Sync word <span class="optional">hex</span></label>' +
                   '<input id="sync-' + i + '" data-k="sync" type="text" inputmode="latin" value="0x' + s.sync.toString(16).toUpperCase() + '" /></div>' +
                 '<div class="field"><label for="bytes-' + i + '">Payload <span class="optional">bytes</span></label>' +
-                  '<input id="bytes-' + i + '" data-k="bytes" type="number" inputmode="numeric" min="0" max="255" step="1" value="' + s.bytes + '" /></div>' +
+                  '<input id="bytes-' + i + '" data-k="bytes" type="number" inputmode="numeric" min="0" max="255" step="1" value="' + s.bytes + '"' +
+                  (s.content === "meshtastic" ? " disabled" : "") + ' /></div>' +
+              "</div>" +
+              '<div class="field"><label for="content-' + i + '">Payload content</label>' +
+                '<select id="content-' + i + '" data-k="content">' + CONTENTS.map(function (c) {
+                  return '<option value="' + c.id + '"' + (s.content === c.id ? " selected" : "") + ">" + c.name + "</option>";
+                }).join("") + "</select>" +
+                (s.content === "meshtastic" ? '<span class="field-hint">' + MT_FIELDS + "</span>" : "") +
               "</div>" +
               '<div class="field"><span class="field-hint">' + syncRegs(s.sync) +
                 " &rarr; sync symbols " + syncSymbols(s.sync, s.sf).join(" and ") +
@@ -1882,7 +1947,10 @@
           run.push({ part: "sfd", shift: 0, span: 1, down: true, idx: 0 });
           run.push({ part: "sfd", shift: 0, span: 1, down: true, idx: 1 });
           run.push({ part: "sfd", shift: 0, span: 0.25, down: true, idx: 2 });
-          syms.forEach(function (v, j) { run.push({ part: j < 8 ? "header" : "payload", shift: v, span: 1, down: false, idx: j }); });
+          // On air a data symbol of value v starts at bin v + 1; the receiver takes the one
+          // back off (gr-lora_sdr's fft_demod; seen on SX1262, LR1110 and SX1276 captures).
+          var nb = Math.pow(2, s.sf);
+          syms.forEach(function (v, j) { run.push({ part: j < 8 ? "header" : "payload", shift: (v + 1) % nb, val: v, span: 1, down: false, idx: j }); });
           var t = 0, bands = {};
           run.forEach(function (r) {
             r.t0 = t; t += r.span * ms; r.t1 = t;
@@ -1976,7 +2044,7 @@
                   " L " + x(r.t0 + g[2] * d.ms).toFixed(2) + " " + yOf(g[3], k).toFixed(2);
               }).join(" ");
               var meta = [r.part, r.idx, r.down ? "down" : r.shift, r.t0.toFixed(2),
-                (d.ms * r.span * 1000).toFixed(0), r.lab || "", i ? "B" : "A"].join("~");
+                (d.ms * r.span * 1000).toFixed(0), r.lab || "", i ? "B" : "A", r.val != null ? r.val : ""].join("~");
               svg += '<g class="vx-sym" data-meta="' + meta + '">' +
                 '<rect class="vx-hit" x="' + x(r.t0).toFixed(2) + '" y="' + (M.t + RH) + '" width="' +
                 Math.max(x(r.t1) - x(r.t0), 1.4).toFixed(2) + '" height="' + (PH - 2 * RH) + '"></rect>' +
@@ -2052,7 +2120,7 @@
                 " L " + x(r.t0 + g[2] * ms).toFixed(2) + " " + y(g[3]).toFixed(2);
             }).join(" ");
             var meta = [r.part, r.idx, r.down ? "down" : r.shift, r.t0.toFixed(2),
-              (ms * r.span * 1000).toFixed(0), r.lab || "", i ? "B" : "A"].join("~");
+              (ms * r.span * 1000).toFixed(0), r.lab || "", i ? "B" : "A", r.val != null ? r.val : ""].join("~");
             svg += '<g class="vx-sym" data-meta="' + meta + '">' +
               '<rect class="vx-hit" x="' + x(r.t0).toFixed(2) + '" y="' + M.t + '" width="' +
               Math.max(x(r.t1) - x(r.t0), 1.4).toFixed(2) + '" height="' + PH + '"></rect>' +
@@ -2068,9 +2136,9 @@
             ? '<span class="ok-pill">encoded</span>'
             : '<span class="bad-pill">structure only</span>';
           return '<div class="vx-panel"><div class="vx-head"><strong>Frame ' + (i ? "B" : "A") + "</strong>" +
-            '<span class="vx-set">SF' + s.sf + " · " + s.bw + " kHz · 4/" + (s.cr + 4) +
+            '<span class="vx-set">' + ABBR.SF + s.sf + " · " + s.bw + " kHz · 4/" + (s.cr + 4) +
             " · sync 0x" + s.sync.toString(16).toUpperCase() + " · " +
-            f.airMs.toFixed(2) + " ms" + (f.ldro ? " · LDRO on" : "") +
+            f.airMs.toFixed(2) + " ms" + (f.ldro ? " · " + ABBR.LDRO + " on" : "") +
             "</span>" + provenance + "</div>" +
             '<div class="vx-plot" data-ml="' + M.l + '" data-pw="' + PW + '" data-w="' + W +
             '" data-t0="' + win.t0 + '" data-t1="' + win.t1 + '"><svg viewBox="0 0 ' + W + " " + H +
@@ -2098,8 +2166,14 @@
           out += "<p><strong>Sync word.</strong> 0x12 is the private network, 0x34 is reserved " +
             "for LoRaWAN, and 0x2B is Meshtastic&rsquo;s own. Each nibble becomes one sync symbol " +
             "at eight times its value, and those two modulated upchirps are the only thing " +
-            "separating two meshes that share a frequency. The figure is a measurement: MeshBench " +
-            "took it off a real SX1262, and gr-lora_sdr implements the same.</p>";
+            "separating two meshes that share a frequency.</p>" +
+            "<p><strong>High nibbles are negative.</strong> For 0x12 and 0x34 the eight-times rule " +
+            "is a measurement: MeshBench took it off a real SX1262, and gr-lora_sdr implements it. " +
+            "For Meshtastic&rsquo;s 0x2B it is not. SDR captures of an SX1262 and an LR1110 at SF9 " +
+            "put the second symbol at &minus;40 (472), not 88: the nibble 0xB counts as &minus;5, as " +
+            "a signed 4-bit value. The page draws that rule. It rests on one high nibble at one " +
+            "spreading factor, so a flat 128 bins low fits the same data, and gr-lora_sdr&rsquo;s " +
+            "receiver, which looks for 88, would not find it.</p>";
           out += "<p><strong>Two registers, not one.</strong> The SX1262 holds the word in 0x0740 " +
             "and 0x0741, and RadioLib spreads the byte across them with control bits 0x44, so the " +
             "low nibble of each written byte is always 4. That is why the private word reads " +
@@ -2119,9 +2193,9 @@
           out += row("Spreading factor", "SF" + A.sf, "SF" + B.sf);
           out += row("Bandwidth", A.bw + " kHz", B.bw + " kHz");
           out += row("Coding rate", "4/" + (A.cr + 4), "4/" + (B.cr + 4));
-          out += row("Sync word", "0x" + A.sync.toString(16).toUpperCase() + " → (" + (A.sync >> 4) * 8 + ", " + (A.sync & 15) * 8 + ")",
-                                  "0x" + B.sync.toString(16).toUpperCase() + " → (" + (B.sync >> 4) * 8 + ", " + (B.sync & 15) * 8 + ")");
-          out += row("Low data rate opt.", fa.ldro ? "on" : "off", fb.ldro ? "on" : "off");
+          out += row("Sync word", "0x" + A.sync.toString(16).toUpperCase() + " → (" + syncSymbols(A.sync, A.sf).join(", ") + ")",
+                                  "0x" + B.sync.toString(16).toUpperCase() + " → (" + syncSymbols(B.sync, B.sf).join(", ") + ")");
+          out += row('<abbr title="low-data-rate optimisation (LDRO)">Low data rate opt.</abbr>', fa.ldro ? "on" : "off", fb.ldro ? "on" : "off");
           out += row("Sync word registers", syncRegs(A.sync), syncRegs(B.sync));
           out += sp();
           out += row("Symbol duration", (fa.tsymMs * 1000).toFixed(1) + " µs", (fb.tsymMs * 1000).toFixed(1) + " µs");
@@ -2130,7 +2204,7 @@
           out += sp();
           function part(lbl, n, f) { return n + " sym · " + (n * f.tsymMs).toFixed(2) + " ms"; }
           out += row("Preamble", part(0, A.pre, fa), part(0, B.pre, fb));
-          out += row("Sync + SFD", part(0, fa.c1, fa), part(0, fb.c1, fb));
+          out += row("Sync + " + ABBR.SFD, part(0, fa.c1, fa), part(0, fb.c1, fb));
           out += row("Header", part(0, 8, fa), part(0, 8, fb));
           out += row("Payload", part(0, fa.payloadSyms, fa), part(0, fb.payloadSyms, fb));
           out += sp();
@@ -2149,6 +2223,9 @@
             var f = frameOf(s), syms = symbolsFor(s, f);
             return "<h4>Frame " + (i ? "B" : "A") +
               (symbolsAreEncoded(s, f) ? "" : " <span class=\"optional\">(not encoded)</span>") + "</h4>" +
+              "<p class=\"vx-dumplabel\">payload bytes, before whitening</p><pre>" +
+                (payloadOf(s).map(function (b) { return hex2(b); }).join(" ") || "(none)") + "</pre>" +
+              "<p class=\"vx-dumplabel\">symbol values; on air each chirp starts one bin higher, at value + 1</p>" +
               "<p class=\"vx-dumplabel\">header, 8 symbols at SF-2</p><pre>[" + syms.slice(0, 8).join(", ") + "]</pre>" +
               "<p class=\"vx-dumplabel\">payload, " + f.payloadSyms + " symbols</p><pre>[" + syms.slice(8).join(", ") + "]</pre>";
           }).join("");
@@ -2211,6 +2288,10 @@
                     s.preset = el.value;
                   }
                 }
+              } else if (k === "content") {
+                // Content is not a radio setting, so the preset stays as it is.
+                s.content = el.value;
+                if (s.content === "meshtastic") s.bytes = MT_PACKET.length;
               } else if (k === "sync") {
                 var v = parseInt(String(el.value).replace(/^0x/i, ""), 16);
                 s.sync = isFinite(v) ? Math.max(0, Math.min(255, v)) : s.sync;
@@ -2317,18 +2398,21 @@
 
         function wireTips() {
           var names = {};
-          PARTS.forEach(function (p) { names[p.id] = p.name; });
+          PARTS.forEach(function (p) { names[p.id] = p.full ? p.name + " · " + p.full : p.name; });
           document.querySelectorAll(".vx-plot").forEach(function (box) {
             var tip = box.querySelector(".vx-tip");
             box.querySelectorAll(".vx-sym").forEach(function (g) {
               function show() {
                 var m = g.dataset.meta.split("~");
-                var part = m[0], idx = +m[1], shift = m[2], t0 = m[3], us = m[4], lab = m[5], frame = m[6];
+                var part = m[0], idx = +m[1], shift = m[2], t0 = m[3], us = m[4], lab = m[5], frame = m[6], val = m[7];
                 var isData = part === "header" || part === "payload";
                 var rows = [];
                 if (OVERLAY) rows.push(["frame", frame]);
                 rows = rows.concat([
-                  [part === "sync" ? "symbol" : "index", part === "sync" ? lab : (isData ? "#" + idx : String(idx + 1))],
+                  [part === "sync" ? "symbol" : "index", part === "sync" ? lab : (isData ? "#" + idx : String(idx + 1))]
+                ]);
+                if (isData) rows.push(["value", val]);
+                rows = rows.concat([
                   ["shift", shift],
                   ["starts", t0 + " ms"],
                   ["lasts", us + " µs"]
@@ -2353,7 +2437,7 @@
 
         document.getElementById("partkey").innerHTML = PARTS.map(function (p) {
           return '<li><span class="vx-swatch" style="background:var(--pc-' + p.id + ')"></span>' +
-            "<span>" + p.name + '</span><span class="optional">' + p.note + "</span></li>";
+            "<span>" + (ABBR[p.name] || p.name) + '</span><span class="optional">' + p.note + "</span></li>";
         }).join("");
 
         document.getElementById("reset-btn").addEventListener("click", function () {
