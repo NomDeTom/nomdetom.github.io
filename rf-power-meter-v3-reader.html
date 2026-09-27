@@ -478,12 +478,26 @@
         }
       }
 
+      .trace-controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.6rem 1.5rem;
+        align-items: start;
+      }
+
+      @media (max-width: 760px) {
+        .trace-controls {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
       .ctl-label {
         min-width: 5.5rem;
         color: var(--muted);
         font-size: 0.85rem;
       }
 
+      #traceSec[data-trig="manual"] [data-show-trig="threshold"],
       #traceSec[data-mode="rolling"] [data-show="frame"],
       #traceSec[data-mode="frame"] [data-show="rolling"] {
         display: none !important;
@@ -544,9 +558,38 @@
         font-variant-numeric: tabular-nums;
       }
 
+      .pages-table th,
+      .pages-table td {
+        text-align: center;
+        padding: 0.3rem 0.25rem;
+      }
+
+      .pages-table tbody th {
+        text-align: left;
+        color: var(--muted);
+        font-weight: 600;
+        padding-right: 0.6rem;
+      }
+
       .pages-table input {
-        width: 5rem;
-        padding: 0.3rem 0.4rem;
+        width: 100%;
+        min-width: 4.6rem;
+        padding: 0.3rem 0.35rem;
+        text-align: right;
+      }
+
+      .pages-table .pg-meter {
+        white-space: pre-line;
+        line-height: 1.25;
+        color: var(--muted);
+      }
+
+      .pages-table .active-page {
+        background: var(--accent-soft);
+      }
+
+      .pages-table thead .active-page {
+        color: var(--accent);
       }
 
       .pages-table .action-btn {
@@ -670,50 +713,50 @@
           keeps its settings across a power cycle.
         </p>
         <p>
-          Have a V5 instead? Switch the model to V5 below. The V5 commands come from the
+          Have a V5 instead? Switch the model to V5 under Connection. The V5 commands come from the
           companion repo and have not been tested on a V5 here.
-        </p>
-      </section>
-
-      <section>
-        <h2>Connection</h2>
-        <div class="row">
-          <span class="inline-field">Model</span>
-          <div class="chip-group" role="group" aria-label="Meter model">
-            <button type="button" class="chip selected" data-model="v3" aria-pressed="true">
-              V3
-            </button>
-            <button type="button" class="chip" data-model="v5" aria-pressed="false">V5</button>
-          </div>
-        </div>
-        <div class="row">
-          <button id="connect" class="action-btn primary" type="button">Connect</button>
-          <button id="disconnect" class="action-btn" type="button" disabled>Disconnect</button>
-          <label
-            class="inline-field"
-            title="Off: only offer the STM32 Virtual COM Port (0483:5740). On: offer every serial port."
-          >
-            <input type="checkbox" id="anyPort" /> any serial port
-          </label>
-        </div>
-        <div class="row">
-          <span id="connPill" class="pill">disconnected</span>
-          <span id="setPill" class="pill">settings not read</span>
-          <span id="ratePill" class="pill">0 rec/s</span>
-        </div>
-        <p class="hint" data-for="v3">
-          V3: the port chooser lists the STM32 Virtual COM Port. The baud rate is ignored over
-          native USB (921600 is sent, as in the manual). A <code>Read</code> goes out 150 ms after
-          connecting, because the V3 sends nothing until its first command.
-        </p>
-        <p class="hint" data-for="v5">
-          V5: the port chooser lists every serial port, because the V5 uses a USB-UART bridge.
-          The port is opened at 460800 8N1, which the bridge needs.
         </p>
       </section>
 
       <div class="meter-grid">
         <div class="col">
+          <section>
+            <h2>Connection</h2>
+            <div class="row">
+              <span class="inline-field">Model</span>
+              <div class="chip-group" role="group" aria-label="Meter model">
+                <button type="button" class="chip selected" data-model="v3" aria-pressed="true">
+                  V3
+                </button>
+                <button type="button" class="chip" data-model="v5" aria-pressed="false">V5</button>
+              </div>
+            </div>
+            <div class="row">
+              <button id="connect" class="action-btn primary" type="button">Connect</button>
+              <button id="disconnect" class="action-btn" type="button" disabled>Disconnect</button>
+              <label
+                class="inline-field"
+                title="Off: only offer the STM32 Virtual COM Port (0483:5740). On: offer every serial port."
+              >
+                <input type="checkbox" id="anyPort" /> any serial port
+              </label>
+            </div>
+            <div class="row">
+              <span id="connPill" class="pill">disconnected</span>
+              <span id="setPill" class="pill">settings not read</span>
+              <span id="ratePill" class="pill">0 rec/s</span>
+            </div>
+            <p class="hint" data-for="v3">
+              V3: the port chooser lists the STM32 Virtual COM Port. The baud rate is ignored over
+              native USB (921600 is sent, as in the manual). A <code>Read</code> goes out 150 ms after
+              connecting, because the V3 sends nothing until its first command.
+            </p>
+            <p class="hint" data-for="v5">
+              V5: the port chooser lists every serial port, because the V5 uses a USB-UART bridge.
+              The port is opened at 460800 8N1, which the bridge needs.
+            </p>
+          </section>
+
           <section>
             <h2>Reading</h2>
             <div class="readout">
@@ -758,42 +801,51 @@
 
           <section id="traceSec" data-mode="rolling">
             <h2>Trace</h2>
-            <div class="row">
-              <span class="ctl-label">Mode</span>
-              <div class="chip-group" role="group" aria-label="Trace mode">
-                <button type="button" class="chip tr-chip" data-group="mode" data-value="rolling">Rolling</button>
-                <button type="button" class="chip tr-chip" data-group="mode" data-value="frame">Fixed frame</button>
+            <div class="trace-controls">
+              <div>
+                <div class="row">
+                  <span class="ctl-label">Mode</span>
+                  <div class="chip-group" role="group" aria-label="Trace mode">
+                    <button type="button" class="chip tr-chip" data-group="mode" data-value="rolling">Rolling</button>
+                    <button type="button" class="chip tr-chip" data-group="mode" data-value="frame">Fixed frame</button>
+                  </div>
+                </div>
+                <div class="row" data-show="frame">
+                  <span class="ctl-label">When full</span>
+                  <div class="chip-group" role="group" aria-label="When the frame is full">
+                    <button type="button" class="chip tr-chip" data-group="end" data-value="stop">Stop</button>
+                    <button type="button" class="chip tr-chip" data-group="end" data-value="wrap">Wrap</button>
+                  </div>
+                </div>
+                <div class="row" data-show="frame">
+                  <span class="ctl-label">Start</span>
+                  <div class="chip-group" role="group" aria-label="Frame start">
+                    <button type="button" class="chip tr-chip" data-group="trig" data-value="manual">On click</button>
+                    <button type="button" class="chip tr-chip" data-group="trig" data-value="threshold">On threshold</button>
+                  </div>
+                  <label class="inline-field" data-show-trig="threshold"
+                    >at ≥ <input type="number" id="trigLevel" value="-40" step="0.5" /> dBm</label
+                  >
+                </div>
               </div>
-            </div>
-            <div class="row">
-              <span class="ctl-label">Width</span>
-              <div class="chip-group" role="group" aria-label="Trace width">
-                <button type="button" class="chip tr-chip" data-group="win" data-value="10">10 s</button>
-                <button type="button" class="chip tr-chip" data-group="win" data-value="30">30 s</button>
-                <button type="button" class="chip tr-chip" data-group="win" data-value="60">1 min</button>
-                <button type="button" class="chip tr-chip" data-group="win" data-value="300">5 min</button>
-                <button type="button" class="chip tr-chip" data-group="win" data-value="600">10 min</button>
-              </div>
-            </div>
-            <div class="row" data-show="frame">
-              <span class="ctl-label">When full</span>
-              <div class="chip-group" role="group" aria-label="When the frame is full">
-                <button type="button" class="chip tr-chip" data-group="end" data-value="stop">Stop</button>
-                <button type="button" class="chip tr-chip" data-group="end" data-value="wrap">Wrap</button>
-              </div>
-            </div>
-            <div class="row" data-show="frame">
-              <span class="ctl-label">Start</span>
-              <div class="chip-group" role="group" aria-label="Frame start">
-                <button type="button" class="chip tr-chip" data-group="trig" data-value="manual">On click</button>
-                <button type="button" class="chip tr-chip" data-group="trig" data-value="threshold">On threshold</button>
-              </div>
-            </div>
-            <div class="row">
-              <span class="ctl-label">Y axis</span>
-              <div class="chip-group" role="group" aria-label="Y axis">
-                <button type="button" class="chip tr-chip" data-group="y" data-value="auto">Auto</button>
-                <button type="button" class="chip tr-chip" data-group="y" data-value="fixed">−60 … +10 dBm</button>
+              <div>
+                <div class="row">
+                  <span class="ctl-label">Width</span>
+                  <div class="chip-group" role="group" aria-label="Trace width">
+                    <button type="button" class="chip tr-chip" data-group="win" data-value="10">10 s</button>
+                    <button type="button" class="chip tr-chip" data-group="win" data-value="30">30 s</button>
+                    <button type="button" class="chip tr-chip" data-group="win" data-value="60">1 min</button>
+                    <button type="button" class="chip tr-chip" data-group="win" data-value="300">5 min</button>
+                    <button type="button" class="chip tr-chip" data-group="win" data-value="600">10 min</button>
+                  </div>
+                </div>
+                <div class="row">
+                  <span class="ctl-label">Y axis</span>
+                  <div class="chip-group" role="group" aria-label="Y axis">
+                    <button type="button" class="chip tr-chip" data-group="y" data-value="auto">Auto</button>
+                    <button type="button" class="chip tr-chip" data-group="y" data-value="fixed">−60 … +10 dBm</button>
+                  </div>
+                </div>
               </div>
             </div>
             <canvas id="chart" style="margin-top: 0.9rem"></canvas>
@@ -816,7 +868,8 @@
               <b>Rolling</b>: the right edge is now. <b>Pause</b> freezes the view only; records
               keep arriving and nothing is lost. <b>Fixed frame</b>: the frame starts when you
               press Start frame, or, set to <i>On threshold</i>, at the first record at or above
-              the level in Threshold events, with 10% of the width before the trigger.
+              the level set beside it (the same level as Threshold events), with 10% of the
+              width before the trigger.
               <i>Stop</i> freezes the frame when it is full and keeps it until you start another;
               <i>Wrap</i> sweeps like an oscilloscope, newest overwriting oldest.
             </p>
@@ -871,36 +924,18 @@
               <button id="capClear" class="action-btn" type="button">Clear</button>
             </div>
           </section>
-        </div>
 
-        <div class="col">
-          <section data-for="v3">
-            <h2>Sample rate (V3)</h2>
-            <div class="chip-group" role="group" aria-label="Sample rate">
-              <button type="button" class="chip s-chip" data-s="0" disabled>S0 · low</button>
-              <button type="button" class="chip s-chip" data-s="1" disabled>S1 · medium</button>
-              <button type="button" class="chip s-chip" data-s="2" disabled>S2 · high</button>
-            </div>
-            <div class="row"><span id="sState" class="pill">rate not set this session</span></div>
-            <p class="hint">
-              Measured on a V3: S0 about 1 record/s, S1 (default) about 5/s, S2 about 2,500/s.
-              At S2 a LoRa packet gets hundreds of records, so packets can be measured directly.
-              The meter cannot report its rate: the page checks the measured rate 3 s after each
-              send. S2 turns the meter's own display off, and the manual warns that commands are
-              less reliable at S2, so resend if the check fails.
-            </p>
-          </section>
-
-          <section>
+          <section id="pagesSec">
             <h2><span data-for="v3">Pages (V3)</span><span data-for="v5">Setting (V5)</span></h2>
             <div class="table-wrap">
               <table class="pages-table">
-                <thead>
-                  <tr>
-                    <th>page</th><th>on meter</th><th>MHz</th><th>offset dB</th><th></th>
-                  </tr>
-                </thead>
-                <tbody id="pagesBody"></tbody>
+                <thead><tr id="pgHead"><th scope="col">page</th></tr></thead>
+                <tbody>
+                  <tr id="pgRowM"><th scope="row">on meter</th></tr>
+                  <tr id="pgRowF"><th scope="row">MHz</th></tr>
+                  <tr id="pgRowO"><th scope="row">offset dB</th></tr>
+                  <tr id="pgRowS"><th scope="row"></th></tr>
+                </tbody>
               </table>
             </div>
             <div class="row" style="margin-top: 0.75rem">
@@ -922,7 +957,8 @@
               every reading, so an attenuator's value there gives power at the attenuator input.
               The two buttons on the meter step between pages. <b>Read does not say which page
               is active:</b> set <i>active page</i> to match the meter's display, so that the
-              safety check below uses the right offset. V3 settings persist across a power cycle.
+              safety warnings use the right offset; its column is highlighted. V3 settings
+              persist across a power cycle.
             </p>
             <p class="hint" data-for="v5">
               The V5 holds one setting, kept in RAM only: it powers up at 1 MHz, +0.0 dB.
@@ -932,6 +968,25 @@
               command is checked against the full form <code>A0868+30.6</code> before it is
               written. The short form <code>A0868</code> is never sent, because on the V5 it
               corrupts the offset.
+            </p>
+          </section>
+        </div>
+
+        <div class="col">
+          <section data-for="v3">
+            <h2>Sample rate (V3)</h2>
+            <div class="chip-group" role="group" aria-label="Sample rate">
+              <button type="button" class="chip s-chip" data-s="0" disabled>S0 · low</button>
+              <button type="button" class="chip s-chip" data-s="1" disabled>S1 · medium</button>
+              <button type="button" class="chip s-chip" data-s="2" disabled>S2 · high</button>
+            </div>
+            <div class="row"><span id="sState" class="pill">rate not set this session</span></div>
+            <p class="hint">
+              Measured on a V3: S0 about 1 record/s, S1 (default) about 5/s, S2 about 2,500/s.
+              At S2 a LoRa packet gets hundreds of records, so packets can be measured directly.
+              The meter cannot report its rate: the page checks the measured rate 3 s after each
+              send. S2 turns the meter's own display off, and the manual warns that commands are
+              less reliable at S2, so resend if the check fails.
             </p>
           </section>
 
@@ -965,9 +1020,13 @@
                 <tbody></tbody>
               </table>
             </div>
+            <div class="row" style="margin-top: 0.6rem">
+              <button id="evMd" class="action-btn" type="button">Copy as Markdown</button>
+              <button id="evCsv" class="action-btn" type="button">Save CSV</button>
+            </div>
             <p class="hint">
               An event opens when a record reaches the level, and closes after 150 ms below
-              level − 1 dB. <b>Duration</b> is by host arrival time; <b>n ÷ rate</b> is the
+              level − 1 dB. The newest 5,000 events are kept. <b>Duration</b> is by host arrival time; <b>n ÷ rate</b> is the
               record count over the measured rate. At S1 a short packet is caught only by chance;
               use S2.
             </p>
@@ -1435,15 +1494,20 @@ while True:
         try { setModel(localStorage.getItem("rf-meter-model") || "v3", false); } catch { setModel("v3", false); }
 
         // ==================== PAGES TABLE ====================
+        // Pages run across as columns: header, on meter, MHz, offset, Set.
         for (const L of LETTERS) {
-          const tr = document.createElement("tr");
-          if (L !== "A") tr.dataset.for = "v3";
-          tr.innerHTML =
-            `<th>${L}</th><td class="mono" id="pgM-${L}">—</td>` +
-            `<td><input type="number" id="pgF-${L}" min="1" max="9999" step="1" aria-label="Page ${L} frequency, MHz"></td>` +
-            `<td><input type="number" id="pgO-${L}" min="-99.9" max="99.9" step="0.1" aria-label="Page ${L} offset, dB"></td>` +
-            `<td><button type="button" class="action-btn page-set" data-page="${L}" disabled>Set</button></td>`;
-          $("pagesBody").appendChild(tr);
+          const cell = (tag, html) => {
+            const c = document.createElement(tag);
+            c.innerHTML = html;
+            c.dataset.page = L;
+            if (L !== "A") c.dataset.for = "v3";
+            return c;
+          };
+          $("pgHead").appendChild(cell("th", L));
+          $("pgRowM").appendChild(cell("td", `<span class="mono pg-meter" id="pgM-${L}">—</span>`));
+          $("pgRowF").appendChild(cell("td", `<input type="number" id="pgF-${L}" min="1" max="9999" step="1" aria-label="Page ${L} frequency, MHz">`));
+          $("pgRowO").appendChild(cell("td", `<input type="number" id="pgO-${L}" min="-99.9" max="99.9" step="0.1" aria-label="Page ${L} offset, dB">`));
+          $("pgRowS").appendChild(cell("td", `<button type="button" class="action-btn page-set" data-page="${L}" aria-label="Set page ${L}" disabled>Set</button>`));
           for (const id of [`pgF-${L}`, `pgO-${L}`]) $(id).addEventListener("input", () => ($(id).dataset.dirty = "1"));
         }
         $("pgF-A").value = 868;
@@ -1646,7 +1710,7 @@ while True:
         function showPages() {
           meter.pages.forEach((p, i) => {
             const L = LETTERS[i];
-            $(`pgM-${L}`).textContent = `${String(p.freq).padStart(4, "0")} ${fmtD(p.att)}`;
+            $(`pgM-${L}`).textContent = `${String(p.freq).padStart(4, "0")}\n${fmtD(p.att)}`;
             // Fill the inputs from the meter unless the user is editing them.
             if (!$(`pgF-${L}`).dataset.dirty) $(`pgF-${L}`).value = p.freq;
             if (!$(`pgO-${L}`).dataset.dirty) $(`pgO-${L}`).value = p.att.toFixed(1);
@@ -1713,6 +1777,10 @@ while True:
           if (!on) setPill("sState", "rate not set this session", "");
         }
         function updateSettingPill() {
+          const act = model === "v5" ? "A" : $("activePage").value;
+          for (const c of document.querySelectorAll(".pages-table [data-page]")) {
+            c.classList.toggle("active-page", c.dataset.page === act && c.tagName !== "BUTTON");
+          }
           const s = activeSetting();
           if (!s) { setPill("setPill", "settings not read", ""); return; }
           const page = model === "v3" ? `page ${$("activePage").value} · ` : "";
@@ -1744,6 +1812,7 @@ while True:
             c.setAttribute("aria-pressed", on ? "true" : "false");
           }
           $("traceSec").dataset.mode = trace.mode;
+          $("traceSec").dataset.trig = trace.trig;
           if (init) return;
           // A new width, end or trigger makes a different frame: start over.
           if (group !== "y") resetFrame();
@@ -1872,8 +1941,8 @@ while True:
           }
           if (!ev.belowAt) ev.belowAt = t;
           if (t - ev.belowAt >= 150) {
-            events.unshift({ ...ev, dur: ev.belowAt - ev.t0, rate });
-            if (events.length > 200) events.pop();
+            events.unshift({ ...ev, dur: ev.belowAt - ev.t0, rate, level: thrLevel });
+            if (events.length > 5000) events.pop();
             ev = null;
             renderEvents();
           }
@@ -1887,10 +1956,39 @@ while True:
             .join("");
         }
         $("thrClear").addEventListener("click", () => { events.length = 0; renderEvents(); });
-        $("thr").addEventListener("input", () => {
-          const L = parseFloat($("thr").value);
-          if (Number.isFinite(L)) thrLevel = L;
+        // Exports list events oldest first; n ÷ rate only where the rate resolves packets (S2).
+        const evNRate = (e) => (e.rate > 50 ? Math.round((e.n / e.rate) * 1000) : NaN);
+        $("evMd").addEventListener("click", async () => {
+          const md = [
+            "| start | duration (ms) | n ÷ rate (ms) | peak (dBm) | n | level (dBm) |",
+            "|---|---|---|---|---|---|",
+            ...[...events].reverse().map((e) =>
+              `| ${hhmmss(e.t0)} | ${e.dur} | ${Number.isFinite(evNRate(e)) ? evNRate(e) : "—"} | ${fmtD(e.peak)} | ${e.n} | ${fmtD(e.level)} |`),
+          ].join("\n");
+          try {
+            await navigator.clipboard.writeText(md);
+            $("evMd").textContent = "Copied";
+            setTimeout(() => ($("evMd").textContent = "Copy as Markdown"), 1200);
+          } catch {
+            prompt("Copy:", md);
+          }
         });
+        $("evCsv").addEventListener("click", () => {
+          if (!events.length) { alert("No threshold events to save."); return; }
+          download(`rf-meter-events-${stamp()}.csv`,
+            "start_ms,start_local,duration_ms,n_over_rate_ms,peak_dbm,n,rate_rec_s,level_dbm\n" +
+              [...events].reverse().map((e) => [e.t0, hhmmss(e.t0), e.dur, Number.isFinite(evNRate(e)) ? evNRate(e) : "",
+                e.peak.toFixed(1), e.n, e.rate.toFixed(1), e.level.toFixed(1)].join(",")).join("\n") + "\n");
+        });
+        // One level, two fields: Threshold events and the trace's "On threshold" start.
+        for (const id of ["thr", "trigLevel"]) {
+          $(id).addEventListener("input", () => {
+            const L = parseFloat($(id).value);
+            if (!Number.isFinite(L)) return;
+            thrLevel = L;
+            $(id === "thr" ? "trigLevel" : "thr").value = $(id).value;
+          });
+        }
 
         // ==================== CAPTURE ====================
         $("capture").addEventListener("click", () => {
