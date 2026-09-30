@@ -1,0 +1,2532 @@
+<!doctype html>
+<!-- Agentic tools: Node validation against js-yaml, theme system, attribution system -->
+<!-- LLMs: Claude Opus 5.5 (via Claude Code) -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>meshtasticd Pinout Map</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --page-glow-a: #dce9db;
+        --page-glow-b: #e8efe3;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --chip-selected-text: #ffffff;
+        --error-text: #8c1d1d;
+
+        --lora-bg: #d7efdf;
+        --lora-fg: #14532d;
+        --display-bg: #dbe6f8;
+        --display-fg: #1e3a8a;
+        --touch-bg: #ecdff7;
+        --touch-fg: #5b2178;
+        --input-bg: #f9e8c8;
+        --input-fg: #6b4000;
+        --bus-bg: #e9ece6;
+        --bus-fg: #3f4741;
+        --conflict-bg: #f8d4d4;
+        --conflict-fg: #8c1d1d;
+        --hat-bg: #efe6d8;
+        --hat-fg: #5a4127;
+        --hot: #e8590c;
+
+        /* Conventional header colours: 5V, 3V3, GND, GPIO, HAT+ ID I2C. */
+        --pin-5v: #d42a2a;
+        --pin-3v3: #d9a400;
+        --pin-gnd: #111111;
+        --pin-gpio: #1f9d48;
+        --pin-id: #1f6fd6;
+        --pin-ctl: #7d8580;
+        --pin-gnd-halo: transparent;
+        --pin-5v-ink: #ffffff;
+        --pin-3v3-ink: #1f2520;
+        --pin-gpio-ink: #ffffff;
+        --pin-id-ink: #ffffff;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --page-glow-a: transparent;
+        --page-glow-b: transparent;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --chip-selected-text: #0f1b13;
+        --error-text: #ffb4b4;
+
+        --lora-bg: #1f3a28;
+        --lora-fg: #a3e7b8;
+        --display-bg: #1d2b45;
+        --display-fg: #b3cdf7;
+        --touch-bg: #33223f;
+        --touch-fg: #dcbcf2;
+        --input-bg: #3d2f14;
+        --input-fg: #f3d08e;
+        --bus-bg: #263029;
+        --bus-fg: #c3cec5;
+        --conflict-bg: #4a1d1d;
+        --conflict-fg: #ffc2c2;
+        --hat-bg: #3a2f22;
+        --hat-fg: #ead4b4;
+        --hot: #ff8c42;
+
+        --pin-5v: #ff5c5c;
+        --pin-3v3: #ffd23f;
+        --pin-gnd: #000000;
+        --pin-gpio: #4fd177;
+        --pin-id: #6aa8ff;
+        --pin-ctl: #9aa39c;
+        --pin-gnd-halo: #e5efe6; /* black on a dark field needs an edge to be seen */
+        --pin-5v-ink: #1a0505;
+        --pin-3v3-ink: #1f2520;
+        --pin-gpio-ink: #0f1b13;
+        --pin-id-ink: #06142a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        background: radial-gradient(circle at 15% 12%, var(--page-glow-a) 0%, transparent 45%),
+          radial-gradient(circle at 85% 88%, var(--page-glow-b) 0%, transparent 42%),
+          var(--page-bg);
+        font: 400 16px/1.45 "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        font-weight: 700;
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .action-btn:hover:not(:disabled) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .action-btn:disabled {
+        color: var(--disabled);
+        cursor: not-allowed;
+      }
+
+      a:not(.action-btn):not(.attribution-link) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):not(.attribution-link):hover {
+        text-decoration: underline;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(20rem, 30rem) minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        padding: 1rem;
+        min-width: 0;
+      }
+
+      h2 {
+        margin: 0 0 0.9rem;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 0.85rem;
+      }
+
+      label {
+        display: block;
+        margin: 0 0 0.35rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      textarea {
+        font-family: "Courier New", monospace;
+        font-size: 0.88rem;
+        min-height: 24rem;
+        resize: vertical;
+        white-space: pre;
+      }
+
+      input[type="file"] {
+        padding: 0.5rem;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      /* Pinout combobox: a text input that filters its own popup list. */
+      .combo {
+        position: relative;
+      }
+
+      .combo-input {
+        padding-right: 2.4rem;
+      }
+
+      .combo-toggle {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        bottom: 1px;
+        width: 2.2rem;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .combo-toggle:hover {
+        color: var(--accent);
+      }
+
+      .combo-list {
+        position: absolute;
+        z-index: 20;
+        top: calc(100% + 2px);
+        left: 0;
+        right: 0;
+        max-height: min(24rem, 60vh);
+        overflow-y: auto;
+        margin: 0;
+        padding: 0.25rem 0;
+        list-style: none;
+        background: var(--panel-bg);
+        border: 1px solid var(--accent);
+        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.18);
+      }
+
+      .combo-list[hidden] {
+        display: none;
+      }
+
+      .combo-group {
+        padding: 0.45rem 0.75rem 0.2rem;
+        color: var(--muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .combo-count,
+      .combo-empty {
+        padding: 0.35rem 0.75rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .combo-option {
+        display: grid;
+        gap: 0.1rem;
+        padding: 0.4rem 0.75rem 0.4rem 1.6rem;
+        cursor: pointer;
+        position: relative;
+      }
+
+      .combo-option[aria-selected="true"]::before {
+        content: "✓";
+        position: absolute;
+        left: 0.6rem;
+        color: var(--accent);
+      }
+
+      .combo-option.active {
+        background: var(--accent-soft);
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+
+      .combo-name {
+        font-size: 0.92rem;
+        overflow-wrap: anywhere;
+      }
+
+      .combo-meta {
+        color: var(--muted);
+        font-size: 0.78rem;
+        overflow-wrap: anywhere;
+      }
+
+      .combo-list mark {
+        background: color-mix(in srgb, var(--hot) 30%, transparent);
+        color: inherit;
+        border-radius: 2px;
+      }
+
+      .source-stack {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .stack-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+      }
+
+      .stack-row .action-btn {
+        padding: 0 0.9rem;
+        font-size: 1.1rem;
+      }
+
+      .status {
+        min-height: 1.4rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .status.error {
+        color: var(--error-text);
+      }
+
+      .help-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .help-tip {
+        position: relative;
+        width: 1.05rem;
+        height: 1.05rem;
+        display: inline-grid;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 400;
+        color: var(--muted);
+        cursor: help;
+        user-select: none;
+        background: var(--panel-bg);
+      }
+
+      .help-tip::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 0.5rem);
+        transform: translateX(-50%);
+        width: min(22rem, 78vw);
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.5rem 0.6rem;
+        font-size: 0.82rem;
+        line-height: 1.35;
+        box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.12);
+        display: none; /* takes no space until shown, so tips near the edge cannot widen the page */
+        pointer-events: none;
+        z-index: 12;
+      }
+
+      .help-tip:hover::after,
+      .help-tip:focus-visible::after {
+        display: block;
+      }
+
+      /* On narrow screens a tip becomes a strip along the bottom of the viewport. */
+      @media (max-width: 600px) {
+        .help-tip::after {
+          position: fixed;
+          left: 1rem;
+          right: 1rem;
+          bottom: 1rem;
+          width: auto;
+          transform: none;
+        }
+      }
+
+      .toggle-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .toggle-btn {
+        background: var(--panel-bg);
+        color: var(--text);
+        border: 2px solid var(--border);
+        padding: 0.4rem 0.85rem;
+        font: inherit;
+        font-size: 0.88rem;
+        cursor: pointer;
+        border-radius: 20px;
+        transition: all 0.2s;
+      }
+
+      .toggle-btn:hover:not(.selected) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .toggle-btn.selected {
+        background: var(--accent);
+        color: var(--chip-selected-text);
+        border-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .preview-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem 1.5rem;
+        align-items: end;
+        margin-bottom: 0.85rem;
+      }
+
+      #diagram {
+        margin: 0;
+        padding: 0.85rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        font-family: "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, "Courier New", monospace;
+        font-size: 0.86rem;
+        line-height: 1.35;
+        overflow-x: auto;
+      }
+
+      #diagram span[data-phys] {
+        border-radius: 2px;
+      }
+
+      /* Geometric glyphs are often wider than a mono cell; pin each mark to exactly one column. */
+      #diagram.pin-colours .mk.pc-5v { color: var(--pin-5v); font-weight: 700; }
+      #diagram.pin-colours .mk.pc-3v3 { color: var(--pin-3v3); font-weight: 700; }
+      #diagram.pin-colours .mk.pc-gnd { color: var(--pin-gnd); font-weight: 700; text-shadow: 1px 0 0 var(--pin-gnd-halo), -1px 0 0 var(--pin-gnd-halo), 0 1px 0 var(--pin-gnd-halo), 0 -1px 0 var(--pin-gnd-halo); }
+      #diagram.pin-colours .mk.pc-gpio { color: var(--pin-gpio); font-weight: 700; }
+      #diagram.pin-colours .mk.pc-id { color: var(--pin-id); font-weight: 700; }
+      #diagram.pin-colours .mk.pc-ctl { color: var(--pin-ctl); font-weight: 700; }
+
+      /* Number and name get a filled pill in the pin colour. */
+      #diagram.pin-num .pl-num,
+      #diagram.pin-name .pl-name {
+        border-radius: 2px;
+        font-weight: 700;
+      }
+      #diagram.pin-num .pl-num.pc-5v, #diagram.pin-name .pl-name.pc-5v { background: var(--pin-5v); color: var(--pin-5v-ink); }
+      #diagram.pin-num .pl-num.pc-3v3, #diagram.pin-name .pl-name.pc-3v3 { background: var(--pin-3v3); color: var(--pin-3v3-ink); }
+      #diagram.pin-num .pl-num.pc-gnd, #diagram.pin-name .pl-name.pc-gnd { background: var(--pin-gnd); color: #ffffff; box-shadow: 0 0 0 1px var(--pin-gnd-halo); }
+      #diagram.pin-num .pl-num.pc-gpio, #diagram.pin-name .pl-name.pc-gpio { background: var(--pin-gpio); color: var(--pin-gpio-ink); }
+      #diagram.pin-num .pl-num.pc-id, #diagram.pin-name .pl-name.pc-id { background: var(--pin-id); color: var(--pin-id-ink); }
+      #diagram.pin-num .pl-num.pc-ctl, #diagram.pin-name .pl-name.pc-ctl { background: var(--pin-ctl); color: #111111; }
+
+      /* Fixed width so the cycling label does not resize the button. */
+      #pincol-cycle {
+        min-width: 7.5em;
+        text-align: center;
+      }
+
+      .pin-legend[hidden] {
+        display: none;
+      }
+
+      .pin-legend .sw {
+        font-weight: 700;
+        margin-right: 0.3rem;
+      }
+
+      #diagram .mk {
+        display: inline-block;
+        width: 1ch;
+        text-align: center;
+        overflow: visible;
+      }
+
+      .sec-lora { background: var(--lora-bg); color: var(--lora-fg); }
+      .sec-display { background: var(--display-bg); color: var(--display-fg); }
+      .sec-touch { background: var(--touch-bg); color: var(--touch-fg); }
+      .sec-input { background: var(--input-bg); color: var(--input-fg); }
+      .sec-bus { background: var(--bus-bg); color: var(--bus-fg); }
+      .sec-hat { background: var(--hat-bg); color: var(--hat-fg); }
+      .sec-overridden { color: var(--muted); font-style: italic; }
+      .sec-conflict { background: var(--conflict-bg); color: var(--conflict-fg); font-weight: 700; }
+
+      #diagram [data-phys],
+      #pin-table tr[data-phys]:not([data-phys=""]) {
+        cursor: pointer;
+      }
+
+      #diagram .hot,
+      #diagram .pinned {
+        outline: 2px solid var(--hot);
+        outline-offset: -1px;
+      }
+
+      #diagram .pinned {
+        outline-width: 3px;
+      }
+
+      /* One frame around the whole row rather than a box per cell. */
+      #pin-table tr.hot td,
+      #pin-table tr.pinned td {
+        box-shadow: inset 0 2px var(--hot), inset 0 -2px var(--hot);
+      }
+
+      #pin-table tr.hot td:first-child,
+      #pin-table tr.pinned td:first-child {
+        box-shadow: inset 0 2px var(--hot), inset 0 -2px var(--hot), inset 2px 0 var(--hot);
+      }
+
+      #pin-table tr.hot td:last-child,
+      #pin-table tr.pinned td:last-child {
+        box-shadow: inset 0 2px var(--hot), inset 0 -2px var(--hot), inset -2px 0 var(--hot);
+      }
+
+      #pin-table tr.pinned td {
+        background: color-mix(in srgb, var(--hot) 10%, transparent);
+      }
+
+      /* Centred: the whole block is centred, lines inside stay left-aligned so columns hold. */
+      #diagram.centred {
+        text-align: center;
+      }
+
+      #diagram .diagram-body {
+        display: inline-block;
+        text-align: left;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin: 0.75rem 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.82rem;
+      }
+
+      .legend li {
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+      }
+
+      .notes {
+        margin: 0.75rem 0 0;
+        padding-left: 1.2rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .notes:empty {
+        display: none;
+      }
+
+      .table-wrap {
+        margin-top: 1rem;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 0.4rem 0.55rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      td.key {
+        white-space: nowrap;
+        font-family: "Courier New", monospace;
+      }
+
+      td.muted {
+        color: var(--muted);
+      }
+
+      .page-footer {
+        margin: 2rem 0 0;
+        padding: 0.75rem 1rem 1.5rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        textarea {
+          min-height: 14rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>meshtasticd Pinout Map</h1>
+        <p class="subtitle">
+          Paste or load meshtasticd <code>config.d</code> YAML and see which Raspberry Pi header pins it uses. Stack a radio and a display
+          to spot clashes between them.
+        </p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button id="toggle-theme-btn" class="action-btn" type="button" aria-pressed="false">Theme: Auto</button>
+          <button id="toggle-license-btn" class="action-btn" type="button" aria-expanded="false">Show license</button>
+        </div>
+        <div id="attribution-block" class="attribution-block" hidden>
+          <p id="hosted-note" class="hosted-note">Did you know: this tool can be saved and used locally! Only "Load list" needs the network.</p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 • By NomDeTom •
+            <a class="attribution-link" href="https://github.com/nomdetom/nomdetom.github.io">GitHub repo</a>
+            •
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom">Buy me a coffee</a>
+          </p>
+          <p class="hosted-note">
+            Example configs and the pin keys come from
+            <a class="attribution-link" href="https://github.com/meshtastic/firmware/tree/develop/bin/config.d">meshtastic/firmware bin/config.d</a>
+            (GPL-3.0). BPI-R4 header from the
+            <a class="attribution-link" href="https://docs.banana-pi.org/en/BPI-R4/GettingStarted_BPI-R4#_gpio_define">BPI-R4 GPIO define table</a>.
+            ROCK 2F header traced from the
+            <a class="attribution-link" href="https://dl.radxa.com/rock2/2f/radxa_rock2f_v1.01_schematic.pdf">Radxa ROCK 2F v1.01 schematic</a>
+            (sheet 23 and the RK3528 sheets). Lyra Ultra, Lyra Zero W and Pico Mini headers from Luckfox's published pinouts (Pico Mini also on the
+            <a class="attribution-link" href="https://github.com/femtofox/femtofox/wiki/Femtofox-Pinout">Femtofox wiki</a>); Pico Ultra header positions read from the
+            <a class="attribution-link" href="https://github.com/wehooper4/Meshtastic-Hardware/tree/main/Luckfox%20Ultra%20Hat">wehooper4 Luckfox Ultra Hat</a>
+            schematic.
+          </p>
+        </div>
+      </header>
+
+      <section class="layout">
+        <article class="panel">
+          <h2>Config</h2>
+          <div class="form-grid">
+            <div>
+              <label for="board-select" class="help-label"
+                >Board
+                <span
+                  class="help-tip"
+                  tabindex="0"
+                  data-tip="Which header to draw. Auto picks CH341 for USB radios (spidev: ch341) and the Raspberry Pi header otherwise. Pico places pins from '# GPn' comments; CH341 maps line numbers 0-10 to the chip's pins. Luckfox Ultra layouts come from the wehooper4 Luckfox Ultra Hat schematic."
+                  >?</span
+                >
+              </label>
+              <select id="board-select">
+                <option value="auto">Auto (from config)</option>
+                <option value="pi">Raspberry Pi 40-pin header</option>
+                <option value="pico">Raspberry Pi Pico (40-pin)</option>
+                <option value="ch341">CH341A/B (SOP-28, SPI mode)</option>
+                <option value="lyraultra">Luckfox Lyra Ultra (26-pin)</option>
+                <option value="lyrazero">Luckfox Lyra Zero W (40-pin)</option>
+                <option value="bpir4">Banana Pi BPI-R4 (26-pin)</option>
+                <option value="rock2f">Radxa ROCK 2F (40-pin)</option>
+                <option value="picomini">Luckfox Pico Mini / Femtofox (22-pin)</option>
+                <option value="picoultra">Luckfox Pico Ultra (26-pin)</option>
+              </select>
+            </div>
+            <div>
+              <label for="pinout-input" class="help-label"
+                >Pinout
+                <span
+                  class="help-tip"
+                  tabindex="0"
+                  data-tip="Type to search by name, board, radio or compatible list; arrow keys and Enter to pick. Lists configs for the chosen board (all of them on Auto). Built-in examples work offline; Load list from GitHub fetches every file in meshtastic/firmware bin/config.d. Stack another adds a second pinout below; the stack is merged top to bottom, like config.d."
+                  >?</span
+                >
+              </label>
+              <div id="source-stack" class="source-stack">
+                <div id="pinout-combo"></div>
+              </div>
+            </div>
+            <div class="controls">
+              <button id="clear-btn" class="action-btn" type="button">Clear</button>
+              <button id="load-btn" class="action-btn" type="button">Load</button>
+              <button id="stack-btn" class="action-btn" type="button">Stack another</button>
+              <button id="remote-list-btn" class="action-btn" type="button">Load list from GitHub</button>
+            </div>
+            <div>
+              <label for="file-input" class="help-label"
+                >Local files
+                <span class="help-tip" tabindex="0" data-tip="Pick one or more .yaml files. Several files are stacked in order, like meshtasticd reading config.d."
+                  >?</span
+                >
+              </label>
+              <input id="file-input" type="file" accept=".yaml,.yml,text/yaml" multiple />
+            </div>
+            <div>
+              <label for="yaml-input" class="help-label"
+                >YAML
+                <span
+                  class="help-tip"
+                  tabindex="0"
+                  data-tip="Documents separated by --- are merged in order; later keys win, as with config.d. On non-Pi boards, a '# (physical N)' comment on a pin places it on the header."
+                  >?</span
+                >
+              </label>
+              <textarea id="yaml-input" spellcheck="false"></textarea>
+            </div>
+            <div id="status" class="status" role="status"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Header map</h2>
+          <div class="preview-controls">
+            <div>
+              <label class="help-label"
+                >Characters
+                <span class="help-tip" tabindex="0" data-tip="Box-drawing looks nicer; plain ASCII survives any editor or serial console.">?</span>
+              </label>
+              <div class="toggle-group">
+                <button id="chars-unicode" type="button" class="toggle-btn selected" aria-pressed="true">Box drawing</button>
+                <button id="chars-ascii" type="button" class="toggle-btn" aria-pressed="false">Plain ASCII</button>
+              </div>
+            </div>
+            <div>
+              <label class="help-label"
+                >Alignment
+                <span class="help-tip" tabindex="0" data-tip="Where the map sits in this panel. Only affects the page; copied text is unchanged.">?</span>
+              </label>
+              <div class="toggle-group">
+                <button id="align-left" type="button" class="toggle-btn" aria-pressed="false">Left</button>
+                <button id="align-centre" type="button" class="toggle-btn selected" aria-pressed="true">Centred</button>
+              </div>
+            </div>
+            <div>
+              <label class="help-label"
+                >Pin colours
+                <span
+                  class="help-tip"
+                  tabindex="0"
+                  data-tip="Standard header colours: red 5V, yellow 3V3, black GND, green GPIO, blue for the HAT+ ID EEPROM I2C pins (27/28). Click to cycle: pin mark, then also the pin number, then also the GPIO name, then off. Page only; copied text is unchanged."
+                  >?</span
+                >
+              </label>
+              <div class="toggle-group">
+                <button id="pincol-cycle" type="button" class="toggle-btn" aria-pressed="false">Off</button>
+              </div>
+            </div>
+            <div>
+              <label class="help-label"
+                >Copy as
+                <span class="help-tip" tabindex="0" data-tip="Prefix each copied line so the map can go straight into a YAML or C comment.">?</span>
+              </label>
+              <div class="toggle-group">
+                <button id="comment-none" type="button" class="toggle-btn selected" aria-pressed="true">Plain</button>
+                <button id="comment-hash" type="button" class="toggle-btn" aria-pressed="false"># line</button>
+                <button id="comment-slash" type="button" class="toggle-btn" aria-pressed="false">// line</button>
+              </div>
+            </div>
+            <div class="controls">
+              <button id="copy-btn" class="action-btn" type="button">Copy</button>
+            </div>
+          </div>
+
+          <pre id="diagram" class="centred" aria-label="Raspberry Pi header map. Click a pin to pin its highlight."></pre>
+          <ul class="legend">
+            <li class="sec-lora">LoRa</li>
+            <li class="sec-display">Display</li>
+            <li class="sec-touch">Touchscreen</li>
+            <li class="sec-input">Input / GPIO</li>
+            <li class="sec-bus">Kernel SPI / I2C / UART</li>
+            <li class="sec-hat">Hat power / other (Meta.pins)</li>
+            <li class="sec-overridden">Overridden by a later file</li>
+            <li class="sec-conflict">Clash</li>
+          </ul>
+          <ul id="pin-legend" class="legend pin-legend" hidden>
+            <li><span class="sw" style="color: var(--pin-5v)">●</span>5V</li>
+            <li><span class="sw" style="color: var(--pin-3v3)">●</span>3V3</li>
+            <li><span class="sw" style="color: var(--pin-gnd); text-shadow: 0 0 1px var(--pin-gnd-halo)">●</span>GND</li>
+            <li><span class="sw" style="color: var(--pin-gpio)">●</span>GPIO</li>
+            <li><span class="sw" style="color: var(--pin-id)">●</span>HAT+ ID I2C</li>
+            <li><span class="sw" style="color: var(--pin-ctl)">●</span>Control / other</li>
+          </ul>
+          <ul id="notes" class="notes"></ul>
+
+          <div class="table-wrap">
+            <table id="pin-table">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>GPIO</th>
+                  <th>Header</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-09-30">30 September 2026</time>
+    </footer>
+
+    <script>
+      const EXAMPLES = {
+        "MeshAdv-Pi E22-900M30S (Raspberry Pi)": "# MeshAdv-Pi E22-900M30S\n# https://github.com/chrismyers2000/MeshAdv-Pi-Hat\nMeta:\n  name: MeshAdv-Pi E22-900M30S\n  support: community\n  compatible:\n    - raspberry-pi\n\nLora:\n  Module: sx1262\n  CS: 21\n  IRQ: 16\n  Busy: 20\n  Reset: 18\n  TXen: 13\n  RXen: 12\n  DIO3_TCXO_VOLTAGE: true\n  # Only for E22-900M33S:\n  # Limit the output power to 8 dBm\n  # SX126X_MAX_POWER: 8\n",
+        "RAK6421 + RAK13300 slot 2 (spidev0.1, enable pins)": "Meta:\n  name: RAK6421 + RAK13300 Slot 2\n  support: official\n  compatible:\n    - raspberry-pi\n\nLora:\n  \n  ### RAK13300 in Slot 2\n  Module: sx1262\n  IRQ: 18 #IO6\n  Reset: 24 # IO4\n  Busy: 19 # IO5\n  # Ant_sw: 23 # IO3 \n  Enable_Pins:\n    - 26\n    - 23\n  DIO3_TCXO_VOLTAGE: true\n  DIO2_AS_RF_SWITCH: true\n  spidev: spidev0.1\n  # CS: 7\n",
+        "Meshtoad USB (CH341)": "# This config works with all revisions of the Meshtoad USB radio.\n\nMeta:\n  name: meshtoad-e22\n  support: official\n  compatible:\n    - usb\n\nLora:\n  Module: sx1262\n  CS: 0\n  IRQ: 6\n  Reset: 2\n  Busy: 4\n  RXen: 1\n  DIO2_AS_RF_SWITCH: true\n  DIO3_TCXO_VOLTAGE: true\n  spidev: ch341\n  USB_PID: 0x5512\n  USB_VID: 0x1A86\n  # Optional: Reduce power to 10 dBm to\n  # avoid over-drawing the USB port\n  # SX126X_MAX_POWER: 10\n  # Optional: Set the serial number for multi-radio support\n  # USB_Serialnum: 13374201\n",
+        "wehooper4 Luckfox Ultra hat 1W (Lyra Ultra)": "# For use with Armbian luckfox-lyra-ultra-w\n# Enable overlay 'luckfox-lyra-ultra-w-spi0-cs0-spidev' with armbian-config\n# https://github.com/wehooper4/Meshtastic-Hardware/tree/main/Luckfox%20Ultra%20Hat\n# 1 Watt Lyra Ultra hat\nMeta:\n  name: wehooper4 Luckfox Ultra 1W\n  support: community\n  compatible:\n    - luckfox-pico-ultra # Armbian\n    - luckfox-lyra-ultra # Armbian\n\nLora:\n  Module: sx1262\n  DIO2_AS_RF_SWITCH: true\n  DIO3_TCXO_VOLTAGE: true\n  CS: 10\n  IRQ: 5\n  Busy: 11\n  Reset: 9\n  RXen: 14\n\n  spidev: spidev0.0 #pins are (CS=10, CLK=8, MOSI=6, MISO=7)\n  spiSpeed: 2000000\n",
+        "Femtofox SX1262 TCXO (Luckfox Pico Mini)": "---\nMeta:\n  name: Femtofox SX1262 TCXO\n  support: community\n  compatible:\n    - luckfox-pico-mini # Armbian\n\nLora:\n## Ebyte E22-900M30S, E22-900M22S with or without external RF switching setup\n## HT-RA62 (Has internal switching, but whatever)\n## Seeed WIO SX1262 (already has TXEN-DIO2 link, but needs RXEN)\n## Will work with any module with or without RF switching, and with TCXO\n  Module: sx1262\n  gpiochip: 1 # subtract 32 from the gpio numbers\n  DIO2_AS_RF_SWITCH: true\n  DIO3_TCXO_VOLTAGE: true\n  CS: 16 #pin6 / GPIO48 1C0\n  IRQ: 23  #pin17 / GPIO55 1C7\n  Busy: 22 #pin16 / GPIO54 1C6\n  Reset: 25 #pin13 / GPIO57 1D1\n  RXen: 24 #pin12 / GPIO56 1D0 # Not strictly needed for auto-switching, but why complicate things?\n#  TXen: bridge to DIO2 on E22 module\n  spidev: spidev0.0 #pins are (CS=16, CLK=17, MOSI=18, MISO=19)\n  spiSpeed: 2000000\n",
+        "Waveshare Pico-LoRa-SX1262 (Raspberry Pi Pico)": "# Waveshare Pico-LoRa-SX1262 on the Raspberry Pi Pico footprint.\n# Hand-written from the pin table at https://www.waveshare.com/wiki/Pico-LoRa-SX1262\n# (not an upstream meshtasticd config). The numbers are the Pico's GPn numbers; a real\n# install on a Linux host uses that host's GPIOs, as in lora-luckfox-pico-max-ws-raspberry-pi-pico-hat.yaml.\nMeta:\n  name: Waveshare Pico-LoRa-SX1262\n  # Pins the hat uses that meshtasticd has no key for, as highlighted in Waveshare's pinout.\n  # Read only by the pinout map; meshtasticd does not read Meta.\n  pins:\n    Power: VSYS\n    Ground: [GND, AGND]  # Waveshare labels pin 33 GND; the Pico pinout calls it AGND\n    BAT_AD: GP26\n\nLora:\n  Module: sx1262\n  DIO2_AS_RF_SWITCH: true\n  DIO3_TCXO_VOLTAGE: true\n  CS: 3      # GP3  LoRa_CS\n  IRQ: 20    # GP20 LoRa_DIO1\n  Busy: 2    # GP2  LoRa_BUSY\n  Reset: 15  # GP15 LoRa_RESET\n  SCK: 10    # GP10 LoRa_CLK (SPI1)\n  MOSI: 11   # GP11 LoRa_MOSI (SPI1)\n  MISO: 12   # GP12 LoRa_MISO (SPI1)\n",
+        "Starter Edition SX1262 hat (Radxa ROCK 2F)": "Meta:\n  name: raxda-rock2f-starter-edition-hat\n  support: community\n  compatible:\n    - rock-2f # Armbian\n\nLora:\n\n### Raxda Rock 2F running Armbian Linux 6.1.99-vendor-rk35xx\n### https://github.com/markbirss/rock-2f\n### https://github.com/markbirss/lora-starter-edition-sx1262-i2c\n### https://github.com/radxa-pkg/radxa-overlays/blob/main/arch/arm64/boot/dts/rockchip/overlays/rk3528-spi0-cs1-spidev.dts\n### Require install of https://github.com/radxa-pkg/radxa-overlays and rk3528-spi0-cs1-spidev.dtbo copied to /boot/dtb/rockchip/overlay and enabled \n### in  /boot/armbianEnv.txt - overlays=rk3528-spi0-cs1-spidev\n### The Radxa Rock 2F employs multiple gpio chips.\n### Each gpio pin must be unique, but can be assigned to a specific gpio chip and line.\n### In case solely a no. is given, the default gpio chip and pin == line will be employed.\n###\n  Module: sx1262  # Radxa Rock 2F + Starter Edition SX1262 HAT by Mark Birss\n  DIO2_AS_RF_SWITCH: true\n  DIO3_TCXO_VOLTAGE: 1.8\n  spidev: spidev0.1\n  CS:             # NSS     PIN_24 -> chip 4, line 14\n    pin: 24\n    gpiochip: 4\n    line: 14\n  SCK:            # SCK     PIN_23 -> chip 4, line 12\n    pin: 23\n    gpiochip: 4\n    line: 12\n  Busy:           # BUSY    PIN_7 -> chip 4, line 6\n    pin: 7\n    gpiochip: 4\n    line: 6\n  MOSI:           # MOSI    PIN_19 -> chip 4, line 10\n    pin: 19\n    gpiochip: 4\n    line: 10\n  MISO:           # MISO    PIN_21 -> chip 4, line 11\n    pin: 21\n    gpiochip: 4\n    line: 11\n  Reset:          # NRST    PIN_12 -> chip 1, line 13\n    pin: 12\n    gpiochip: 1\n    line: 13\n  IRQ:            # DIO1    PIN_15 -> chip 4, line 22\n    pin: 15\n    gpiochip: 4\n    line: 22\n#  RXen:           # RXEN    PIN_22 -> chip 3!, line 17\n#    pin: 22\n#    gpiochip: 3\n#    line: 17\n#  TXen: RADIOLIB_NC # TXEN   no PIN, no line, fallback to default gpio chip\n",
+        "SX1262 on the 26-pin header (Banana Pi BPI-R4)": "Meta:\n  name: BananaPi-BPI-R4-sx1262\n  support: community\n  compatible:\n    - bananapi_bpi-r4 # OpenWrt target\n\nLora:\n  Module: sx1262  # BananaPi-BPI-R4 SPI via 26p GPIO Header\n##  CS: 28\n  IRQ: 50\n  Busy: 62\n  Reset: 51\n  spidev: spidev1.0\n  DIO2_AS_RF_SWITCH: true\n  DIO3_TCXO_VOLTAGE: true\n",
+        "MeshAdv-Pi E22-900M30S (Luckfox Lyra Zero W)": "# MeshAdv-Pi E22-900M30S\n# https://github.com/chrismyers2000/MeshAdv-Pi-Hat\nMeta:\n  name: MeshAdv-Pi E22-900M30S\n  support: community\n  compatible:\n    - luckfox-lyra-zero-w # Armbian\n\nLora:\n  Module: sx1262\n  CS: # GPIO0_C2 (physical 40)\n    pin: 18\n    gpiochip: 0\n    line: 18\n  IRQ: # GPIO1_D1 (physical 36)\n    pin: 57\n    gpiochip: 1\n    line: 25\n  Busy: # GPIO0_C1 (physical 38)\n    pin: 17\n    gpiochip: 0\n    line: 17\n  Reset: # GPIO0_B6 (physical 12)\n    pin: 14\n    gpiochip: 0\n    line: 14\n  TXen: # GPIO1_C2 (physical 33)\n    pin: 50\n    gpiochip: 1\n    line: 18\n  RXen: # GPIO1_D2 (physical 32)\n    pin: 58\n    gpiochip: 1\n    line: 26\n  DIO3_TCXO_VOLTAGE: true\n  # Only for E22-900M33S:\n  # Limit the output power to 8 dBm\n  # SX126X_MAX_POWER: 8\n  spidev: spidev0.0\n"
+      };
+
+      // ---------- YAML subset parser ----------
+      // Covers what meshtasticd configs use: block maps and lists, flow lists, scalars,
+      // comments and "---" document separators. Comments are kept per path so hints like
+      // "(physical 40)" can place non-Pi pins on the header.
+
+      function stripComment(line) {
+        let quote = null;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (quote) {
+            if (c === quote) quote = null;
+          } else if (c === '"' || c === "'") {
+            quote = c;
+          } else if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
+            return { text: line.slice(0, i).trimEnd(), comment: line.slice(i + 1).trim() };
+          }
+        }
+        return { text: line.trimEnd(), comment: "" };
+      }
+
+      function parseScalar(raw) {
+        const s = raw.trim();
+        if (s === "" || s === "~" || s === "null") return null;
+        if ((s[0] === '"' && s.endsWith('"')) || (s[0] === "'" && s.endsWith("'"))) return s.slice(1, -1);
+        if (s[0] === "[" && s.endsWith("]")) {
+          const inner = s.slice(1, -1).trim();
+          return inner === "" ? [] : inner.split(",").map(parseScalar);
+        }
+        if (/^(true|yes|on)$/i.test(s)) return true;
+        if (/^(false|no|off)$/i.test(s)) return false;
+        if (/^[-+]?0x[0-9a-f]+$/i.test(s)) return parseInt(s, 16);
+        if (/^[-+]?\d+$/.test(s)) return parseInt(s, 10);
+        if (/^[-+]?(\d+\.\d*|\.\d+|\d+)(e[-+]?\d+)?$/i.test(s)) return parseFloat(s);
+        return s;
+      }
+
+      function splitKey(text) {
+        const m = /^("[^"]*"|'[^']*'|[^:]+?)\s*:(\s+|$)(.*)$/.exec(text);
+        if (!m) return null;
+        let key = m[1];
+        if (key[0] === '"' || key[0] === "'") key = key.slice(1, -1);
+        return { key, rest: m[3] };
+      }
+
+      function parseYamlDocs(src) {
+        const docs = [];
+        let cur = [];
+        for (const rawLine of src.replace(/\t/g, "  ").split(/\r?\n/)) {
+          if (/^(---|\.\.\.)\s*(#.*)?$/.test(rawLine)) {
+            docs.push(cur);
+            cur = [];
+            continue;
+          }
+          const { text, comment } = stripComment(rawLine);
+          const indent = rawLine.length - rawLine.trimStart().length;
+          if (text.trim() === "") {
+            // A comment-only line belongs to whatever block surrounds it; keep it so a
+            // commented-out key does not count, but its text is still searchable.
+            if (comment) cur.push({ indent, text: null, comment });
+            continue;
+          }
+          cur.push({ indent, text: text.trim(), comment });
+        }
+        docs.push(cur);
+        return docs
+          .filter((lines) => lines.some((l) => l.text !== null))
+          .map((lines) => {
+            const comments = {};
+            const content = lines.filter((l) => l.text !== null);
+            const pos = { i: 0 };
+            const value = content.length ? parseBlock(content, pos, content[0].indent, "", comments) : null;
+            return { value, comments };
+          });
+      }
+
+      function addComment(comments, path, comment) {
+        if (!comment) return;
+        comments[path] = comments[path] ? comments[path] + " " + comment : comment;
+      }
+
+      function parseBlock(lines, pos, indent, path, comments) {
+        const first = lines[pos.i];
+        if (first.text.startsWith("- ") || first.text === "-") return parseList(lines, pos, indent, path, comments);
+        return parseMap(lines, pos, indent, path, comments);
+      }
+
+      function joinPath(path, key) {
+        return path ? path + "." + key : String(key);
+      }
+
+      function parseMap(lines, pos, indent, path, comments) {
+        const out = {};
+        while (pos.i < lines.length) {
+          const line = lines[pos.i];
+          if (line.indent < indent) break;
+          if (line.indent > indent) {
+            pos.i++; // stray over-indented line; skip rather than fail the whole file
+            continue;
+          }
+          const kv = splitKey(line.text);
+          if (!kv) break;
+          const childPath = joinPath(path, kv.key);
+          addComment(comments, childPath, line.comment);
+          pos.i++;
+          if (kv.rest !== "") {
+            out[kv.key] = parseScalar(kv.rest);
+            continue;
+          }
+          const next = lines[pos.i];
+          const nextIsList = next && (next.text.startsWith("- ") || next.text === "-");
+          if (next && (next.indent > indent || (next.indent === indent && nextIsList))) {
+            out[kv.key] = parseBlock(lines, pos, next.indent, childPath, comments);
+          } else {
+            out[kv.key] = null;
+          }
+        }
+        return out;
+      }
+
+      function parseList(lines, pos, indent, path, comments) {
+        const out = [];
+        while (pos.i < lines.length) {
+          const line = lines[pos.i];
+          if (line.indent !== indent || !(line.text.startsWith("- ") || line.text === "-")) break;
+          const itemPath = joinPath(path, out.length);
+          const body = line.text.slice(1).trim();
+          addComment(comments, itemPath, line.comment);
+          if (body === "") {
+            pos.i++;
+            const next = lines[pos.i];
+            out.push(next && next.indent > indent ? parseBlock(lines, pos, next.indent, itemPath, comments) : null);
+            continue;
+          }
+          if (splitKey(body)) {
+            // "- key: value" starts an inline map; rewrite the dash as indentation.
+            const childIndent = indent + (line.text.length - body.length);
+            lines[pos.i] = { indent: childIndent, text: body, comment: line.comment };
+            out.push(parseMap(lines, pos, childIndent, itemPath, comments));
+            continue;
+          }
+          out.push(parseScalar(body));
+          pos.i++;
+        }
+        return out;
+      }
+
+      function mergeInto(target, src) {
+        for (const [k, v] of Object.entries(src || {})) {
+          if (v && typeof v === "object" && !Array.isArray(v) && target[k] && typeof target[k] === "object" && !Array.isArray(target[k])) {
+            mergeInto(target[k], v);
+          } else {
+            target[k] = v;
+          }
+        }
+        return target;
+      }
+
+      // ---------- Raspberry Pi 40-pin header ----------
+
+      const PI_HEADER = [
+        "3V3", "5V", 2, "5V", 3, "GND", 4, 14, "GND", 15,
+        17, 18, 27, "GND", 22, 23, "3V3", 24, 10, "GND",
+        9, 25, 11, 8, "GND", 7, 0, 1, 5, "GND",
+        6, 12, 13, "GND", 19, 16, 26, 20, "GND", 21,
+      ];
+
+      const BCM_ALT = {
+        0: "ID_SD", 1: "ID_SC", 2: "SDA1", 3: "SCL1", 4: "GPCLK0", 7: "CE1", 8: "CE0",
+        9: "MISO", 10: "MOSI", 11: "SCLK", 14: "TXD", 15: "RXD", 19: "MISO1", 20: "MOSI1", 21: "SCLK1",
+      };
+
+      const BCM_TO_PHYS = {};
+      PI_HEADER.forEach((v, i) => {
+        if (typeof v === "number") BCM_TO_PHYS[v] = i + 1;
+      });
+
+      const SPI_BUSES = {
+        0: { SCLK: 11, MOSI: 10, MISO: 9, CE: [8, 7] },
+        1: { SCLK: 21, MOSI: 20, MISO: 19, CE: [18, 17, 16] },
+      };
+
+      // ---------- Boards ----------
+      // Each board lists its pins by physical number: name, colour type, and whether it is a
+      // signal pin (drawn ○ when free) or power/fixed (drawn □). rows pairs the left/right pins.
+
+      function pairRows(count, facing) {
+        const rows = [];
+        for (let i = 1; i <= count / 2; i++) rows.push(facing ? [i, count + 1 - i] : [2 * i - 1, 2 * i]);
+        return rows;
+      }
+
+      function piPin(v) {
+        if (v === "5V") return { name: v, type: "5v", io: false };
+        if (v === "3V3") return { name: v, type: "3v3", io: false };
+        if (v === "GND") return { name: v, type: "gnd", io: false };
+        return { name: "GPIO" + v + (BCM_ALT[v] ? " " + BCM_ALT[v] : ""), type: v === 0 || v === 1 ? "id" : "gpio", io: true };
+      }
+
+      // Raspberry Pi Pico / Pico 2, from the official pinout diagram.
+      const PICO_PINS = [
+        "GP0", "GP1", "GND", "GP2", "GP3", "GP4", "GP5", "GND", "GP6", "GP7",
+        "GP8", "GP9", "GND", "GP10", "GP11", "GP12", "GP13", "GND", "GP14", "GP15",
+        "GP16", "GP17", "GND", "GP18", "GP19", "GP20", "GP21", "GND", "GP22", "RUN",
+        "GP26", "GP27", "AGND", "GP28", "ADC_VREF", "3V3(OUT)", "3V3_EN", "GND", "VSYS", "VBUS",
+      ];
+      const PICO_ALT = { GP10: "SPI1 SCK", GP11: "SPI1 TX", GP12: "SPI1 RX", GP13: "SPI1 CSn" };
+      const PICO_GP_TO_PHYS = {};
+      PICO_PINS.forEach((v, i) => {
+        if (/^GP\d+$/.test(v)) PICO_GP_TO_PHYS[+v.slice(2)] = i + 1;
+      });
+
+      function picoPin(v) {
+        if (/^GP\d+$/.test(v)) return { name: v + (PICO_ALT[v] ? " " + PICO_ALT[v] : ""), type: "gpio", io: true };
+        if (v === "GND" || v === "AGND") return { name: v, type: "gnd", io: false };
+        if (v === "VBUS" || v === "VSYS") return { name: v, type: "5v", io: false };
+        if (v === "3V3(OUT)") return { name: v, type: "3v3", io: false };
+        return { name: v, type: "ctl", io: false };
+      }
+
+      // CH341A/B SOP-28, EPP/MEM pin names with the SPI-mode role of D0-D7 (WCH datasheet).
+      // libpinedio numbers the lines 0-7 = D0-D7, 8 = ERR#, 9 = PEMP, 10 = INT#.
+      const CH341_PINS = [
+        "ACT#", "RSTI", "AS#", "DS#", "ERR#", "PEMP", "INT#", "SLCT", "V3", "UD+", "UD-", "GND", "XI", "XO",
+        "D0 CS0", "D1 CS1", "D2 CS2", "D3 DCK", "D4 DOUT2", "D5 DOUT", "D6 DIN2", "D7 DIN", "SDA", "SCL", "WR#", "RST#", "WT#", "VCC",
+      ];
+      const CH341_LINE_TO_PHYS = { 0: 15, 1: 16, 2: 17, 3: 18, 4: 19, 5: 20, 6: 21, 7: 22, 8: 5, 9: 6, 10: 7 };
+
+      function ch341Pin(v, phys) {
+        const line = Object.keys(CH341_LINE_TO_PHYS).find((k) => CH341_LINE_TO_PHYS[k] === phys);
+        if (line != null) return { name: v + " [" + line + "]", type: "gpio", io: true };
+        if (v === "GND") return { name: v, type: "gnd", io: false };
+        if (v === "VCC") return { name: v, type: "5v", io: false };
+        if (v === "V3") return { name: v, type: "3v3", io: false };
+        return { name: v, type: "ctl", io: false };
+      }
+
+      // Luckfox Ultra 26-pin header (Pi-style power pins), from the wehooper4 Luckfox Ultra Hat
+      // schematic: U2 gives the Pico Ultra's GPIO number at each position; the hat's Lyra config
+      // plus its P1 wiring gives the Lyra Ultra's RM_IO number for the 8 pins the hat uses.
+      const ULTRA_POWER = { 1: "3V3", 2: "5V", 4: "5V", 6: "GND", 9: "GND", 14: "GND", 17: "3V3", 20: "GND", 25: "GND" };
+      const PICO_ULTRA_GPIO = { 3: 32, 5: 33, 7: 40, 8: 42, 10: 43, 11: 41, 12: 54, 13: 56, 15: 57, 16: 71, 18: 70, 19: 50, 21: 51, 22: 59, 23: 49, 24: 48, 26: 58 };
+      const ULTRA_ROLE = { 3: "SCL", 5: "SDA", 7: "UART4 RX", 11: "UART4 TX", 19: "MOSI", 21: "MISO", 23: "SCLK", 24: "CS0" };
+
+      function invert(map) {
+        const out = {};
+        for (const [k, v] of Object.entries(map)) out[v] = +k;
+        return out;
+      }
+
+      // Luckfox Lyra Ultra, from Luckfox's pinout: two 2x13 headers, drawn in Luckfox's
+      // orientation with pin 1 top-left. Right-header pins get ids 101-126. [name, global GPIO
+      // number (bank*32 + line, the number configs use), RM_IO number, extra role].
+      const LYRA_ULTRA_PINS = {
+        1: ["3V3_OUT"], 2: ["VSYS"], 3: ["GPIO0_A0", 0, 0, "TP+RTC"], 4: ["VSYS"],
+        5: ["GPIO0_A1", 1, 1, "TP+RTC"], 6: ["GND"], 7: ["GPIO0_A2", 2, 2], 8: ["GPIO0_C6", 22, 22, "UART0 TX"],
+        9: ["GND"], 10: ["GPIO0_C7", 23, 23, "UART0 RX"], 11: ["GPIO0_A3", 3, 3], 12: ["GPIO0_B6", 14, 14],
+        13: ["GPIO0_A4", 4, 4], 14: ["GND"], 15: ["GPIO0_A5", 5, 5], 16: ["GPIO0_B5", 13, 13],
+        17: ["3V3_OUT"], 18: ["GPIO0_B4", 12, 12], 19: ["GPIO0_A6", 6, 6], 20: ["GND"],
+        21: ["GPIO0_A7", 7, 7], 22: ["GPIO0_B3", 11, 11], 23: ["GPIO0_B0", 8, 8], 24: ["GPIO0_B2", 10, 10],
+        25: ["GND"], 26: ["GPIO0_B1", 9, 9],
+        101: ["VSYS"], 102: ["1.8V"], 103: ["GND"], 104: ["GND"],
+        105: ["3V3_OUT"], 106: ["GPIO4_B3", 139, null, "ADC_IN3 1.8V"], 107: ["GND"], 108: ["GPIO4_B2", 138, null, "ADC_IN2 1.8V"],
+        109: ["GPIO1_B1", 41, 24], 110: ["GND"], 111: ["GPIO1_B2", 42, 25], 112: ["GPIO0_C0", 16, 16],
+        113: ["GPIO1_B3", 43, 26], 114: ["GPIO2_B7", 79], 115: ["GPIO1_C2", 50, 27], 116: ["GPIO2_B6", 78],
+        117: ["GPIO1_C3", 51, 28], 118: ["GND"], 119: ["GPIO1_D1", 57, 29], 120: ["GPIO0_C1", 17, 17],
+        121: ["GPIO1_D2", 58, 30], 122: ["GPIO0_C2", 18, 18], 123: ["GPIO1_D3", 59, 31], 124: ["GPIO0_C4", 20, 20],
+        125: ["GND"], 126: ["GND"],
+      };
+      const LYRA_ULTRA_TO_PHYS = {};
+      for (const [phys, spec] of Object.entries(LYRA_ULTRA_PINS)) if (spec[1] != null) LYRA_ULTRA_TO_PHYS[spec[1]] = +phys;
+
+      // Luckfox Lyra Zero W 40-pin header (Pi layout), from Luckfox's pinout. Pins 1-26 match the
+      // Lyra Ultra's left header. Same [name, global GPIO, RM_IO, role] format.
+      const LYRA_ZERO_PINS = {
+        1: ["3V3_OUT"], 2: ["VSYS"], 3: ["GPIO0_A0", 0, 0, "TP+RTC"], 4: ["VSYS"], 5: ["GPIO0_A1", 1, 1, "TP+RTC"], 6: ["GND"],
+        7: ["GPIO0_A2", 2, 2], 8: ["GPIO0_C6", 22, 22, "UART0 TX"], 9: ["GND"], 10: ["GPIO0_C7", 23, 23, "UART0 RX"],
+        11: ["GPIO0_A3", 3, 3], 12: ["GPIO0_B6", 14, 14], 13: ["GPIO0_A4", 4, 4], 14: ["GND"],
+        15: ["GPIO0_A5", 5, 5], 16: ["GPIO0_B5", 13, 13], 17: ["3V3_OUT"], 18: ["GPIO0_B4", 12, 12],
+        19: ["GPIO0_A6", 6, 6], 20: ["GND"], 21: ["GPIO0_A7", 7, 7], 22: ["GPIO0_B3", 11, 11],
+        23: ["GPIO0_B0", 8, 8], 24: ["GPIO0_B2", 10, 10], 25: ["GND"], 26: ["GPIO0_B1", 9, 9],
+        27: ["GPIO1_B1", 41, 24], 28: ["GPIO1_D3", 59, 31], 29: ["GPIO1_B2", 42, 25], 30: ["GND"],
+        31: ["GPIO1_B3", 43, 26], 32: ["GPIO1_D2", 58, 30], 33: ["GPIO1_C2", 50, 27], 34: ["GND"],
+        35: ["GPIO0_C0", 16, 16], 36: ["GPIO1_D1", 57, 29], 37: ["GPIO1_C3", 51, 28], 38: ["GPIO0_C1", 17, 17],
+        39: ["GND"], 40: ["GPIO0_C2", 18, 18],
+      };
+      const LYRA_ZERO_TO_PHYS = {};
+      for (const [phys, spec] of Object.entries(LYRA_ZERO_PINS)) if (spec[1] != null) LYRA_ZERO_TO_PHYS[spec[1]] = +phys;
+
+      function lyraUltraPin(p) {
+        return lyraPin(LYRA_ULTRA_PINS[p]);
+      }
+
+      function lyraPin(spec) {
+        const [name, gnum, rm, role] = spec;
+        if (gnum == null) {
+          const type = name === "GND" ? "gnd" : name === "VSYS" ? "5v" : "3v3";
+          return { name, type, io: false };
+        }
+        const extra = [rm != null ? "RM_IO" + rm : "", role || ""].filter(Boolean).join(" ");
+        return { name: name + " [" + gnum + "]" + (extra ? " " + extra : ""), type: "gpio", io: true };
+      }
+
+      function ultraPin(p, numbers, prefix) {
+        const power = ULTRA_POWER[p];
+        if (power) return { name: power, type: power === "5V" ? "5v" : power === "3V3" ? "3v3" : "gnd", io: false };
+        const role = ULTRA_ROLE[p] ? " " + ULTRA_ROLE[p] : "";
+        return { name: (numbers[p] != null ? prefix + numbers[p] : "IO ?") + role, type: "gpio", io: true };
+      }
+
+      // Luckfox Pico Mini (Femtofox base), from Luckfox's pinout: 11 pins down each side,
+      // pin 1 top-left, 12 bottom-right. [name, global GPIO number, role].
+      const PICO_MINI_PINS = {
+        1: ["VBUS"], 2: ["GND"], 3: ["3V3(OUT)"], 4: ["GPIO1_B2", 42, "UART2 TX"], 5: ["GPIO1_B3", 43, "UART2 RX"],
+        6: ["GPIO1_C0", 48, "SPI0 CS0"], 7: ["GPIO1_C1", 49, "SPI0 CLK"], 8: ["GPIO1_C2", 50, "SPI0 MOSI"],
+        9: ["GPIO1_C3", 51, "SPI0 MISO"], 10: ["GPIO1_C4", 52, "UART4 TX"], 11: ["GPIO1_C5", 53, "UART4 RX"],
+        12: ["GPIO1_D0", 56, "UART3 TX"], 13: ["GPIO1_D1", 57, "UART3 RX"], 14: ["GPIO1_D2", 58, "I2C3 SDA"],
+        15: ["GPIO1_D3", 59, "I2C3 SCL/SPI0 CS1"], 16: ["GPIO1_C6", 54, "UART4 RTS"], 17: ["GPIO1_C7", 55, "UART4 CTS"],
+        18: ["GPIO0_A4", 4], 19: ["GPIO4_C0", 144, "ADC_IN0 1.8V"], 20: ["GPIO4_C1", 145, "ADC_IN1 1.8V"],
+        21: ["GND"], 22: ["1V8(OUT)"],
+      };
+      const PICO_MINI_TO_PHYS = {};
+      for (const [phys, spec] of Object.entries(PICO_MINI_PINS)) if (spec[1] != null) PICO_MINI_TO_PHYS[spec[1]] = +phys;
+
+      function picoMiniPin(p) {
+        const [name, gnum, role] = PICO_MINI_PINS[p];
+        if (gnum == null) return { name, type: name === "GND" ? "gnd" : name === "VBUS" ? "5v" : "3v3", io: false };
+        return { name: name + " [" + gnum + "]" + (role ? " " + role : ""), type: "gpio", io: true };
+      }
+
+      // Radxa ROCK 2F 40-pin header, from the ROCK 2F v1.01 schematic (sheet 23, J2401), with each
+      // net traced to its RK3528 GPIO on the SoC sheets. [name, gpiochip, line, role]. Pin 37 reaches
+      // GPIO1_B3 only through R2405, which is not fitted on v1.01.
+      const ROCK2F_PINS = {
+        1: ["3V3"], 2: ["5V"], 3: ["GPIO4_A0", 4, 0, "I2C0 SDA"], 4: ["5V"], 5: ["GPIO4_A1", 4, 1, "I2C0 SCL"], 6: ["GND"],
+        7: ["GPIO4_A6", 4, 6], 8: ["GPIO4_D0", 4, 24, "UART0 TX"], 9: ["GND"], 10: ["GPIO4_C7", 4, 23, "UART0 RX"],
+        11: ["GPIO4_B7", 4, 15, "PWM4"], 12: ["GPIO1_B5", 1, 13, "I2S0 SCLK"], 13: ["GPIO4_C0", 4, 16, "PWM5"], 14: ["GND"],
+        15: ["GPIO4_C6", 4, 22], 16: ["GPIO4_B0", 4, 8], 17: ["3V3"], 18: ["GPIO4_B1", 4, 9],
+        19: ["GPIO4_B2", 4, 10, "SPI0 MOSI"], 20: ["GND"], 21: ["GPIO4_B3", 4, 11, "SPI0 MISO"], 22: ["GPIO1_B2", 1, 10],
+        23: ["GPIO4_B4", 4, 12, "SPI0 CLK"], 24: ["GPIO4_B6", 4, 14, "SPI0 CS0"], 25: ["GND"], 26: ["GPIO4_C1", 4, 17, "SPI0 CS1"],
+        27: ["GPIO4_A2", 4, 2, "I2C1 SDA"], 28: ["GPIO4_A3", 4, 3, "I2C1 SCL"], 29: ["GPIO4_B5", 4, 13], 30: ["GND"],
+        31: ["GPIO1_B0", 1, 8], 32: ["GPIO4_C3", 4, 19], 33: ["GPIO1_B1", 1, 9], 34: ["GND"],
+        35: ["GPIO1_B6", 1, 14, "I2S0 LRCK"], 36: ["GPIO1_B4", 1, 12, "I2S0 MCLK"], 37: ["NC"], 38: ["GPIO1_B7", 1, 15, "I2S0 SDI"],
+        39: ["GND"], 40: ["GPIO1_C0", 1, 16, "I2S0 SDO"],
+      };
+      const ROCK2F_TO_PHYS = {};
+      for (const [phys, spec] of Object.entries(ROCK2F_PINS)) if (spec[1] != null) ROCK2F_TO_PHYS[spec[1] * 32 + spec[2]] = +phys;
+
+      function rock2fPin(p) {
+        const [name, chip, line, role] = ROCK2F_PINS[p];
+        if (chip == null) {
+          if (name === "NC") return { name: "NC (GPIO1_B3, R2405 not fitted)", type: "ctl", io: false };
+          return { name, type: name === "GND" ? "gnd" : name === "5V" ? "5v" : "3v3", io: false };
+        }
+        return { name: name + " [" + chip + ":" + line + "]" + (role ? " " + role : ""), type: "gpio", io: true };
+      }
+
+      // Banana Pi BPI-R4 26-pin header (CON2), from the "GPIO define" table in the BPI-R4 docs.
+      // Numbers are the MT7988 GPIO numbers configs use. [name, GPIO, role].
+      const BPIR4_PINS = {
+        1: ["3V3"], 2: ["5V"], 3: ["GPIO18", 18, "I2C1 SDA"], 4: ["5V"], 5: ["GPIO17", 17, "I2C1 SCL"], 6: ["GND"],
+        7: ["GPIO62", 62, "PWM6"], 8: ["GPIO59", 59, "UART1 TX"], 9: ["GND"], 10: ["GPIO58", 58, "UART1 RX"],
+        11: ["GPIO81", 81, "UART1 TXD"], 12: ["GPIO51", 51, "I2S BCLK"], 13: ["GPIO80", 80, "UART1 RXD"], 14: ["GND"],
+        15: ["GPIO50", 50, "I2S LRCK"], 16: ["GPIO61", 61, "UART1 RTS"], 17: ["3V3"], 18: ["GPIO60", 60, "UART1 CTS"],
+        19: ["GPIO30", 30, "SPI1 MOSI"], 20: ["GND"], 21: ["GPIO29", 29, "SPI1 MISO"], 22: ["GPIO53", 53, "I2S DOUT"],
+        23: ["GPIO31", 31, "SPI1 CLK"], 24: ["GPIO28", 28, "SPI1 CS"], 25: ["GND"], 26: ["GPIO52", 52, "I2S DIN"],
+      };
+      const BPIR4_TO_PHYS = {};
+      for (const [phys, spec] of Object.entries(BPIR4_PINS)) if (spec[1] != null) BPIR4_TO_PHYS[spec[1]] = +phys;
+
+      function bpir4Pin(p) {
+        const [name, gpio, role] = BPIR4_PINS[p];
+        if (gpio == null) return { name, type: name === "GND" ? "gnd" : name === "5V" ? "5v" : "3v3", io: false };
+        return { name: name + (role ? " " + role : ""), type: "gpio", io: true };
+      }
+
+      // Meta.compatible values that pick a board on Auto, most specific first.
+      const COMPAT_BOARDS = [
+        ["luckfox-lyra-zero-w", "lyrazero"],
+        ["luckfox-lyra-ultra", "lyraultra"],
+        ["bananapi_bpi-r4", "bpir4"],
+        ["rock-2f", "rock2f"],
+        ["luckfox-pico-mini", "picomini"],
+        ["luckfox-pico-ultra", "picoultra"],
+      ];
+
+      const BOARDS = {
+        pi: { label: "Raspberry Pi 40-pin header", rows: pairRows(40, false), pin: (p) => piPin(PI_HEADER[p - 1]) },
+        pico: { label: "Raspberry Pi Pico (40-pin)", rows: pairRows(40, true), pin: (p) => picoPin(PICO_PINS[p - 1]), wide: true, usbTop: true },
+        ch341: { label: "CH341A/B (SOP-28, SPI mode)", rows: pairRows(28, true), pin: (p) => ch341Pin(CH341_PINS[p - 1], p) },
+        bpir4: {
+          label: "Banana Pi BPI-R4 26-pin header",
+          rows: pairRows(26, false),
+          pin: bpir4Pin,
+          lineToPhys: BPIR4_TO_PHYS,
+          spiBuses: { 1: { SCLK: 31, MOSI: 30, MISO: 29, CE: [28] } },
+        },
+        lyrazero: {
+          label: "Luckfox Lyra Zero W 40-pin header",
+          rows: pairRows(40, false),
+          pin: (p) => lyraPin(LYRA_ZERO_PINS[p]),
+          lineToPhys: LYRA_ZERO_TO_PHYS,
+          globalGpio: true,
+          spi0: { SCLK: 8, MOSI: 6, MISO: 7, CE: [10, 9] },
+        },
+        rock2f: {
+          label: "Radxa ROCK 2F 40-pin header",
+          rows: pairRows(40, false),
+          pin: rock2fPin,
+          lineToPhys: ROCK2F_TO_PHYS,
+          globalGpio: true,
+          spi0: { SCLK: 140, MOSI: 138, MISO: 139, CE: [142, 145] },
+        },
+        picomini: {
+          label: "Luckfox Pico Mini (Femtofox)",
+          rows: pairRows(22, true),
+          wide: true,
+          usbTop: true,
+          pin: picoMiniPin,
+          lineToPhys: PICO_MINI_TO_PHYS,
+          globalGpio: true,
+          spi0: { SCLK: 49, MOSI: 50, MISO: 51, CE: [48, 59] },
+        },
+        picoultra: {
+          label: "Luckfox Pico Ultra 26-pin header",
+          rows: pairRows(26, false),
+          pin: (p) => ultraPin(p, PICO_ULTRA_GPIO, "GPIO"),
+          lineToPhys: invert(PICO_ULTRA_GPIO),
+          globalGpio: true,
+          spi0: { SCLK: 49, MOSI: 50, MISO: 51, CE: [48] },
+        },
+        lyraultra: {
+          label: "Luckfox Lyra Ultra",
+          usbTop: true,
+          headers: [
+            { label: "Left header", rows: pairRows(26, false) },
+            { label: "Right header", rows: pairRows(26, false).map(([a, b]) => [a + 100, b + 100]) },
+          ],
+          pin: lyraUltraPin,
+          lineToPhys: LYRA_ULTRA_TO_PHYS,
+          globalGpio: true,
+          spi0: { SCLK: 8, MOSI: 6, MISO: 7, CE: [10] },
+        },
+      };
+
+      // Keys meshtasticd reads through readGPIOFromYaml (PortduinoGlue).
+      const PIN_KEYS = {
+        Lora: ["CS", "IRQ", "Busy", "Reset", "TXen", "RXen", "SX126X_ANT_SW", "GPIO_DETECT_PA", "SCK", "MOSI", "MISO"],
+        Display: ["CS", "DC", "Backlight", "Reset"],
+        Touchscreen: ["CS", "IRQ"],
+        Input: ["User", "TrackballUp", "TrackballDown", "TrackballLeft", "TrackballRight", "TrackballPress"],
+        GPIO: ["User"],
+      };
+      const PIN_LISTS = { Lora: ["Enable_Pins"], GPIO: ["ExtraPins"] };
+
+      const SECTION_CLASS = {
+        Lora: "sec-lora",
+        Display: "sec-display",
+        Touchscreen: "sec-touch",
+        Input: "sec-input",
+        GPIO: "sec-input",
+        Bus: "sec-bus",
+        Hat: "sec-hat",
+      };
+
+      // Adafruit RGB Matrix Bonnet/HAT (rpi-rgb-led-matrix "adafruit-hat" mappings), BCM numbers
+      // from https://learn.adafruit.com/adafruit-rgb-matrix-bonnet-for-raspberry-pi/pinouts.
+      // "adafruit-hat-pwm" is the quality mod: GPIO4 is wired to GPIO18, which then drives OE.
+      const HUB75_ADAFRUIT = [
+        ["R1", 5], ["G1", 13], ["B1", 6], ["R2", 12], ["G2", 16], ["B2", 23],
+        ["CLK", 17], ["LAT", 21], ["A", 22], ["B", 26], ["C", 27], ["D", 20], ["E", 24],
+      ];
+
+      function isPiCompatible(compat) {
+        return compat.length === 0 || compat.some((c) => /raspberry|uconsole/i.test(c));
+      }
+
+      function picoFromComment(comment) {
+        const m = /\bGP(\d{1,2})\b/.exec(comment || "");
+        return m && PICO_GP_TO_PHYS[+m[1]] ? PICO_GP_TO_PHYS[+m[1]] : null;
+      }
+
+      function physicalFromComment(comment) {
+        const m = /physical\s*(?:pin\s*)?(\d{1,2})\b/i.exec(comment || "");
+        if (!m) return null;
+        const n = parseInt(m[1], 10);
+        return n >= 1 && n <= 40 ? n : null;
+      }
+
+      function spiBus(dev) {
+        const m = /^(?:\/dev\/)?spidev(\d+)\.(\d+)$/.exec(String(dev || ""));
+        return m ? { bus: +m[1], cs: +m[2], name: "spidev" + m[1] + "." + m[2] } : null;
+      }
+
+      // The raw text of each YAML document, matching parseYamlDocs' split and filtering.
+      function splitDocTexts(text) {
+        const out = [[]];
+        for (const line of text.replace(/\t/g, "  ").split(/\r?\n/)) {
+          if (/^(---|\.\.\.)\s*(#.*)?$/.test(line)) out.push([]);
+          else out[out.length - 1].push(line);
+        }
+        return out.filter((lines) => lines.some((l) => stripComment(l).text.trim() !== "")).map((lines) => lines.join("\n"));
+      }
+
+      function buildModel(text, boardChoice) {
+        const docs = parseYamlDocs(text);
+        const merged = {};
+        const comments = {};
+        const metaNames = [];
+        const compat = [];
+        const metaPins = []; // per-file Meta.pins maps: pins a hat uses that meshtasticd has no key for
+        for (const d of docs) {
+          if (!d.value || typeof d.value !== "object" || Array.isArray(d.value)) continue;
+          mergeInto(merged, d.value);
+          Object.assign(comments, d.comments);
+          const meta = d.value.Meta;
+          if (meta && meta.name) metaNames.push(String(meta.name));
+          if (meta && Array.isArray(meta.compatible)) compat.push(...meta.compatible.map(String));
+          if (meta && meta.pins && typeof meta.pins === "object" && !Array.isArray(meta.pins)) metaPins.push(meta.pins);
+        }
+
+        const piBoard = isPiCompatible(compat);
+        const usb = compat.includes("usb") || (merged.Lora && merged.Lora.spidev === "ch341");
+        // Pico-footprint hats on other hosts name the Pico pin in a comment ("# GPIO1_C7 / GP2").
+        // With no Meta.compatible at all, GPn comments still mean a Pico-footprint config.
+        const picoHint = (!piBoard || compat.length === 0) && Object.values(comments).some((c) => /\bGP\d{1,2}\b/.test(c));
+        const byCompat = COMPAT_BOARDS.find(([c]) => compat.includes(c));
+        const autoKey = usb ? "ch341" : byCompat ? byCompat[1] : picoHint ? "pico" : "pi";
+        const boardKey = boardChoice && boardChoice !== "auto" ? boardChoice : autoKey;
+        const board = BOARDS[boardKey];
+        // An explicit Pi choice means "treat the numbers as BCM", whatever Meta.compatible says.
+        const bcm = boardKey === "pi" && (piBoard || boardChoice === "pi") && !usb;
+        const loraChip = merged.Lora && merged.Lora.gpiochip != null ? merged.Lora.gpiochip : 0;
+        const assignments = [];
+
+        function addPin(section, key, node, path) {
+          let pin, line, chip;
+          if (node && typeof node === "object" && !Array.isArray(node)) {
+            pin = node.pin;
+            line = node.line != null ? node.line : pin;
+            chip = node.gpiochip != null ? node.gpiochip : loraChip;
+          } else {
+            pin = node;
+            line = node;
+            chip = loraChip;
+          }
+          const a = { section, key, pin, line, chip, comment: comments[path] || "", phys: null, how: "", note: "" };
+          // Some configs note the SPI pins for reference; meshtasticd leaves those to the kernel.
+          const infoOnly = section === "Lora" && /^(SCK|MOSI|MISO)$/.test(key);
+          if (typeof pin !== "number") {
+            a.note = pin == null ? "no pin number" : "not a GPIO number (" + pin + ")";
+          } else if (boardKey === "ch341") {
+            if (CH341_LINE_TO_PHYS[pin] != null) {
+              a.phys = CH341_LINE_TO_PHYS[pin];
+              a.how = "CH341 line";
+            } else a.note = "CH341 has no line " + pin;
+          } else if (board.lineToPhys) {
+            // Rockchip numbering: a bare number on gpiochip N is line N*32 + pin globally;
+            // a {pin, gpiochip, line} map already carries the global number in pin.
+            // A {pin, gpiochip, line} map is placed from gpiochip and line: some configs (ROCK 2F)
+            // put the header pin number in "pin", others (Lyra) the global number.
+            const isMap = node && typeof node === "object";
+            const gnum = !board.globalGpio ? pin : isMap && node.gpiochip != null && node.line != null ? node.gpiochip * 32 + node.line : chip ? chip * 32 + pin : pin;
+            if (physicalFromComment(a.comment)) {
+              a.phys = physicalFromComment(a.comment);
+              a.how = "comment";
+            } else if (board.lineToPhys[gnum] != null) {
+              a.phys = board.lineToPhys[gnum];
+              a.how = "board GPIO";
+            } else {
+              a.note = "GPIO " + gnum + " is not on this board's headers";
+            }
+          } else if (boardKey === "pico") {
+            const phys = picoFromComment(a.comment) || physicalFromComment(a.comment);
+            if (phys) {
+              a.phys = phys;
+              a.how = "comment";
+            } else a.note = "host GPIO; add a '# GPn' comment to place it on the Pico";
+          } else if (physicalFromComment(a.comment)) {
+            a.phys = physicalFromComment(a.comment);
+            a.how = "comment";
+          } else if (bcm && BCM_TO_PHYS[pin] != null) {
+            a.phys = BCM_TO_PHYS[pin];
+            a.how = "BCM";
+          } else if (bcm) {
+            a.note = "GPIO" + pin + " is not on the 40-pin header";
+          } else {
+            a.note = "board-specific GPIO; add a '# (physical N)' comment to place it";
+          }
+          if (infoOnly) a.note = (a.note ? a.note + "; " : "") + "reference only, not read by meshtasticd";
+          assignments.push(a);
+        }
+
+        for (const [section, keys] of Object.entries(PIN_KEYS)) {
+          const sec = merged[section];
+          if (!sec || typeof sec !== "object") continue;
+          for (const key of keys) {
+            if (sec[key] !== undefined && sec[key] !== null) addPin(section, key, sec[key], section + "." + key);
+          }
+        }
+        // HUB75: the library owns these pins, chosen by HardwareMapping rather than per-pin keys.
+        const hub = merged.Display && merged.Display.Panel === "HUB75" ? merged.Display.HUB75 || {} : null;
+        const hubMap = hub && hub.HardwareMapping;
+        const hubDrawn = hub && bcm && (hubMap === "adafruit-hat" || hubMap === "adafruit-hat-pwm");
+        if (hubDrawn) {
+          // Address lines follow the scan rate: rows/2 lines need A-C (16 rows), A-D (32), A-E (64).
+          const rows = Number(hub.Rows) || 32;
+          const addr = rows > 32 ? "ABCDE" : rows > 16 ? "ABCD" : "ABC";
+          const signals = HUB75_ADAFRUIT.filter(([name]) => !/^[A-E]$/.test(name) || addr.includes(name));
+          signals.push(hubMap === "adafruit-hat-pwm" ? ["OE", 18] : ["OE", 4]);
+          if (hubMap === "adafruit-hat-pwm") signals.push(["OE (bridged to 18)", 4]);
+          for (const [name, gpio] of signals) {
+            assignments.push({ section: "Display", key: "HUB75 " + name, pin: gpio, line: gpio, chip: 0, phys: BCM_TO_PHYS[gpio], how: "HUB75 " + hubMap, note: "", comment: "" });
+          }
+        }
+
+        // Meta.pins (read only by this map; meshtasticd ignores Meta): label -> pin name(s) on the
+        // drawn board, e.g. "VSYS", "GND" (every GND pin) or "GP26", or physical pin numbers.
+        const boardPins = (board.headers ? board.headers.flatMap((h) => h.rows) : board.rows).flat();
+        const firstWord = (p) => board.pin(p).name.split(" ")[0];
+        for (const pins of metaPins) {
+          for (const [label, ref] of Object.entries(pins)) {
+            for (const r of Array.isArray(ref) ? ref : [ref]) {
+              const hits = typeof r === "number" ? boardPins.filter((p) => p === r) : boardPins.filter((p) => firstWord(p) === String(r));
+              if (!hits.length) {
+                assignments.push({ section: "Hat", key: label, pin: r, phys: null, how: "", note: "no pin '" + r + "' on this board", comment: "" });
+                continue;
+              }
+              for (const phys of hits) assignments.push({ section: "Hat", key: label, pin: r, phys, how: "Meta.pins", note: "", comment: "" });
+            }
+          }
+        }
+
+        for (const [section, keys] of Object.entries(PIN_LISTS)) {
+          const sec = merged[section];
+          if (!sec || typeof sec !== "object") continue;
+          for (const key of keys) {
+            if (!Array.isArray(sec[key])) continue;
+            sec[key].forEach((item, i) => addPin(section, key + "[" + i + "]", item, section + "." + key + "." + i));
+          }
+        }
+
+        // Buses the kernel drives on the Pi's behalf.
+        const bus = [];
+        const notes = [];
+        const loraSpi = merged.Lora && merged.Lora.spidev ? spiBus(merged.Lora.spidev) : spiBus("spidev0.0");
+        // Board SPI buses by number; most boards only bring SPI0 to the header.
+        const spiDef = loraSpi && (board.spiBuses || { 0: board.spi0 })[loraSpi.bus];
+        if (spiDef && merged.Lora) {
+          const tag = "SPI" + loraSpi.bus;
+          for (const sig of ["SCLK", "MOSI", "MISO"]) {
+            const phys = board.lineToPhys[spiDef[sig]];
+            if (phys) bus.push({ section: "Bus", key: tag + " " + sig, pin: spiDef[sig], phys });
+          }
+          const ce = spiDef.CE[loraSpi.cs];
+          if (ce != null && board.lineToPhys[ce]) bus.push({ section: "Bus", key: tag + " CS" + loraSpi.cs + " (LoRa)", pin: ce, phys: board.lineToPhys[ce] });
+        }
+        if (boardKey === "ch341") {
+          // The CH341's SPI engine owns these; CS is driven as a GPIO (auto-CS is off).
+          bus.push({ section: "Bus", key: "CH341 SPI SCK", pin: 3, phys: 18, note: "CH341 SPI engine" });
+          bus.push({ section: "Bus", key: "CH341 SPI MOSI", pin: 5, phys: 20, note: "CH341 SPI engine" });
+          bus.push({ section: "Bus", key: "CH341 SPI MISO", pin: 7, phys: 22, note: "CH341 SPI engine" });
+        }
+        if (bcm) {
+          const spiUsers = [];
+          if (merged.Lora && (merged.Lora.Module || assignments.some((a) => a.section === "Lora"))) {
+            spiUsers.push(["LoRa", merged.Lora.spidev || "spidev0.0"]);
+          }
+          if (merged.Display && merged.Display.spidev) spiUsers.push(["Display", merged.Display.spidev]);
+          if (merged.Touchscreen && merged.Touchscreen.spidev) spiUsers.push(["Touch", merged.Touchscreen.spidev]);
+          const seen = new Set();
+          for (const [who, dev] of spiUsers) {
+            const s = spiBus(dev);
+            if (!s || !SPI_BUSES[s.bus]) continue;
+            const b = SPI_BUSES[s.bus];
+            const tag = "SPI" + s.bus;
+            for (const sig of ["SCLK", "MOSI", "MISO"]) {
+              if (seen.has(tag + sig)) continue;
+              seen.add(tag + sig);
+              bus.push({ section: "Bus", key: tag + " " + sig, pin: b[sig], phys: BCM_TO_PHYS[b[sig]] });
+            }
+            if (b.CE[s.cs] != null) {
+              bus.push({ section: "Bus", key: tag + " CE" + s.cs + " (" + who + ")", pin: b.CE[s.cs], phys: BCM_TO_PHYS[b.CE[s.cs]] });
+            }
+          }
+          const i2c = merged.I2C && merged.I2C.I2CDevice;
+          if (i2c && /i2c-1$/.test(i2c)) {
+            bus.push({ section: "Bus", key: "I2C1 SDA", pin: 2, phys: 3 });
+            bus.push({ section: "Bus", key: "I2C1 SCL", pin: 3, phys: 5 });
+          }
+          const gps = merged.GPS && merged.GPS.SerialPath;
+          if (gps && /(ttyS0|ttyAMA0|serial0)$/.test(gps)) {
+            bus.push({ section: "Bus", key: "UART TXD (GPS)", pin: 14, phys: 8 });
+            bus.push({ section: "Bus", key: "UART RXD (GPS)", pin: 15, phys: 10 });
+          }
+        }
+        if (hubDrawn) {
+          notes.push(
+            "HUB75 pins from the Adafruit RGB Matrix Bonnet pinout (" + hubMap + ")" +
+              (hubMap === "adafruit-hat-pwm" ? "; the quality mod bridges GPIO4 to GPIO18, which drives OE." : "."),
+          );
+        } else if (hub) {
+          notes.push("HUB75 panels take their pins from HardwareMapping (" + (hubMap || "not set") + "); only the Adafruit bonnet mappings are drawn here.");
+        }
+        if (boardChoice === "auto" || !boardChoice) notes.push("Board: auto, drawn as " + BOARDS[boardKey].label + ".");
+        if (usb && boardKey !== "ch341") notes.push("This is a USB (CH341) radio: its pin numbers are CH341 lines, not host header pins.");
+        if (!usb && boardKey === "ch341") notes.push("This config does not use spidev: ch341, so its numbers are host GPIOs, not CH341 lines.");
+        if (boardKey === "pi" && !bcm)
+          notes.push(
+            "No layout for " + compat.join(", ") + ". Drawn on a Raspberry Pi-style header, placing only pins whose comment says '(physical N)'; the power pins shown are the Pi's, not that board's.",
+          );
+        if (boardKey === "lyrazero") notes.push("Lyra Zero W: [n] is the GPIO number configs use (bank × 32 + line), from Luckfox's pinout; pins 1-26 match the Lyra Ultra's left header.");
+        if (boardKey === "rock2f") notes.push("ROCK 2F: [chip:line] is the gpiochip and line configs use; pins are placed from those, not from 'pin'.");
+        if (boardKey === "lyraultra") notes.push("Lyra Ultra: [n] is the GPIO number configs use (bank × 32 + line). Pins are numbered from the top-left of Luckfox's pinout drawing; the left header matches the Ultra hat's wiring.");
+        if (boardKey === "pico")
+          notes.push(
+            "Drawn as the Pico footprint the hat plugs into, from '# GPn' or '(physical N)' comments." +
+              (compat.length ? " The host board (" + compat.join(", ") + ") has no layout here; the numbers in the config are its GPIOs." : ""),
+          );
+        if (merged.Lora && merged.Lora.gpiochip && bcm) notes.push("gpiochip " + merged.Lora.gpiochip + " set (Pi 5 style); numbers still treated as BCM.");
+
+        // Stacked files: config.d keeps the last value of each key, so an earlier file's pin is
+        // silently replaced. Keep those replaced pins on the map (marked overridden) so hardware
+        // that wires two functions to one pin - e.g. both slots of a two-slot hat - still shows.
+        if (docs.length > 1) {
+          const perDoc = splitDocTexts(text).map((t, i) => {
+            const m = buildModel(t, boardKey);
+            return { label: m.metaNames[0] || "file " + (i + 1), assignments: m.assignments };
+          });
+          const final = new Map(assignments.filter((a) => a.section !== "Hat").map((a) => [a.section + "." + a.key, a]));
+          const winnerLabel = (id) => {
+            for (let i = perDoc.length - 1; i >= 0; i--) if (perDoc[i].assignments.some((a) => a.section + "." + a.key === id)) return perDoc[i].label;
+            return "";
+          };
+          perDoc.slice(0, -1).forEach((d) => {
+            for (const a of d.assignments) {
+              if (a.section === "Hat" || a.phys == null) continue;
+              const id = a.section + "." + a.key;
+              const f = final.get(id);
+              if (!f || (f.phys === a.phys && f.pin === a.pin)) continue;
+              if (!f.labelled) {
+                f.key += " [" + winnerLabel(id) + "]";
+                f.labelled = true;
+              }
+              assignments.push({ ...a, key: a.key + " [" + d.label + "]", overridden: true, note: "overridden by a later file, so meshtasticd does not use it" });
+            }
+          });
+        }
+
+        // Per-header-pin occupancy; explicit assignments win over bus signals.
+        const byPhys = {};
+        for (const a of assignments) {
+          if (a.phys == null) continue;
+          (byPhys[a.phys] = byPhys[a.phys] || { uses: [], bus: [] }).uses.push(a);
+        }
+        for (const b of bus) {
+          (byPhys[b.phys] = byPhys[b.phys] || { uses: [], bus: [] }).bus.push(b);
+        }
+        for (const slot of Object.values(byPhys)) {
+          // Meta.pins entries are power, ground and sense lines hats share by design; only
+          // meshtasticd pin keys landing together count as a clash.
+          const signals = slot.uses.filter((a) => a.section !== "Hat");
+          if (signals.length > 1) {
+            slot.conflict = true;
+            for (const a of signals) a.note = (a.note ? a.note + "; " : "") + "shares header pin with " + signals.filter((o) => o !== a).map((o) => o.section + "." + o.key).join(", ");
+          }
+          if (slot.uses.length && slot.bus.length) {
+            for (const a of slot.uses) a.note = (a.note ? a.note + "; " : "") + "also " + slot.bus.map((b) => b.key).join(", ");
+          }
+        }
+
+        return { merged, metaNames, compat, piBoard, usb, board, boardKey, assignments, bus, byPhys, notes, docCount: docs.length };
+      }
+
+      // ---------- ASCII renderer ----------
+
+      function physLabel(board, p) {
+        if (!board.headers) return "pin " + p;
+        return (p > 100 ? "right" : "left") + " pin " + (p % 100);
+      }
+
+      function slotLabel(slot) {
+        if (!slot) return "";
+        if (slot.uses.length) return slot.uses.map((a) => a.section + "." + a.key).join(" + ");
+        return slot.bus.map((b) => b.key).join(" + ");
+      }
+
+      function slotClass(slot) {
+        if (!slot) return "";
+        if (slot.conflict) return "sec-conflict";
+        const live = slot.uses.find((a) => !a.overridden);
+        if (live) return SECTION_CLASS[live.section];
+        if (slot.uses.length) return "sec-overridden";
+        return SECTION_CLASS.Bus;
+      }
+
+      // Returns rows of segments: [{text, cls}] so the caller can emit plain text or highlighted HTML.
+      function renderHeader(model, opts) {
+        const ascii = !!opts.ascii;
+        const g = ascii
+          ? { used: "*", bus: "+", free: "o", pwr: "#", v: "|", h: "-", tl: "+", tr: "+", bl: "+", br: "+", dash: "-" }
+          : { used: "●", bus: "■", free: "○", pwr: "□", v: "│", h: "─", tl: "┌", tr: "┐", bl: "└", br: "┘", dash: "─" };
+
+        const board = model.board;
+        const headers = board.headers || [{ label: "", rows: board.rows }];
+        const allRows = headers.flatMap((h) => h.rows);
+        const pinName = (p) => board.pin(p).name;
+        const pinType = (p) => board.pin(p).type;
+        const pinNum = (p) => String(p % 100); // right-header pins use ids 101+
+        const numW = Math.max(...allRows.flat().map((p) => pinNum(p).length));
+
+        let nameW = 0;
+        let funcW = 0;
+        for (const [a, b] of allRows) {
+          for (const p of [a, b]) {
+            nameW = Math.max(nameW, pinName(p).length);
+            funcW = Math.max(funcW, slotLabel(model.byPhys[p]).length);
+          }
+        }
+
+        function mark(p) {
+          const slot = model.byPhys[p];
+          if (slot && slot.uses.length) return g.used;
+          if (slot && slot.bus.length) return g.bus;
+          return board.pin(p).io ? g.free : g.pwr;
+        }
+
+        const pairs = [];
+        for (const [p, q] of allRows) {
+          const lFunc = slotLabel(model.byPhys[p]);
+          const rFunc = slotLabel(model.byPhys[q]);
+          const lName = pinName(p);
+          const rName = pinName(q);
+          // Left reads "func ── name NN", right "NN name ── func"; the dashes line the labels up.
+          // Kept as parts so the pin number and name can be coloured on their own.
+          const lParts = [
+            { text: lFunc ? lFunc + " " + g.dash.repeat(funcW - lFunc.length + nameW - lName.length + 1) + " " : "" },
+            { text: lName, sub: "name", pinType: pinType(p) },
+            { text: " ".repeat(numW + 1 - pinNum(p).length) },
+            { text: pinNum(p), sub: "num", pinType: pinType(p) },
+          ];
+          const rParts = [
+            { text: pinNum(q), sub: "num", pinType: pinType(q) },
+            { text: " ".repeat(numW + 1 - pinNum(q).length) },
+            { text: rName, sub: "name", pinType: pinType(q) },
+            { text: rFunc ? " " + g.dash.repeat(nameW - rName.length + 1) + " " + rFunc : "" },
+          ];
+          const join = (parts) => parts.map((x) => x.text).join("");
+          pairs.push({ p, q, lText: join(lParts), rText: join(rParts), lParts, rParts });
+        }
+        const title = model.metaNames.length ? model.metaNames.join(" + ") + " on " + board.label : board.label;
+        const legendParts = [
+          [g.used, " used by config   "],
+          [g.bus, " bus (SPI/I2C/UART)   "],
+          [g.free, " free GPIO   "],
+          [g.pwr, " power/GND/fixed"],
+        ];
+        const legend = legendParts.map((x) => x.join("")).join("");
+        // Boards with a pin row down each edge get a board-width gap between the columns.
+        const gap = board.wide ? 9 : 1;
+        const INNER = 4 + gap; // " ● ● " between the box sides
+        const BOX_W = INNER + 4; // " │" + inner + "│ "
+        let leftW = Math.max(...pairs.map((x) => x.lText.length));
+        let rightW = 0;
+        // Symmetric: both sides padded to one width so the box sits at the block's centre,
+        // whatever the labels are. Used for the centred on-screen view, not for copied text.
+        if (opts.symmetric) {
+          const side = Math.max(
+            leftW,
+            ...pairs.map((x) => x.rText.length),
+            Math.ceil((title.length - BOX_W) / 2),
+            Math.ceil((legend.length - BOX_W) / 2),
+          );
+          leftW = side;
+          rightW = side;
+        }
+        const centreLine = (text) => (opts.symmetric ? " ".repeat(Math.floor((leftW * 2 + BOX_W - text.length) / 2)) + text : text);
+        const boxPad = " ".repeat(leftW + 1);
+        // Box edge, with an optional label (the USB end) set into the middle of the line.
+        const edge = (label) => {
+          if (!label) return g.h.repeat(INNER);
+          const left = Math.floor((INNER - label.length) / 2);
+          return g.h.repeat(left) + label + g.h.repeat(INNER - left - label.length);
+        };
+        const rows = [];
+        rows.push([{ text: centreLine(title) }]);
+        rows.push([{ text: "" }]);
+        const byFirst = new Map(pairs.map((x) => [x.p, x]));
+        for (const h of headers) {
+          // A labelled header gets its name centred over its box.
+          if (h.label) rows.push([{ text: " ".repeat(Math.max(0, leftW + Math.floor(BOX_W / 2) - Math.floor(h.label.length / 2))) + h.label }]);
+          rows.push([{ text: boxPad + g.tl + edge(board.usbTop ? "USB" : "") + g.tr }]);
+          for (const [first] of h.rows) {
+            const { p, q, lText, rText, lParts, rParts } = byFirst.get(first);
+          const l = model.byPhys[p];
+          const r = model.byPhys[q];
+          rows.push([
+            { text: " ".repeat(leftW - lText.length) },
+            { text: lText, cls: slotClass(l), phys: p, parts: lParts },
+            { text: " " + g.v + " " },
+            { text: mark(p), cls: slotClass(l), phys: p, mark: true, pinType: pinType(p) },
+            { text: " ".repeat(gap) },
+            { text: mark(q), cls: slotClass(r), phys: q, mark: true, pinType: pinType(q) },
+            { text: " " + g.v + " " },
+            { text: rText, cls: slotClass(r), phys: q, parts: rParts },
+            { text: " ".repeat(Math.max(0, rightW - rText.length)) },
+          ]);
+          }
+          rows.push([{ text: boxPad + g.bl + edge("") + g.br }]);
+          rows.push([{ text: "" }]);
+        }
+        // Legend glyphs are marks too, so they get the same one-column cell as the pins.
+        rows.push([
+          { text: centreLine(legend).slice(0, -legend.length) },
+          ...legendParts.flatMap(([glyph, label]) => [{ text: glyph, mark: true }, { text: label }]),
+        ]);
+        return rows;
+      }
+
+      function rowsToText(rows, prefix) {
+        return rows.map((r) => (prefix + r.map((s) => s.text).join("")).trimEnd()).join("\n");
+      }
+
+      // ---------- UI ----------
+
+      const el = {
+        sourceHost: document.getElementById("pinout-combo"),
+        sourceStack: document.getElementById("source-stack"),
+        board: document.getElementById("board-select"),
+
+        clearBtn: document.getElementById("clear-btn"),
+        loadBtn: document.getElementById("load-btn"),
+        stackBtn: document.getElementById("stack-btn"),
+        remoteListBtn: document.getElementById("remote-list-btn"),
+        fileInput: document.getElementById("file-input"),
+        yaml: document.getElementById("yaml-input"),
+        status: document.getElementById("status"),
+        diagram: document.getElementById("diagram"),
+        notes: document.getElementById("notes"),
+        tableBody: document.querySelector("#pin-table tbody"),
+        copyBtn: document.getElementById("copy-btn"),
+        charsUnicode: document.getElementById("chars-unicode"),
+        charsAscii: document.getElementById("chars-ascii"),
+        alignCentre: document.getElementById("align-centre"),
+        alignLeft: document.getElementById("align-left"),
+        pincolCycle: document.getElementById("pincol-cycle"),
+        pinLegend: document.getElementById("pin-legend"),
+        commentNone: document.getElementById("comment-none"),
+        commentHash: document.getElementById("comment-hash"),
+        commentSlash: document.getElementById("comment-slash"),
+        toggleTheme: document.getElementById("toggle-theme-btn"),
+        toggleLicense: document.getElementById("toggle-license-btn"),
+        attributionBlock: document.getElementById("attribution-block"),
+        hostedNote: document.getElementById("hosted-note"),
+      };
+
+      const state = { ascii: false, prefix: "", rows: [], pinned: new Set() };
+      const remoteFiles = {};
+
+      function setStatus(msg, isError) {
+        el.status.textContent = msg;
+        el.status.classList.toggle("error", !!isError);
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      }
+
+      function render() {
+        let model;
+        try {
+          model = buildModel(el.yaml.value, el.board.value);
+        } catch (err) {
+          setStatus("Could not read YAML: " + err.message, true);
+          return;
+        }
+        state.rows = renderHeader(model, { ascii: state.ascii });
+        const centred = el.diagram.classList.contains("centred");
+        const shown = centred ? renderHeader(model, { ascii: state.ascii, symmetric: true }) : state.rows;
+        el.diagram.innerHTML = '<span class="diagram-body">' + shown
+          .map((row) =>
+            row
+              .map((seg) => {
+                const text = seg.parts
+                  ? seg.parts
+                      .map((pt) => (pt.sub && pt.text ? '<span class="pl-' + pt.sub + " pc-" + pt.pinType + '">' + escapeHtml(pt.text) + "</span>" : escapeHtml(pt.text)))
+                      .join("")
+                  : escapeHtml(seg.text);
+                const cls = [seg.cls, seg.mark ? "mk" : "", seg.pinType ? "pc-" + seg.pinType : ""].filter(Boolean).join(" ");
+                if (!cls) return text;
+                return '<span class="' + cls + '"' + (seg.phys ? ' data-phys="' + seg.phys + '"' : "") + ">" + text + "</span>";
+              })
+              .join(""),
+          )
+          .join("\n") + "</span>";
+
+        el.notes.innerHTML = model.notes.map((n) => "<li>" + escapeHtml(n) + "</li>").join("");
+
+        const rows = model.assignments.map((a) => ({
+          cls: model.byPhys[a.phys] && model.byPhys[a.phys].conflict ? "sec-conflict" : a.overridden ? "sec-overridden" : SECTION_CLASS[a.section],
+          key: a.section + "." + a.key,
+          gpio: typeof a.pin === "number" ? (a.chip ? "chip " + a.chip + " line " + a.line : String(a.pin)) : String(a.pin),
+          phys: a.phys,
+          header: a.phys ? physLabel(model.board, a.phys) + (a.how === "comment" ? " (from comment)" : "") : "not placed",
+          note: a.note,
+        }));
+        for (const b of model.bus) {
+          rows.push({ cls: SECTION_CLASS.Bus, key: b.key, gpio: String(b.pin), phys: b.phys, header: physLabel(model.board, b.phys), note: b.note || "kernel driver" });
+        }
+        el.tableBody.innerHTML = rows.length
+          ? rows
+              .map(
+                (r) =>
+                  '<tr data-phys="' + (r.phys || "") + '"><td class="key"><span class="' + r.cls + '">' + escapeHtml(r.key) + "</span></td><td>" +
+                  escapeHtml(r.gpio) + '</td><td class="' + (r.phys ? "" : "muted") + '">' + escapeHtml(r.header) + '</td><td class="muted">' + escapeHtml(r.note || "") + "</td></tr>",
+              )
+              .join("")
+          : '<tr><td colspan="4" class="muted">' +
+            (el.yaml.value.trim()
+              ? "No pin keys found. meshtasticd reads pins from Lora, Display, Touchscreen, Input and GPIO."
+              : "Paste or load a config to see which pins it uses.") +
+            "</td></tr>";
+
+        applyPinned();
+
+        if (!el.yaml.value.trim()) {
+          setStatus("No config: showing the plain header.");
+          return;
+        }
+        const live = model.assignments.filter((a) => !a.overridden);
+        const overridden = model.assignments.length - live.length;
+        const placed = live.filter((a) => a.phys).length;
+        const clashes = Object.values(model.byPhys).filter((s) => s.conflict).length;
+        setStatus(
+          model.docCount + " document" + (model.docCount === 1 ? "" : "s") + ", " + live.length + " pin keys, " + placed + " on the header" +
+            (overridden ? ", " + overridden + " overridden by a later file" : "") +
+            (clashes ? ", " + clashes + " clash" + (clashes === 1 ? "" : "es") : "") + ".",
+          clashes > 0,
+        );
+      }
+
+      function highlight(phys, on) {
+        if (!phys) return;
+        document.querySelectorAll('[data-phys="' + phys + '"]').forEach((n) => n.classList.toggle("hot", on));
+      }
+
+      // Pinned highlights survive re-renders, so editing YAML keeps the pins you are tracking.
+      function applyPinned() {
+        document.querySelectorAll("[data-phys]").forEach((n) => n.classList.toggle("pinned", state.pinned.has(n.dataset.phys)));
+      }
+
+      for (const container of [el.diagram, el.tableBody]) {
+        container.addEventListener("mouseover", (e) => {
+          const t = e.target.closest("[data-phys]");
+          if (t) highlight(t.dataset.phys, true);
+        });
+        container.addEventListener("mouseout", (e) => {
+          const t = e.target.closest("[data-phys]");
+          if (t) highlight(t.dataset.phys, false);
+        });
+        container.addEventListener("click", (e) => {
+          const t = e.target.closest("[data-phys]");
+          if (!t || !t.dataset.phys) return;
+          const phys = t.dataset.phys;
+          if (state.pinned.has(phys)) state.pinned.delete(phys);
+          else state.pinned.add(phys);
+          applyPinned();
+        });
+      }
+
+      function setChoice(buttons, selected) {
+        for (const b of buttons) {
+          b.classList.toggle("selected", b === selected);
+          b.setAttribute("aria-pressed", b === selected ? "true" : "false");
+        }
+      }
+
+      el.charsUnicode.addEventListener("click", () => {
+        state.ascii = false;
+        setChoice([el.charsUnicode, el.charsAscii], el.charsUnicode);
+        render();
+      });
+      el.charsAscii.addEventListener("click", () => {
+        state.ascii = true;
+        setChoice([el.charsUnicode, el.charsAscii], el.charsAscii);
+        render();
+      });
+      el.alignCentre.addEventListener("click", () => {
+        el.diagram.classList.add("centred");
+        setChoice([el.alignCentre, el.alignLeft], el.alignCentre);
+        render();
+      });
+      el.alignLeft.addEventListener("click", () => {
+        el.diagram.classList.remove("centred");
+        setChoice([el.alignCentre, el.alignLeft], el.alignLeft);
+        render();
+      });
+      // Pure CSS switch: the marks always carry their pin-type class, the diagram class turns colour on.
+      const PIN_COLOUR_MODES = [
+        // Each label names only what that step adds; the aria-label spells out the full state.
+        { label: "Off", full: "off", classes: [] },
+        { label: "Pin", full: "pin", classes: ["pin-colours"] },
+        { label: "+ Number", full: "pin and number", classes: ["pin-colours", "pin-num"] },
+        { label: "+ GPIO", full: "pin, number and GPIO name", classes: ["pin-colours", "pin-num", "pin-name"] },
+      ];
+      let pinColourMode = 0;
+
+      function setPinColourMode(i) {
+        pinColourMode = i;
+        const mode = PIN_COLOUR_MODES[i];
+        for (const c of ["pin-colours", "pin-num", "pin-name"]) el.diagram.classList.toggle(c, mode.classes.includes(c));
+        el.pinLegend.hidden = i === 0;
+        el.pincolCycle.textContent = mode.label;
+        el.pincolCycle.classList.toggle("selected", i !== 0);
+        el.pincolCycle.setAttribute("aria-pressed", i !== 0 ? "true" : "false");
+        el.pincolCycle.setAttribute("aria-label", "Pin colours: " + mode.full + ". Activate for " + PIN_COLOUR_MODES[(i + 1) % PIN_COLOUR_MODES.length].full + ".");
+      }
+      el.pincolCycle.addEventListener("click", () => setPinColourMode((pinColourMode + 1) % PIN_COLOUR_MODES.length));
+      setPinColourMode(0);
+
+      for (const [btn, prefix] of [
+        [el.commentNone, ""],
+        [el.commentHash, "# "],
+        [el.commentSlash, "// "],
+      ]) {
+        btn.addEventListener("click", () => {
+          state.prefix = prefix;
+          setChoice([el.commentNone, el.commentHash, el.commentSlash], btn);
+        });
+      }
+
+      el.copyBtn.addEventListener("click", async () => {
+        const text = rowsToText(state.rows, state.prefix);
+        try {
+          await navigator.clipboard.writeText(text);
+          el.copyBtn.textContent = "Copied";
+        } catch (err) {
+          el.copyBtn.textContent = "Copy failed";
+        }
+        setTimeout(() => (el.copyBtn.textContent = "Copy"), 1200);
+      });
+
+      // ---------- Sources ----------
+
+      const remoteList = []; // bin/config.d paths, once fetched
+      const remoteText = {}; // value -> file text, fetched with the list so it can be filtered
+      const boardsOf = {}; // value -> Set of board keys the config is written for
+      const STACK_PLACEHOLDER = "Choose a pinout to stack…";
+
+      // Which drawn boards a config belongs to, from what the file itself says.
+      function boardsForText(text) {
+        const out = new Set();
+        let docs;
+        try {
+          docs = parseYamlDocs(text);
+        } catch (err) {
+          return out;
+        }
+        const compat = [];
+        let ch341 = false;
+        let gpComment = false;
+        for (const d of docs) {
+          const v = d.value || {};
+          if (v.Meta && Array.isArray(v.Meta.compatible)) compat.push(...v.Meta.compatible.map(String));
+          if (v.Lora && v.Lora.spidev === "ch341") ch341 = true;
+          if (Object.values(d.comments).some((c) => /\bGP\d{1,2}\b/.test(c))) gpComment = true;
+        }
+        if (compat.includes("raspberry-pi")) out.add("pi");
+        if (ch341) out.add("ch341");
+        if (gpComment) out.add("pico");
+        if (compat.includes("luckfox-lyra-ultra")) out.add("lyraultra");
+        if (compat.includes("luckfox-lyra-zero-w")) out.add("lyrazero");
+        // The Ultra hat configs list both Ultras, but their numbers are the Lyra's (the hat's
+        // readme says only the Lyra is set up in software), so they count for the Lyra only.
+        if (compat.includes("luckfox-pico-ultra") && !compat.includes("luckfox-lyra-ultra")) out.add("picoultra");
+        if (compat.includes("luckfox-pico-mini")) out.add("picomini");
+        if (compat.includes("rock-2f")) out.add("rock2f");
+        if (compat.includes("bananapi_bpi-r4")) out.add("bpir4");
+        return out;
+      }
+
+      const searchOf = {}; // value -> lower-case text the pinout search matches against
+      const metaOf = {}; // value -> second line shown under each pinout in the list
+
+      // Name, Meta.name, Meta.compatible and radio module: the things people search by.
+      function indexPinout(value, label, text) {
+        const names = [];
+        const compat = [];
+        const parts = [];
+        try {
+          for (const d of parseYamlDocs(text || "")) {
+            const v = d.value || {};
+            if (v.Meta && v.Meta.name) names.push(String(v.Meta.name));
+            if (v.Meta && Array.isArray(v.Meta.compatible)) compat.push(...v.Meta.compatible.map(String));
+            if (v.Lora && v.Lora.Module) parts.push(String(v.Lora.Module));
+            if (v.Display && v.Display.Panel) parts.push(String(v.Display.Panel));
+          }
+        } catch (err) {}
+        searchOf[value] = [label, ...names, ...compat, ...parts].join(" ").toLowerCase();
+        metaOf[value] = [...names.filter((n) => !label.includes(n)), ...parts, compat.join(", ")].filter(Boolean).join(" · ");
+      }
+
+      Object.keys(EXAMPLES).forEach((k) => {
+        boardsOf["example:" + k] = boardsForText(EXAMPLES[k]);
+        indexPinout("example:" + k, k, EXAMPLES[k]);
+      });
+
+      function matchesBoard(value) {
+        const board = el.board.value;
+        return board === "auto" || (boardsOf[value] && boardsOf[value].has(board));
+      }
+
+      // Mark boards with nothing to list, so an empty Pinout dropdown is expected rather than
+      // surprising. Before the GitHub list is loaded only the built-ins count.
+      function updateBoardOptions() {
+        const values = Object.keys(boardsOf);
+        for (const opt of el.board.options) {
+          if (opt.value === "auto") continue;
+          if (!opt.dataset.label) opt.dataset.label = opt.textContent;
+          const has = values.some((v) => boardsOf[v].has(opt.value));
+          opt.textContent = opt.dataset.label + (has ? "" : remoteList.length ? " (no configs)" : " (no built-in configs)");
+        }
+      }
+
+      // ---------- Pinout combobox ----------
+      // A text input that filters its own popup list (WAI-ARIA combobox + listbox): typing
+      // filters, arrows move, Enter picks, Escape closes and restores the current pick.
+
+      function pinoutGroups() {
+        return [
+          ["Built-in examples", Object.keys(EXAMPLES).map((k) => ["example:" + k, k])],
+          ["meshtastic/firmware bin/config.d", remoteList.map((rel) => ["remote:" + rel, rel])],
+        ].map(([label, items]) => [label, items.filter(([value]) => matchesBoard(value))]);
+      }
+
+      function labelOf(value) {
+        return value.replace(/^(example|remote):/, "");
+      }
+
+      // Escaped text with every occurrence of each search term wrapped in <mark>.
+      function markTerms(text, terms) {
+        const lower = text.toLowerCase();
+        const hit = new Array(text.length).fill(false);
+        for (const t of terms) {
+          for (let i = lower.indexOf(t); i >= 0; i = lower.indexOf(t, i + 1)) hit.fill(true, i, i + t.length);
+        }
+        let out = "";
+        let inMark = false;
+        for (let i = 0; i < text.length; i++) {
+          if (hit[i] !== inMark) {
+            out += hit[i] ? "<mark>" : "</mark>";
+            inMark = hit[i];
+          }
+          out += escapeHtml(text[i]);
+        }
+        return out + (inMark ? "</mark>" : "");
+      }
+
+      let comboCount = 0;
+
+      function createCombobox({ host, inputId, placeholder, ariaLabel, onPick }) {
+        const listId = "pinout-list-" + ++comboCount;
+        const wrap = document.createElement("div");
+        wrap.className = "combo";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "combo-input";
+        if (inputId) input.id = inputId;
+        input.placeholder = placeholder;
+        input.autocomplete = "off";
+        input.spellcheck = false;
+        input.setAttribute("role", "combobox");
+        input.setAttribute("aria-autocomplete", "list");
+        input.setAttribute("aria-expanded", "false");
+        input.setAttribute("aria-controls", listId);
+        if (ariaLabel) input.setAttribute("aria-label", ariaLabel);
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "combo-toggle";
+        toggle.tabIndex = -1;
+        toggle.setAttribute("aria-label", "Show pinouts");
+        toggle.textContent = "▾";
+        const list = document.createElement("ul");
+        list.id = listId;
+        list.className = "combo-list";
+        list.setAttribute("role", "listbox");
+        list.hidden = true;
+        wrap.append(input, toggle, list);
+        host.appendChild(wrap);
+
+        const combo = { value: "", label: "", input, wrap };
+        let options = [];
+        let active = -1;
+        let typing = false; // true once the user has typed since opening, so the text is a query
+
+        function terms() {
+          return typing ? input.value.toLowerCase().split(/\s+/).filter(Boolean) : [];
+        }
+
+        function setActive(i) {
+          if (options[active]) options[active].li.classList.remove("active");
+          active = i;
+          if (options[i]) {
+            options[i].li.classList.add("active");
+            input.setAttribute("aria-activedescendant", options[i].li.id);
+            options[i].li.scrollIntoView({ block: "nearest" });
+          } else {
+            input.removeAttribute("aria-activedescendant");
+          }
+        }
+
+        function row(className, text) {
+          const li = document.createElement("li");
+          li.className = className;
+          li.setAttribute("role", "presentation");
+          li.textContent = text;
+          list.appendChild(li);
+        }
+
+        function build() {
+          const t = terms();
+          list.innerHTML = "";
+          options = [];
+          active = -1;
+          const countRow = t.length ? (row("combo-count", ""), list.lastChild) : null;
+          let total = 0;
+          for (const [label, items] of pinoutGroups()) {
+            const hits = items.filter(([value]) => {
+              const hay = searchOf[value] || value.toLowerCase();
+              return t.every((x) => hay.includes(x));
+            });
+            if (!hits.length) continue;
+            row("combo-group", label);
+            for (const [value, text] of hits) {
+              const li = document.createElement("li");
+              li.id = listId + "-" + options.length;
+              li.className = "combo-option";
+              li.setAttribute("role", "option");
+              li.setAttribute("aria-selected", value === combo.value ? "true" : "false");
+              li.innerHTML =
+                '<span class="combo-name">' + markTerms(text, t) + "</span>" +
+                (metaOf[value] ? '<span class="combo-meta">' + markTerms(metaOf[value], t) + "</span>" : "");
+              li.addEventListener("click", () => pick(value));
+              list.appendChild(li);
+              options.push({ value, li });
+            }
+            total += hits.length;
+          }
+          if (countRow) countRow.textContent = total + " match" + (total === 1 ? "" : "es");
+          if (!total) {
+            if (countRow) countRow.remove();
+            row("combo-empty", t.length ? "No pinouts match" : remoteList.length ? "No pinouts for this board" : "No built-in pinouts for this board: load the list from GitHub");
+          }
+          // While typing, the first match is ready for Enter; otherwise start on the current pick.
+          setActive(typing ? (options.length ? 0 : -1) : options.findIndex((o) => o.value === combo.value));
+        }
+
+        function open() {
+          if (!list.hidden) return;
+          list.hidden = false;
+          input.setAttribute("aria-expanded", "true");
+          build();
+        }
+
+        function close(restore) {
+          list.hidden = true;
+          input.setAttribute("aria-expanded", "false");
+          input.removeAttribute("aria-activedescendant");
+          typing = false;
+          if (restore) input.value = combo.label;
+        }
+
+        function pick(value) {
+          combo.set(value);
+          close(false);
+          if (onPick) onPick(value);
+        }
+
+        combo.set = (value) => {
+          combo.value = value || "";
+          combo.label = value ? labelOf(value) : "";
+          input.value = combo.label;
+        };
+        combo.refresh = () => {
+          if (!list.hidden) build();
+        };
+        combo.focus = () => input.focus();
+
+        input.addEventListener("focus", () => input.select());
+        input.addEventListener("click", open);
+        input.addEventListener("input", () => {
+          typing = true;
+          list.hidden = false;
+          input.setAttribute("aria-expanded", "true");
+          build();
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (list.hidden) return open();
+            if (!options.length) return;
+            const step = e.key === "ArrowDown" ? 1 : -1;
+            setActive(active < 0 ? (step > 0 ? 0 : options.length - 1) : (active + step + options.length) % options.length);
+          } else if (e.key === "Enter") {
+            if (!list.hidden && options[active]) {
+              e.preventDefault();
+              pick(options[active].value);
+            }
+          } else if (e.key === "Escape") {
+            if (!list.hidden) {
+              e.preventDefault();
+              close(true);
+              input.select();
+            }
+          }
+        });
+        input.addEventListener("blur", () => close(true));
+        // Clicks inside the popup (options, scrollbar) must not blur the input first.
+        list.addEventListener("mousedown", (e) => e.preventDefault());
+        toggle.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          if (list.hidden) {
+            input.focus();
+            open();
+          } else {
+            close(true);
+          }
+        });
+        return combo;
+      }
+
+      const stackCombos = [];
+
+      function stackSelects() {
+        return [el.source, ...stackCombos];
+      }
+
+      function refreshCombos() {
+        stackSelects().forEach((c) => c.refresh());
+      }
+
+      async function fetchSource(value) {
+        if (value.startsWith("example:")) return EXAMPLES[value.slice(8)];
+        if (remoteText[value] != null) return remoteText[value];
+        const url = remoteFiles[value];
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      }
+
+      // Rebuild the YAML from every chosen source, top to bottom.
+      async function loadStack() {
+        const chosen = stackSelects().filter((c) => c.value);
+        const labels = chosen.map((c) => c.label);
+        try {
+          setStatus("Loading " + labels.join(" + ") + "…");
+          const texts = await Promise.all(chosen.map((c) => fetchSource(c.value)));
+          el.yaml.value = texts.map((t) => t.trimEnd()).join("\n---\n") + "\n";
+          render();
+        } catch (err) {
+          setStatus("Could not load " + labels.join(" + ") + ": " + err.message, true);
+        }
+      }
+
+      function addStackRow() {
+        const n = stackSelects().length + 1;
+        const row = document.createElement("div");
+        row.className = "stack-row";
+        el.sourceStack.appendChild(row);
+        const combo = createCombobox({ host: row, placeholder: STACK_PLACEHOLDER, ariaLabel: "Stacked config " + n, onPick: loadStack });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "action-btn";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", "Remove stacked config " + n);
+        remove.addEventListener("click", () => {
+          row.remove();
+          stackCombos.splice(stackCombos.indexOf(combo), 1);
+          if (combo.value) loadStack();
+        });
+        row.appendChild(remove);
+        stackCombos.push(combo);
+        combo.focus();
+      }
+
+      function clearStackRows() {
+        el.sourceStack.querySelectorAll(".stack-row").forEach((r) => r.remove());
+        stackCombos.length = 0;
+      }
+
+      // The first pinout waits for Load, so picking one never overwrites hand-edited YAML.
+      el.source = createCombobox({
+        host: el.sourceHost,
+        inputId: "pinout-input",
+        placeholder: "Search or pick a pinout…",
+        onPick: (value) => setStatus("Picked " + labelOf(value) + ": press Load to show it, or Stack another to add a second pinout."),
+      });
+      updateBoardOptions();
+      el.loadBtn.addEventListener("click", loadStack);
+      el.stackBtn.addEventListener("click", addStackRow);
+
+      async function listDir(path) {
+        const res = await fetch("https://api.github.com/repos/meshtastic/firmware/contents/" + path);
+        if (!res.ok) throw new Error(res.status === 403 ? "GitHub rate limit hit, try again later" : "HTTP " + res.status);
+        const items = await res.json();
+        const out = [];
+        for (const it of items) {
+          if (it.type === "file" && /\.ya?ml$/.test(it.name)) out.push(it);
+          else if (it.type === "dir") out.push(...(await listDir(it.path)));
+        }
+        return out;
+      }
+
+      el.remoteListBtn.addEventListener("click", async () => {
+        el.remoteListBtn.disabled = true;
+        setStatus("Listing meshtastic/firmware bin/config.d…");
+        try {
+          const files = await listDir("bin/config.d");
+          files.sort((a, b) => a.path.localeCompare(b.path));
+          // Read every file now: the board filter needs each one's Meta.compatible.
+          setStatus("Reading " + files.length + " configs…");
+          const texts = await Promise.all(
+            files.map((f) =>
+              fetch(f.download_url)
+                .then((r) => (r.ok ? r.text() : null))
+                .catch(() => null),
+            ),
+          );
+          remoteList.length = 0;
+          files.forEach((f, i) => {
+            const rel = f.path.replace(/^bin\/config\.d\//, "");
+            const value = "remote:" + rel;
+            remoteFiles[value] = f.download_url;
+            if (texts[i] != null) remoteText[value] = texts[i];
+            boardsOf[value] = texts[i] != null ? boardsForText(texts[i]) : new Set();
+            indexPinout(value, rel, texts[i]);
+            remoteList.push(rel);
+          });
+          refreshCombos();
+          updateBoardOptions();
+          const unread = texts.filter((t) => t == null).length;
+          setStatus(
+            files.length + " configs listed" + (unread ? " (" + unread + " could not be read, so show only under Auto)" : "") + ". Pick one and Load, or Stack another.",
+            unread > 0,
+          );
+          el.remoteListBtn.textContent = "List loaded";
+        } catch (err) {
+          setStatus("Could not list configs: " + err.message, true);
+          el.remoteListBtn.disabled = false;
+        }
+      });
+
+      el.fileInput.addEventListener("change", async () => {
+        const files = Array.from(el.fileInput.files || []);
+        if (!files.length) return;
+        const texts = await Promise.all(files.map((f) => f.text()));
+        el.yaml.value = texts.map((t) => t.trimEnd()).join("\n---\n") + "\n";
+        el.fileInput.value = "";
+        render();
+      });
+
+      let debounce = null;
+      el.yaml.addEventListener("input", () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(render, 150);
+      });
+
+      // ---------- Theme and license ----------
+
+      const THEME_STORAGE_KEY = "nomdetom-theme-mode";
+      const autoThemeMediaQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+      let themeMode = "auto";
+
+      function getStoredThemeMode() {
+        try {
+          const stored = localStorage.getItem(THEME_STORAGE_KEY);
+          if (stored === "light" || stored === "dark" || stored === "auto") return stored;
+        } catch (err) {}
+        return "auto";
+      }
+
+      function applyThemeMode(mode, shouldPersist) {
+        themeMode = mode === "light" || mode === "dark" ? mode : "auto";
+        const resolved = themeMode === "auto" ? (autoThemeMediaQuery && autoThemeMediaQuery.matches ? "dark" : "light") : themeMode;
+        document.documentElement.setAttribute("data-theme", resolved);
+        el.toggleTheme.textContent = "Theme: " + themeMode.charAt(0).toUpperCase() + themeMode.slice(1);
+        el.toggleTheme.setAttribute("aria-label", "Theme mode " + themeMode + ". Activate to switch mode.");
+        if (shouldPersist) {
+          try {
+            localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+          } catch (err) {}
+        }
+      }
+
+      el.toggleTheme.addEventListener("click", () => {
+        applyThemeMode(themeMode === "light" ? "dark" : themeMode === "dark" ? "auto" : "light", true);
+      });
+
+      if (autoThemeMediaQuery && autoThemeMediaQuery.addEventListener) {
+        autoThemeMediaQuery.addEventListener("change", () => {
+          if (themeMode === "auto") applyThemeMode("auto", false);
+        });
+      }
+
+      el.toggleLicense.addEventListener("click", () => {
+        const expanded = el.toggleLicense.getAttribute("aria-expanded") === "true";
+        el.toggleLicense.setAttribute("aria-expanded", expanded ? "false" : "true");
+        el.toggleLicense.textContent = expanded ? "Show license" : "Hide license";
+        el.attributionBlock.hidden = expanded;
+      });
+
+      if (location.protocol === "file:") el.hostedNote.hidden = true;
+
+      // Empty config: the plain header with nothing highlighted. View options are left alone.
+      // The board filters the pinout lists. If the chosen pinout is filtered out, the first
+      // match for the new board is loaded so the map and the dropdown agree.
+      el.board.addEventListener("change", () => {
+        state.pinned.clear();
+        refreshCombos();
+        // Stacked rows keep their picks; the first pinout follows the board.
+        if (!el.source.value || matchesBoard(el.source.value)) return render();
+        const first = pinoutGroups().flatMap(([, items]) => items)[0];
+        if (!first) return render();
+        el.source.set(first[0]);
+        loadStack();
+      });
+
+      el.clearBtn.addEventListener("click", () => {
+        state.pinned.clear();
+        clearStackRows();
+        el.yaml.value = "";
+        render();
+      });
+
+      applyThemeMode(getStoredThemeMode(), false);
+      el.source.set("example:" + Object.keys(EXAMPLES)[0]);
+      el.yaml.value = EXAMPLES[Object.keys(EXAMPLES)[0]];
+      render();
+    </script>
+  </body>
+</html>
