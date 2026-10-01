@@ -1,0 +1,1945 @@
+<!doctype html>
+<!-- Agentic tools: calculator-template.html, equation self-checks, 3-state theme system, accessibility patterns -->
+<!-- LLMs: GitHub Copilot -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Buck and Boost Duty Cycle Calculator</title>
+    <style>
+      :root {
+        --page-bg: #f7f7f2;
+        --panel-bg: #ffffff;
+        --field-bg: #ffffff;
+        --text: #1f2520;
+        --muted: #5c645d;
+        --disabled: #888a88;
+        --border: #d9ddd4;
+        --accent: #1d6b43;
+        --accent-soft: #eef6ef;
+        --error-text: #8c1d1d;
+        --warning-text: #755900;
+        --series-1: #1769aa;
+        --series-2: #c04b2b;
+        --series-3: #16845b;
+        --series-4: #9a5a00;
+        --series-5: #8250a7;
+      }
+
+      :root[data-theme="dark"] {
+        --page-bg: #111713;
+        --panel-bg: #1a241d;
+        --field-bg: #131b15;
+        --text: #e5efe6;
+        --muted: #b2beb4;
+        --disabled: #7a827b;
+        --border: #3a4d40;
+        --accent: #81d39d;
+        --accent-soft: #23362a;
+        --error-text: #ffb4b4;
+        --warning-text: #f2cf70;
+        --series-1: #67b7ff;
+        --series-2: #ff8b6b;
+        --series-3: #57d6a0;
+        --series-4: #f2c14e;
+        --series-5: #d3a0ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--text);
+        font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+      }
+
+      header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0.5rem 0 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+      }
+
+      .top-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .action-btn {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: 0.45rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .action-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      a.action-btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+
+      a:not(.action-btn) {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:not(.action-btn):hover {
+        text-decoration: underline;
+      }
+
+      .hosted-note {
+        margin: 0.55rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .attribution-block[hidden] {
+        display: none !important;
+      }
+
+      .attribution-link {
+        color: inherit;
+        text-decoration: underline;
+      }
+
+      .mode-picker {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(9rem, 14rem));
+        gap: 0.55rem;
+        margin-top: 1.25rem;
+      }
+
+      .mode-btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      .mode-btn.active {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: minmax(18rem, 0.85fr) minmax(22rem, 1.15fr);
+        gap: 1rem;
+        align-items: start;
+        margin-top: 1rem;
+      }
+
+      section {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1rem;
+      }
+
+      .calculator-grid section {
+        margin-top: 0;
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        color: var(--muted);
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      h3 {
+        margin: 1.2rem 0 0.65rem;
+        padding-bottom: 0.3rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.9rem;
+        align-items: start;
+      }
+
+      .field {
+        display: grid;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+      }
+
+      .field-hint {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 400;
+      }
+
+      .input-with-unit {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-width: 0;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid var(--border);
+        border-radius: 0;
+        background: var(--field-bg);
+        color: var(--text);
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-color: var(--accent);
+      }
+
+      .unit-tag {
+        display: flex;
+        align-items: center;
+        min-width: 3.25rem;
+        padding: 0 0.7rem;
+        border: 1px solid var(--border);
+        border-left: 0;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .mode-banner {
+        margin-bottom: 1rem;
+        padding: 0.7rem 0.85rem;
+        border: 1px solid var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .mode-banner.invalid {
+        border-color: var(--error-text);
+        background: transparent;
+      }
+
+      .mode-name {
+        display: block;
+        font-weight: 700;
+      }
+
+      .mode-detail {
+        display: block;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .messages {
+        display: grid;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .messages:empty {
+        display: none;
+      }
+
+      .message {
+        padding: 0.55rem 0.7rem;
+        border: 1px solid;
+        font-size: 0.88rem;
+      }
+
+      .message.error {
+        border-color: var(--error-text);
+        color: var(--error-text);
+      }
+
+      .message.warning {
+        border-color: var(--warning-text);
+        color: var(--warning-text);
+      }
+
+      .results {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 1rem;
+      }
+
+      .result[hidden] {
+        display: none !important;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: baseline;
+        column-gap: 1rem;
+        padding: 0.8rem 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .result:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result:nth-child(2) {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .result-label {
+        color: var(--muted);
+      }
+
+      .result-equation {
+        display: block;
+        font-family: "Courier New", monospace;
+        font-size: 0.78rem;
+      }
+
+      .result-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        text-align: left;
+      }
+
+      .result.primary .result-value {
+        color: var(--accent);
+        font-size: 1.45rem;
+      }
+
+      .result-detail {
+        grid-column: 1;
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: left;
+      }
+
+      .status-pill {
+        display: inline-block;
+        padding: 0.1rem 0.35rem;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .status-pill.warning {
+        border-color: var(--warning-text);
+        color: var(--warning-text);
+      }
+
+      .formula-note {
+        display: grid;
+        gap: 0.4rem;
+        margin: 0.75rem 0 0;
+        padding: 0.8rem 0.9rem;
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .formula-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      .formula-table th,
+      .formula-table td {
+        padding: 0.5rem 0.6rem;
+        border: 1px solid var(--border);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .formula-table th {
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .formula-table code {
+        font-family: "Courier New", monospace;
+        white-space: normal;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      .caveat {
+        margin: 0.9rem 0 0;
+        padding: 0.7rem 0.85rem;
+        border-left: 3px solid var(--accent);
+        background: var(--accent-soft);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .caveat strong {
+        color: var(--text);
+      }
+
+      .sweep-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .sweep-heading h2 {
+        margin: 0;
+      }
+
+      .sweep-cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .sweep-card {
+        min-width: 0;
+        margin: 0;
+      }
+
+      .sweep-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .sweep-card-title {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .sweep-card-actions {
+        display: flex;
+        gap: 0.45rem;
+        flex: 0 0 auto;
+      }
+
+      .swap-sweep-btn,
+      .remove-sweep-btn {
+        flex: 0 0 auto;
+        padding: 0.3rem 0.55rem;
+        font-size: 0.78rem;
+      }
+
+      .sweep-controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 0.75rem;
+      }
+
+      .sweep-controls .field {
+        margin-bottom: 0.75rem;
+      }
+
+      .sweep-chart-wrap {
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        overflow-x: auto;
+      }
+
+      .sweep-chart {
+        display: block;
+        width: 100%;
+        aspect-ratio: 760 / 360;
+        color: var(--muted);
+      }
+
+      .chart-axis {
+        stroke: var(--muted);
+        stroke-width: 1;
+      }
+
+      .chart-grid {
+        stroke: var(--border);
+        stroke-width: 1;
+      }
+
+      .chart-series {
+        fill: none;
+        stroke-width: 2.5;
+        vector-effect: non-scaling-stroke;
+      }
+
+      .chart-series-1 { stroke: var(--series-1); }
+      .chart-series-2 { stroke: var(--series-2); }
+      .chart-series-3 { stroke: var(--series-3); }
+      .chart-series-4 { stroke: var(--series-4); }
+      .chart-series-5 { stroke: var(--series-5); }
+
+      .chart-hover-line {
+        stroke: var(--text);
+        stroke-width: 1;
+        stroke-dasharray: 4 3;
+        pointer-events: none;
+      }
+
+      .chart-hover-overlay {
+        pointer-events: none;
+      }
+
+      .chart-hover-dot {
+        stroke: var(--field-bg);
+        stroke-width: 2;
+        vector-effect: non-scaling-stroke;
+        pointer-events: none;
+      }
+
+      .chart-hover-dot-1 { fill: var(--series-1); }
+      .chart-hover-dot-2 { fill: var(--series-2); }
+      .chart-hover-dot-3 { fill: var(--series-3); }
+      .chart-hover-dot-4 { fill: var(--series-4); }
+      .chart-hover-dot-5 { fill: var(--series-5); }
+
+      .chart-tooltip-bg {
+        fill: var(--panel-bg);
+        stroke: var(--border);
+        stroke-width: 1;
+      }
+
+      .chart-tooltip-title {
+        fill: var(--text);
+        font-weight: 700;
+        font-size: 12px;
+      }
+
+      .chart-tooltip-value {
+        fill: var(--text);
+        font-size: 11px;
+      }
+
+      .sweep-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 0.8rem;
+        min-height: 2rem;
+        margin-top: 0.65rem;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .legend-line {
+        width: 1.4rem;
+        height: 0;
+        border-top: 3px solid;
+      }
+
+      .legend-line-1 { border-color: var(--series-1); }
+      .legend-line-2 { border-color: var(--series-2); }
+      .legend-line-3 { border-color: var(--series-3); }
+      .legend-line-4 { border-color: var(--series-4); }
+      .legend-line-5 { border-color: var(--series-5); }
+
+      .sweep-status {
+        min-height: 1.3rem;
+        margin: 0.45rem 0 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .sweep-status.error {
+        color: var(--error-text);
+      }
+
+      .page-footer {
+        width: min(100%, 96rem);
+        margin: 0 auto;
+        padding: 0.75rem 1rem 2rem;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-align: center;
+      }
+
+      @media (max-width: 800px) {
+        .calculator-grid,
+        .sweep-cards {
+          grid-template-columns: 1fr;
+        }
+
+        .sweep-chart {
+          min-width: 47.5rem;
+        }
+      }
+
+      @media (max-width: 560px) {
+        main {
+          padding: 1.25rem 0.9rem 2rem;
+        }
+
+        .mode-picker,
+        .two-col-fields,
+        .sweep-controls,
+        .results {
+          grid-template-columns: 1fr;
+        }
+
+        .result:nth-child(2) {
+          border-top: 1px solid var(--border);
+          padding-top: 0.8rem;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .result-value,
+        .result-detail {
+          grid-column: 1;
+          text-align: left;
+        }
+      }
+    </style>
+    <link rel="stylesheet" href="directory-override.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Buck and Boost Duty Cycle Calculator</h1>
+        <p class="subtitle">
+          Generic ideal CCM duty cycle, ripple, and component-current estimates
+          for non-isolated buck and boost converters.
+        </p>
+        <div class="top-actions">
+          <a class="action-btn" href="index.html">Back to index</a>
+          <button
+            id="toggle-theme-btn"
+            class="action-btn"
+            type="button"
+            aria-pressed="false"
+          >
+            Theme: Auto
+          </button>
+          <button
+            id="toggle-license-btn"
+            class="action-btn"
+            type="button"
+            aria-expanded="false"
+          >
+            Show license
+          </button>
+        </div>
+        <div id="attribution-block" class="attribution-block" hidden>
+          <p class="hosted-note">
+            Equations follow the ideal steady-state CCM models in Robert W.
+            Erickson and Dragan Maksimovic, <cite>Fundamentals of Power
+            Electronics</cite>, 3rd edition, Springer, 2020. RMS expressions
+            integrate the corresponding rectangular-gated triangular inductor
+            current waveforms.
+          </p>
+          <p class="hosted-note">
+            CC BY-SA 4.0 &bull; By NomDeTom &bull;
+            <a
+              class="attribution-link"
+              href="https://github.com/nomdetom/nomdetom.github.io"
+              >GitHub repo</a
+            >
+            &bull;
+            <a class="attribution-link" href="https://buymeacoffee.com/nomdetom"
+              >Buy me a coffee</a
+            >
+          </p>
+        </div>
+        <div class="mode-picker" role="tablist" aria-label="Converter topology">
+          <button
+            id="buck-mode-btn"
+            class="action-btn mode-btn active"
+            type="button"
+            role="tab"
+            aria-selected="true"
+          >
+            Buck
+          </button>
+          <button
+            id="boost-mode-btn"
+            class="action-btn mode-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+          >
+            Boost
+          </button>
+        </div>
+      </header>
+
+      <div class="calculator-grid">
+        <section>
+          <h2>Operating point</h2>
+          <form id="calculator-form">
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-vin">
+                  V<sub>IN</sub> &mdash; input voltage
+                </label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-vin"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="any"
+                    value="12"
+                  />
+                  <span class="unit-tag">V</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="input-vout">
+                  V<sub>OUT</sub> &mdash; output voltage
+                </label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-vout"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="any"
+                    value="5"
+                  />
+                  <span class="unit-tag">V</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="input-iout">
+                I<sub>OUT</sub> &mdash; output current
+                <span class="field-hint"
+                  >Average load current at the stated output voltage.</span
+                >
+              </label>
+              <div class="input-with-unit">
+                <input
+                  id="input-iout"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="any"
+                  value="2"
+                />
+                <span class="unit-tag">A</span>
+              </div>
+            </div>
+
+            <h3>Switching stage</h3>
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-frequency">Switching frequency</label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-frequency"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="any"
+                    value="500"
+                  />
+                  <span class="unit-tag">kHz</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="input-inductance">Inductance</label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-inductance"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="any"
+                    value="10"
+                  />
+                  <span class="unit-tag">&micro;H</span>
+                </div>
+              </div>
+            </div>
+
+            <h3>Output capacitor</h3>
+            <div class="two-col-fields">
+              <div class="field">
+                <label for="input-capacitance">
+                  Effective capacitance
+                  <span class="field-hint">Use the DC-biased value.</span>
+                </label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-capacitance"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="any"
+                    value="47"
+                  />
+                  <span class="unit-tag">&micro;F</span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="input-esr">
+                  ESR
+                  <span class="field-hint">Set to zero for ideal.</span>
+                </label>
+                <div class="input-with-unit">
+                  <input
+                    id="input-esr"
+                    type="number"
+                    inputmode="decimal"
+                    min="0"
+                    step="any"
+                    value="10"
+                  />
+                  <span class="unit-tag">m&Omega;</span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <section>
+          <h2>Results</h2>
+          <div id="mode-banner" class="mode-banner" role="status" aria-live="polite">
+            <span id="mode-name" class="mode-name">Buck mode</span>
+            <span id="mode-detail" class="mode-detail">VOUT is below VIN</span>
+          </div>
+          <div id="messages" class="messages" role="alert"></div>
+
+          <div class="results">
+            <div class="result primary">
+              <span class="result-label">
+                Duty cycle
+                <span id="duty-equation" class="result-equation">D = VOUT / VIN</span>
+              </span>
+              <span id="out-duty" class="result-value">&mdash;</span>
+              <span id="out-period" class="result-detail"></span>
+            </div>
+            <div class="result">
+              <span class="result-label">
+                Average inductor current
+                <span id="il-equation" class="result-equation">IL(avg) = IOUT</span>
+              </span>
+              <span id="out-il-avg" class="result-value">&mdash;</span>
+            </div>
+            <div class="result">
+              <span class="result-label">
+                Inductor ripple current
+                <span id="ripple-equation" class="result-equation"></span>
+              </span>
+              <span id="out-ripple" class="result-value">&mdash;</span>
+              <span id="out-ripple-detail" class="result-detail"></span>
+            </div>
+            <div class="result">
+              <span class="result-label">Inductor minimum / peak</span>
+              <span id="out-il-range" class="result-value">&mdash;</span>
+              <span id="out-ccm" class="result-detail"></span>
+            </div>
+            <div class="result">
+              <span class="result-label">
+                Main switch current
+                <span class="result-equation">average / RMS / peak</span>
+              </span>
+              <span id="out-switch-current" class="result-value">&mdash;</span>
+            </div>
+            <div class="result">
+              <span class="result-label">
+                Rectifier current
+                <span class="result-equation">average / RMS / peak</span>
+              </span>
+              <span id="out-rectifier-current" class="result-value">&mdash;</span>
+            </div>
+            <div class="result">
+              <span class="result-label">Output capacitor RMS current</span>
+              <span id="out-cap-rms" class="result-value">&mdash;</span>
+            </div>
+            <div id="input-cap-row" class="result">
+              <span class="result-label">Buck input capacitor RMS current</span>
+              <span id="out-input-cap-rms" class="result-value">&mdash;</span>
+            </div>
+            <div class="result">
+              <span class="result-label">
+                Estimated output ripple
+                <span class="result-equation">capacitive + ESR contribution</span>
+              </span>
+              <span id="out-voltage-ripple" class="result-value">&mdash;</span>
+              <span id="out-voltage-ripple-detail" class="result-detail"></span>
+            </div>
+            <div class="result">
+              <span class="result-label">Critical inductance at this load</span>
+              <span id="out-critical-inductance" class="result-value">&mdash;</span>
+              <span class="result-detail">Boundary between CCM and DCM in the ideal model</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section aria-labelledby="sweep-heading">
+        <div class="sweep-heading">
+          <div>
+            <h2 id="sweep-heading">Operating-range charts</h2>
+            <p class="subtitle">
+              Sweep one variable along the X axis and a second variable across
+              five traces. Other values come from the operating point above.
+            </p>
+          </div>
+          <button id="add-sweep-btn" class="action-btn" type="button">
+            Add chart
+          </button>
+        </div>
+        <div id="sweep-cards" class="sweep-cards" aria-live="polite"></div>
+      </section>
+
+      <section>
+        <h2>Equation reference</h2>
+        <div class="table-scroll">
+          <table class="formula-table">
+            <thead>
+              <tr>
+                <th scope="col">Quantity</th>
+                <th scope="col">Buck</th>
+                <th scope="col">Boost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Duty cycle</td>
+                <td><code>D = VOUT / VIN</code></td>
+                <td><code>D = 1 - VIN / VOUT</code></td>
+              </tr>
+              <tr>
+                <td>Average inductor current</td>
+                <td><code>IL = IOUT</code></td>
+                <td><code>IL = IOUT / (1 - D)</code></td>
+              </tr>
+              <tr>
+                <td>Inductor ripple, peak-to-peak</td>
+                <td><code>&Delta;IL = (VIN - VOUT) D / (L fSW)</code></td>
+                <td><code>&Delta;IL = VIN D / (L fSW)</code></td>
+              </tr>
+              <tr>
+                <td>Switch RMS current</td>
+                <td colspan="2">
+                  <code>ISW(rms) = sqrt(D (IL&sup2; + &Delta;IL&sup2; / 12))</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Rectifier RMS current</td>
+                <td colspan="2">
+                  <code>IRECT(rms) = sqrt((1 - D) (IL&sup2; + &Delta;IL&sup2; / 12))</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Output capacitor RMS current</td>
+                <td><code>ICOUT(rms) = &Delta;IL / (2 sqrt(3))</code></td>
+                <td>
+                  <code>ICOUT(rms)&sup2; = IOUT&sup2; D / (1 - D) + (1 - D) &Delta;IL&sup2; / 12</code>
+                </td>
+              </tr>
+              <tr>
+                <td>Capacitive output ripple</td>
+                <td><code>&Delta;V = &Delta;IL / (8 fSW COUT)</code></td>
+                <td><code>&Delta;V = IOUT D / (fSW COUT)</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="formula-note">
+          <span><strong>Assumptions:</strong> ideal conversion ratio, steady state, continuous conduction, triangular inductor ripple, constant load current, and negligible switching dead time.</span>
+          <span><strong>RMS convention:</strong> switch and rectifier values include the triangular ripple term, not only the common square-root duty approximation.</span>
+        </p>
+        <p class="caveat">
+          <strong>These are first-pass component stresses, not final ratings.</strong>
+          Semiconductor voltage stress, switching overshoot, losses, thermal limits,
+          control-loop stability, core loss, inductor saturation tolerance, capacitor
+          bias derating, and transient margin still need to be checked against the
+          chosen topology and parts. A synchronous MOSFET carries the current shown
+          as rectifier current.
+        </p>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      Last updated: <time datetime="2026-10-01">1 October 2026</time>
+    </footer>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var toggleThemeButton = document.getElementById("toggle-theme-btn");
+        var toggleLicenseButton = document.getElementById("toggle-license-btn");
+        var attributionBlock = document.getElementById("attribution-block");
+        var buckModeButton = document.getElementById("buck-mode-btn");
+        var boostModeButton = document.getElementById("boost-mode-btn");
+        var form = document.getElementById("calculator-form");
+        var messages = document.getElementById("messages");
+        var sweepCards = document.getElementById("sweep-cards");
+        var addSweepButton = document.getElementById("add-sweep-btn");
+        var autoThemeMediaQuery = window.matchMedia
+          ? window.matchMedia("(prefers-color-scheme: dark)")
+          : null;
+        var themeMode = "auto";
+        var mode = "buck";
+        var sweepCardCount = 0;
+        var THEME_STORAGE_KEY = "nomdetom-theme-mode";
+
+        function byId(id) {
+          return document.getElementById(id);
+        }
+
+        function getStoredThemeMode() {
+          var stored = localStorage.getItem(THEME_STORAGE_KEY);
+          return stored === "light" || stored === "dark" || stored === "auto"
+            ? stored
+            : "auto";
+        }
+
+        function getResolvedTheme(value) {
+          if (value === "auto") {
+            return autoThemeMediaQuery && autoThemeMediaQuery.matches
+              ? "dark"
+              : "light";
+          }
+          return value;
+        }
+
+        function applyTheme(value, persist) {
+          themeMode = value;
+          document.documentElement.setAttribute(
+            "data-theme",
+            getResolvedTheme(value),
+          );
+          toggleThemeButton.textContent =
+            "Theme: " + value.charAt(0).toUpperCase() + value.slice(1);
+          if (persist) localStorage.setItem(THEME_STORAGE_KEY, value);
+        }
+
+        function nextTheme(value) {
+          if (value === "light") return "dark";
+          if (value === "dark") return "auto";
+          return "light";
+        }
+
+        toggleThemeButton.addEventListener("click", function () {
+          applyTheme(nextTheme(themeMode), true);
+        });
+
+        if (autoThemeMediaQuery) {
+          var handleAutoThemeChange = function () {
+            if (themeMode === "auto") applyTheme("auto", false);
+          };
+          if (autoThemeMediaQuery.addEventListener) {
+            autoThemeMediaQuery.addEventListener("change", handleAutoThemeChange);
+          } else if (autoThemeMediaQuery.addListener) {
+            autoThemeMediaQuery.addListener(handleAutoThemeChange);
+          }
+        }
+
+        toggleLicenseButton.addEventListener("click", function () {
+          var isHidden = attributionBlock.hasAttribute("hidden");
+          attributionBlock.toggleAttribute("hidden", !isHidden);
+          toggleLicenseButton.textContent = isHidden
+            ? "Hide license"
+            : "Show license";
+          toggleLicenseButton.setAttribute(
+            "aria-expanded",
+            isHidden ? "true" : "false",
+          );
+        });
+
+        function readNumber(id) {
+          return Number(byId(id).value);
+        }
+
+        function readInputs() {
+          return {
+            vin: readNumber("input-vin"),
+            vout: readNumber("input-vout"),
+            iout: readNumber("input-iout"),
+            frequency: readNumber("input-frequency") * 1000,
+            inductance: readNumber("input-inductance") * 1e-6,
+            capacitance: readNumber("input-capacitance") * 1e-6,
+            esr: readNumber("input-esr") * 1e-3,
+          };
+        }
+
+        function calculateStage(selectedMode, input) {
+          var duty =
+            selectedMode === "buck"
+              ? input.vout / input.vin
+              : 1 - input.vin / input.vout;
+          var ilAverage =
+            selectedMode === "buck"
+              ? input.iout
+              : input.iout / (1 - duty);
+          var rippleCurrent =
+            selectedMode === "buck"
+              ? ((input.vin - input.vout) * duty) /
+                (input.inductance * input.frequency)
+              : (input.vin * duty) /
+                (input.inductance * input.frequency);
+          var ilMinimum = ilAverage - rippleCurrent / 2;
+          var ilPeak = ilAverage + rippleCurrent / 2;
+          var currentMeanSquare =
+            ilAverage * ilAverage +
+            (rippleCurrent * rippleCurrent) / 12;
+          var switchAverage = duty * ilAverage;
+          var switchRms = Math.sqrt(duty * currentMeanSquare);
+          var rectifierAverage = (1 - duty) * ilAverage;
+          var rectifierRms = Math.sqrt((1 - duty) * currentMeanSquare);
+          var outputCapRms;
+          var inputCapRms = null;
+          var capacitiveRipple;
+          var esrRipple;
+
+          if (selectedMode === "buck") {
+            outputCapRms = rippleCurrent / (2 * Math.sqrt(3));
+            inputCapRms = Math.sqrt(
+              duty * (1 - duty) * ilAverage * ilAverage +
+                (duty * rippleCurrent * rippleCurrent) / 12,
+            );
+            capacitiveRipple =
+              rippleCurrent / (8 * input.frequency * input.capacitance);
+            esrRipple = rippleCurrent * input.esr;
+          } else {
+            outputCapRms = Math.sqrt(
+              (input.iout * input.iout * duty) / (1 - duty) +
+                ((1 - duty) * rippleCurrent * rippleCurrent) / 12,
+            );
+            capacitiveRipple =
+              (input.iout * duty) / (input.frequency * input.capacitance);
+            esrRipple = ilPeak * input.esr;
+          }
+
+          return {
+            duty: duty,
+            period: 1 / input.frequency,
+            ilAverage: ilAverage,
+            rippleCurrent: rippleCurrent,
+            ilMinimum: ilMinimum,
+            ilPeak: ilPeak,
+            switchAverage: switchAverage,
+            switchRms: switchRms,
+            rectifierAverage: rectifierAverage,
+            rectifierRms: rectifierRms,
+            outputCapRms: outputCapRms,
+            inputCapRms: inputCapRms,
+            capacitiveRipple: capacitiveRipple,
+            esrRipple: esrRipple,
+            totalRipple: capacitiveRipple + esrRipple,
+            criticalInductance:
+              input.inductance * rippleCurrent / (2 * ilAverage),
+          };
+        }
+
+        var SWEEP_VARIABLES = {
+          vin: { label: "Input voltage", shortLabel: "VIN", unit: "V", scale: 1 },
+          vout: { label: "Output voltage", shortLabel: "VOUT", unit: "V", scale: 1 },
+          iout: { label: "Output current", shortLabel: "IOUT", unit: "A", scale: 1 },
+          frequency: { label: "Switching frequency", shortLabel: "fSW", unit: "kHz", scale: 1000 },
+          inductance: { label: "Inductance", shortLabel: "L", unit: "uH", scale: 1e-6 },
+          capacitance: { label: "Output capacitance", shortLabel: "COUT", unit: "uF", scale: 1e-6 },
+          esr: { label: "Capacitor ESR", shortLabel: "ESR", unit: "mOhm", scale: 1e-3 },
+        };
+
+        var SWEEP_METRICS = {
+          duty: { label: "Duty cycle", unit: "%", scale: 100 },
+          rippleCurrent: { label: "Inductor ripple", unit: "A p-p", scale: 1 },
+          ilPeak: { label: "Peak inductor current", unit: "A", scale: 1 },
+          switchRms: { label: "Switch RMS current", unit: "A", scale: 1 },
+          rectifierRms: { label: "Rectifier RMS current", unit: "A", scale: 1 },
+          outputCapRms: { label: "Output capacitor RMS current", unit: "A", scale: 1 },
+          totalRipple: { label: "Output voltage ripple", unit: "mV p-p", scale: 1000 },
+          criticalInductance: { label: "Critical inductance", unit: "uH", scale: 1e6 },
+        };
+
+        function selectOptions(items, selectedKey) {
+          return Object.keys(items)
+            .map(function (key) {
+              return (
+                '<option value="' + key + '"' +
+                (key === selectedKey ? " selected" : "") +
+                ">" + items[key].label + "</option>"
+              );
+            })
+            .join("");
+        }
+
+        function displayValueForVariable(key, value) {
+          return value / SWEEP_VARIABLES[key].scale;
+        }
+
+        function baseRangeForVariable(key, base) {
+          var value = displayValueForVariable(key, base[key]);
+          if (key === "vin") {
+            if (mode === "buck") {
+              return [
+                Math.max(displayValueForVariable("vout", base.vout) * 1.05, value * 0.6),
+                value * 1.5,
+              ];
+            }
+            return [value * 0.5, Math.min(displayValueForVariable("vout", base.vout) * 0.95, value * 1.5)];
+          }
+          if (key === "vout") {
+            if (mode === "buck") {
+              return [value * 0.5, Math.min(displayValueForVariable("vin", base.vin) * 0.95, value * 1.5)];
+            }
+            return [
+              Math.max(displayValueForVariable("vin", base.vin) * 1.05, value * 0.6),
+              value * 1.5,
+            ];
+          }
+          if (key === "esr") return [0, Math.max(value * 2, 1)];
+          return [Math.max(value * 0.25, value > 0 ? value * 0.1 : 0.1), Math.max(value * 1.5, 1)];
+        }
+
+        function setSweepInput(input, key, displayValue) {
+          input[key] = displayValue * SWEEP_VARIABLES[key].scale;
+        }
+
+        function isValidSweepPoint(input, result) {
+          var required = [
+            input.vin,
+            input.vout,
+            input.iout,
+            input.frequency,
+            input.inductance,
+            input.capacitance,
+          ];
+          if (required.some(function (value) { return !Number.isFinite(value) || value <= 0; })) return false;
+          if (!Number.isFinite(input.esr) || input.esr < 0) return false;
+          if (mode === "buck" ? input.vout >= input.vin : input.vout <= input.vin) return false;
+          return (
+            Number.isFinite(result.duty) &&
+            result.duty > 0 &&
+            result.duty < 1 &&
+            Number.isFinite(result.ilMinimum) &&
+            result.ilMinimum > 0
+          );
+        }
+
+        function formatAxisValue(value) {
+          var absolute = Math.abs(value);
+          if (absolute >= 10000 || (absolute > 0 && absolute < 0.01)) {
+            return value.toExponential(2);
+          }
+          return formatNumber(value, 4);
+        }
+
+        function clearSweepHover(card) {
+          var overlay = card.querySelector(".chart-hover-overlay");
+          if (overlay) overlay.remove();
+        }
+
+        function showSweepHover(card, event) {
+          var plot = card._sweepPlot;
+          if (!plot) return;
+          var svg = card.querySelector(".sweep-chart");
+          var matrix = svg.getScreenCTM();
+          if (!matrix) return;
+          var pointer = svg.createSVGPoint();
+          pointer.x = event.clientX;
+          pointer.y = event.clientY;
+          var position = pointer.matrixTransform(matrix.inverse());
+          if (
+            position.x < plot.left ||
+            position.x > plot.width - plot.right ||
+            position.y < plot.top ||
+            position.y > plot.height - plot.bottom
+          ) {
+            clearSweepHover(card);
+            return;
+          }
+
+          var sampleIndex = Math.max(
+            0,
+            Math.min(
+              plot.pointCount - 1,
+              Math.round(
+                ((position.x - plot.left) / plot.plotWidth) *
+                  (plot.pointCount - 1),
+              ),
+            ),
+          );
+          var sampleX =
+            plot.xMin +
+            ((plot.xMax - plot.xMin) * sampleIndex) /
+              (plot.pointCount - 1);
+          var xPosition = plot.xFor(sampleX);
+          clearSweepHover(card);
+
+          var namespace = "http://www.w3.org/2000/svg";
+          var overlay = document.createElementNS(namespace, "g");
+          overlay.setAttribute("class", "chart-hover-overlay");
+          var line = document.createElementNS(namespace, "line");
+          line.setAttribute("class", "chart-hover-line");
+          line.setAttribute("x1", xPosition);
+          line.setAttribute("x2", xPosition);
+          line.setAttribute("y1", plot.top);
+          line.setAttribute("y2", plot.height - plot.bottom);
+          overlay.appendChild(line);
+
+          var hoveredRows = [];
+          plot.traces.forEach(function (trace, traceIndex) {
+            var point = trace.points.find(function (candidate) {
+              return candidate.sampleIndex === sampleIndex;
+            });
+            if (!point) return;
+            var marker = document.createElementNS(namespace, "circle");
+            marker.setAttribute(
+              "class",
+              "chart-hover-dot chart-hover-dot-" + (traceIndex + 1),
+            );
+            marker.setAttribute("cx", plot.xFor(point.x));
+            marker.setAttribute("cy", plot.yFor(point.y));
+            marker.setAttribute("r", "4.5");
+            overlay.appendChild(marker);
+            hoveredRows.push({
+              traceIndex: traceIndex,
+              text:
+                plot.traceInfo.shortLabel + " " +
+                formatAxisValue(trace.value) + " " + plot.traceInfo.unit +
+                ": " + formatAxisValue(point.y) + " " + plot.metric.unit,
+            });
+          });
+
+          var tooltipWidth = 292;
+          var tooltipHeight = 34 + hoveredRows.length * 19;
+          var tooltipX = xPosition + 12;
+          if (tooltipX + tooltipWidth > plot.width - plot.right - 4) {
+            tooltipX = xPosition - tooltipWidth - 12;
+          }
+          tooltipX = Math.max(plot.left + 4, tooltipX);
+          var tooltipY = Math.max(
+            plot.top + 4,
+            Math.min(
+              position.y - tooltipHeight / 2,
+              plot.height - plot.bottom - tooltipHeight - 4,
+            ),
+          );
+          var tooltip = document.createElementNS(namespace, "g");
+          tooltip.setAttribute(
+            "transform",
+            "translate(" + tooltipX + " " + tooltipY + ")",
+          );
+          var background = document.createElementNS(namespace, "rect");
+          background.setAttribute("class", "chart-tooltip-bg");
+          background.setAttribute("width", tooltipWidth);
+          background.setAttribute("height", tooltipHeight);
+          background.setAttribute("rx", "4");
+          tooltip.appendChild(background);
+
+          var title = document.createElementNS(namespace, "text");
+          title.setAttribute("class", "chart-tooltip-title");
+          title.setAttribute("x", "10");
+          title.setAttribute("y", "19");
+          title.textContent =
+            plot.xInfo.shortLabel + " " + formatAxisValue(sampleX) + " " +
+            plot.xInfo.unit;
+          tooltip.appendChild(title);
+          hoveredRows.forEach(function (row, rowIndex) {
+            var rowY = 39 + rowIndex * 19;
+            var dot = document.createElementNS(namespace, "circle");
+            dot.setAttribute(
+              "class",
+              "chart-hover-dot chart-hover-dot-" + (row.traceIndex + 1),
+            );
+            dot.setAttribute("cx", "13");
+            dot.setAttribute("cy", rowY - 4);
+            dot.setAttribute("r", "4");
+            tooltip.appendChild(dot);
+            var value = document.createElementNS(namespace, "text");
+            value.setAttribute("class", "chart-tooltip-value");
+            value.setAttribute("x", "24");
+            value.setAttribute("y", rowY);
+            value.textContent = row.text;
+            tooltip.appendChild(value);
+          });
+          overlay.appendChild(tooltip);
+          svg.appendChild(overlay);
+        }
+
+        function renderSweepCard(card) {
+          var xKey = card.querySelector(".sweep-x-variable").value;
+          var traceKey = card.querySelector(".sweep-trace-variable").value;
+          var metricKey = card.querySelector(".sweep-metric").value;
+          var xMin = Number(card.querySelector(".sweep-x-min").value);
+          var xMax = Number(card.querySelector(".sweep-x-max").value);
+          var traceMin = Number(card.querySelector(".sweep-trace-min").value);
+          var traceMax = Number(card.querySelector(".sweep-trace-max").value);
+          var svg = card.querySelector(".sweep-chart");
+          var legend = card.querySelector(".sweep-legend");
+          var status = card.querySelector(".sweep-status");
+          var xInfo = SWEEP_VARIABLES[xKey];
+          var traceInfo = SWEEP_VARIABLES[traceKey];
+          var metric = SWEEP_METRICS[metricKey];
+
+          clearSweepHover(card);
+          card._sweepPlot = null;
+          status.classList.remove("error");
+          if (xKey === traceKey) {
+            svg.replaceChildren();
+            legend.replaceChildren();
+            status.textContent = "Choose two different variables.";
+            status.classList.add("error");
+            return;
+          }
+          if (
+            ![xMin, xMax, traceMin, traceMax].every(Number.isFinite) ||
+            xMax <= xMin ||
+            traceMax <= traceMin
+          ) {
+            svg.replaceChildren();
+            legend.replaceChildren();
+            status.textContent = "Each maximum must be greater than its minimum.";
+            status.classList.add("error");
+            return;
+          }
+
+          var base = readInputs();
+          var traceCount = 5;
+          var pointCount = 41;
+          var traces = [];
+          var allPoints = [];
+          var omitted = 0;
+          for (var traceIndex = 0; traceIndex < traceCount; traceIndex += 1) {
+            var traceValue =
+              traceMin +
+              ((traceMax - traceMin) * traceIndex) / (traceCount - 1);
+            var trace = { value: traceValue, segments: [], points: [] };
+            var segment = [];
+            for (var pointIndex = 0; pointIndex < pointCount; pointIndex += 1) {
+              var xValue =
+                xMin + ((xMax - xMin) * pointIndex) / (pointCount - 1);
+              var pointInput = Object.assign({}, base);
+              setSweepInput(pointInput, xKey, xValue);
+              setSweepInput(pointInput, traceKey, traceValue);
+              var result = calculateStage(mode, pointInput);
+              var yValue = result[metricKey] * metric.scale;
+              if (isValidSweepPoint(pointInput, result) && Number.isFinite(yValue)) {
+                var point = {
+                  x: xValue,
+                  y: yValue,
+                  sampleIndex: pointIndex,
+                };
+                segment.push(point);
+                trace.points.push(point);
+                allPoints.push(point);
+              } else {
+                omitted += 1;
+                if (segment.length) trace.segments.push(segment);
+                segment = [];
+              }
+            }
+            if (segment.length) trace.segments.push(segment);
+            traces.push(trace);
+          }
+
+          if (!allPoints.length) {
+            svg.replaceChildren();
+            legend.replaceChildren();
+            status.textContent = "No valid CCM operating points in these ranges.";
+            status.classList.add("error");
+            return;
+          }
+
+          var yMin = Math.min.apply(null, allPoints.map(function (point) { return point.y; }));
+          var yMax = Math.max.apply(null, allPoints.map(function (point) { return point.y; }));
+          if (Math.abs(yMax - yMin) < Math.max(Math.abs(yMax), 1) * 1e-9) {
+            var yExpansion = Math.max(Math.abs(yMax) * 0.05, 0.05);
+            yMin -= yExpansion;
+            yMax += yExpansion;
+          } else {
+            var yPadding = (yMax - yMin) * 0.08;
+            yMin -= yPadding;
+            yMax += yPadding;
+          }
+
+          var width = 760;
+          var height = 360;
+          var left = 68;
+          var right = 20;
+          var top = 20;
+          var bottom = 54;
+          var plotWidth = width - left - right;
+          var plotHeight = height - top - bottom;
+          var xFor = function (value) {
+            return left + ((value - xMin) / (xMax - xMin)) * plotWidth;
+          };
+          var yFor = function (value) {
+            return top + (1 - (value - yMin) / (yMax - yMin)) * plotHeight;
+          };
+          var chart = [];
+          for (var tick = 0; tick < 5; tick += 1) {
+            var ratio = tick / 4;
+            var xTickValue = xMin + (xMax - xMin) * ratio;
+            var yTickValue = yMax - (yMax - yMin) * ratio;
+            var x = left + plotWidth * ratio;
+            var y = top + plotHeight * ratio;
+            chart.push(
+              '<line class="chart-grid" x1="' + x + '" y1="' + top + '" x2="' + x + '" y2="' + (height - bottom) + '" />',
+              '<line class="chart-grid" x1="' + left + '" y1="' + y + '" x2="' + (width - right) + '" y2="' + y + '" />',
+              '<text x="' + x + '" y="' + (height - bottom + 20) + '" text-anchor="middle" fill="currentColor" font-size="11">' + formatAxisValue(xTickValue) + '</text>',
+              '<text x="' + (left - 9) + '" y="' + (y + 4) + '" text-anchor="end" fill="currentColor" font-size="11">' + formatAxisValue(yTickValue) + '</text>',
+            );
+          }
+          chart.push(
+            '<line class="chart-axis" x1="' + left + '" y1="' + top + '" x2="' + left + '" y2="' + (height - bottom) + '" />',
+            '<line class="chart-axis" x1="' + left + '" y1="' + (height - bottom) + '" x2="' + (width - right) + '" y2="' + (height - bottom) + '" />',
+          );
+          traces.forEach(function (trace, traceIndex) {
+            trace.segments.forEach(function (points) {
+              if (points.length < 2) return;
+              var path = points
+                .map(function (point, index) {
+                  return (
+                    (index === 0 ? "M" : "L") +
+                    xFor(point.x).toFixed(2) + " " +
+                    yFor(point.y).toFixed(2)
+                  );
+                })
+                .join(" ");
+              chart.push(
+                '<path class="chart-series chart-series-' +
+                  (traceIndex + 1) +
+                  '" d="' + path + '" />',
+              );
+            });
+          });
+          chart.push(
+            '<text x="' + (left + plotWidth / 2) + '" y="' + (height - 7) + '" text-anchor="middle" fill="currentColor" font-size="12">' + xInfo.shortLabel + " (" + xInfo.unit + ")</text>",
+            '<text x="17" y="' + (top + plotHeight / 2) + '" text-anchor="middle" fill="currentColor" font-size="12" transform="rotate(-90 17 ' + (top + plotHeight / 2) + ')">' + metric.label + " (" + metric.unit + ")</text>",
+          );
+          svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+          svg.setAttribute(
+            "aria-label",
+            metric.label + " against " + xInfo.label + " at five " + traceInfo.label + " values",
+          );
+          svg.innerHTML = chart.join("");
+          legend.innerHTML = traces
+            .map(function (trace, index) {
+              return (
+                '<span class="legend-item"><span class="legend-line legend-line-' +
+                (index + 1) +
+                '"></span>' +
+                traceInfo.shortLabel + " " + formatAxisValue(trace.value) + " " + traceInfo.unit +
+                "</span>"
+              );
+            })
+            .join("");
+          status.textContent = omitted
+            ? omitted + " invalid or DCM points omitted."
+            : "All sampled points are valid CCM operating points.";
+          card._sweepPlot = {
+            traces: traces,
+            pointCount: pointCount,
+            xMin: xMin,
+            xMax: xMax,
+            xInfo: xInfo,
+            traceInfo: traceInfo,
+            metric: metric,
+            width: width,
+            height: height,
+            left: left,
+            right: right,
+            top: top,
+            bottom: bottom,
+            plotWidth: plotWidth,
+            xFor: xFor,
+            yFor: yFor,
+          };
+        }
+
+        function updateSweepRangeLabels(card) {
+          var xInfo = SWEEP_VARIABLES[card.querySelector(".sweep-x-variable").value];
+          var traceInfo = SWEEP_VARIABLES[card.querySelector(".sweep-trace-variable").value];
+          card.querySelector(".sweep-x-range-label").textContent =
+            xInfo.shortLabel + " range (" + xInfo.unit + ")";
+          card.querySelector(".sweep-trace-range-label").textContent =
+            traceInfo.shortLabel + " trace range (" + traceInfo.unit + ")";
+        }
+
+        function setSuggestedRange(card, kind, key) {
+          var range = baseRangeForVariable(key, readInputs());
+          card.querySelector(".sweep-" + kind + "-min").value = formatNumber(range[0], 5).replace(/,/g, "");
+          card.querySelector(".sweep-" + kind + "-max").value = formatNumber(range[1], 5).replace(/,/g, "");
+        }
+
+        function swapSweepVariables(card) {
+          var xSelect = card.querySelector(".sweep-x-variable");
+          var traceSelect = card.querySelector(".sweep-trace-variable");
+          var xMinInput = card.querySelector(".sweep-x-min");
+          var xMaxInput = card.querySelector(".sweep-x-max");
+          var traceMinInput = card.querySelector(".sweep-trace-min");
+          var traceMaxInput = card.querySelector(".sweep-trace-max");
+          var previousXKey = xSelect.value;
+          var previousXMin = xMinInput.value;
+          var previousXMax = xMaxInput.value;
+
+          xSelect.value = traceSelect.value;
+          traceSelect.value = previousXKey;
+          xMinInput.value = traceMinInput.value;
+          xMaxInput.value = traceMaxInput.value;
+          traceMinInput.value = previousXMin;
+          traceMaxInput.value = previousXMax;
+          updateSweepRangeLabels(card);
+          renderSweepCard(card);
+        }
+
+        function buildSweepCard() {
+          sweepCardCount += 1;
+          var card = document.createElement("section");
+          card.className = "sweep-card";
+          card.innerHTML =
+            '<div class="sweep-card-header"><p class="sweep-card-title">Operating-range chart ' +
+            sweepCardCount +
+            '</p><div class="sweep-card-actions"><button class="action-btn swap-sweep-btn" type="button" title="Swap X-axis and trace variables">Swap X / Y</button><button class="action-btn remove-sweep-btn" type="button" aria-label="Remove operating-range chart ' +
+            sweepCardCount +
+            '">Remove</button></div></div>' +
+            '<div class="sweep-controls">' +
+            '<label class="field">X-axis variable<select class="sweep-x-variable">' +
+            selectOptions(SWEEP_VARIABLES, "vin") +
+            '</select></label>' +
+            '<label class="field">Trace variable<select class="sweep-trace-variable">' +
+            selectOptions(SWEEP_VARIABLES, "iout") +
+            '</select></label>' +
+            '<div class="field"><label class="sweep-x-range-label">X range</label><div class="two-col-fields"><input class="sweep-x-min" type="number" step="any" aria-label="X-axis minimum" /><input class="sweep-x-max" type="number" step="any" aria-label="X-axis maximum" /></div></div>' +
+            '<div class="field"><label class="sweep-trace-range-label">Trace range</label><div class="two-col-fields"><input class="sweep-trace-min" type="number" step="any" aria-label="Trace minimum" /><input class="sweep-trace-max" type="number" step="any" aria-label="Trace maximum" /></div></div>' +
+            '<label class="field">Result to plot<select class="sweep-metric">' +
+            selectOptions(SWEEP_METRICS, "ilPeak") +
+            '</select></label>' +
+            '</div>' +
+            '<div class="sweep-chart-wrap"><svg class="sweep-chart" role="img"></svg></div>' +
+            '<div class="sweep-legend" aria-label="Chart legend"></div>' +
+            '<p class="sweep-status" aria-live="polite"></p>';
+
+          updateSweepRangeLabels(card);
+          setSuggestedRange(card, "x", "vin");
+          setSuggestedRange(card, "trace", "iout");
+          card.querySelector(".swap-sweep-btn").addEventListener("click", function () {
+            swapSweepVariables(card);
+          });
+          card.querySelector(".remove-sweep-btn").addEventListener("click", function () {
+            card.remove();
+          });
+          card.querySelector(".sweep-x-variable").addEventListener("change", function (event) {
+            setSuggestedRange(card, "x", event.target.value);
+            updateSweepRangeLabels(card);
+            renderSweepCard(card);
+          });
+          card.querySelector(".sweep-trace-variable").addEventListener("change", function (event) {
+            setSuggestedRange(card, "trace", event.target.value);
+            updateSweepRangeLabels(card);
+            renderSweepCard(card);
+          });
+          card.addEventListener("input", function () { renderSweepCard(card); });
+          card.addEventListener("change", function (event) {
+            if (!event.target.classList.contains("sweep-x-variable") &&
+                !event.target.classList.contains("sweep-trace-variable")) {
+              renderSweepCard(card);
+            }
+          });
+          card.querySelector(".sweep-chart").addEventListener("pointermove", function (event) {
+            showSweepHover(card, event);
+          });
+          card.querySelector(".sweep-chart").addEventListener("pointerleave", function () {
+            clearSweepHover(card);
+          });
+          sweepCards.appendChild(card);
+          renderSweepCard(card);
+        }
+
+        function renderAllSweepCards() {
+          sweepCards.querySelectorAll(".sweep-card").forEach(renderSweepCard);
+        }
+
+        function formatNumber(value, digits) {
+          if (!Number.isFinite(value)) return "--";
+          return value.toLocaleString(undefined, {
+            maximumSignificantDigits: digits || 4,
+          });
+        }
+
+        function formatCurrent(value) {
+          return formatNumber(value, 4) + " A";
+        }
+
+        function formatVoltage(value) {
+          if (Math.abs(value) < 1) {
+            return formatNumber(value * 1000, 4) + " mV";
+          }
+          return formatNumber(value, 4) + " V";
+        }
+
+        function formatInductance(value) {
+          return formatNumber(value * 1e6, 4) + " uH";
+        }
+
+        function addMessage(text, type) {
+          var message = document.createElement("div");
+          message.className = "message " + type;
+          message.textContent = text;
+          messages.appendChild(message);
+        }
+
+        function clearResults() {
+          [
+            "out-duty",
+            "out-il-avg",
+            "out-ripple",
+            "out-il-range",
+            "out-switch-current",
+            "out-rectifier-current",
+            "out-cap-rms",
+            "out-input-cap-rms",
+            "out-voltage-ripple",
+            "out-critical-inductance",
+          ].forEach(function (id) {
+            byId(id).textContent = "--";
+          });
+          [
+            "out-period",
+            "out-ripple-detail",
+            "out-ccm",
+            "out-voltage-ripple-detail",
+          ].forEach(function (id) {
+            byId(id).textContent = "";
+          });
+        }
+
+        function validateInputs(input) {
+          var values = [
+            input.vin,
+            input.vout,
+            input.iout,
+            input.frequency,
+            input.inductance,
+            input.capacitance,
+          ];
+          if (values.some(function (value) { return !Number.isFinite(value) || value <= 0; })) {
+            return "All voltage, current, frequency, inductance, and capacitance inputs must be greater than zero.";
+          }
+          if (!Number.isFinite(input.esr) || input.esr < 0) {
+            return "Capacitor ESR must be zero or greater.";
+          }
+          if (mode === "buck" && input.vout >= input.vin) {
+            return "Buck mode requires VOUT to be lower than VIN.";
+          }
+          if (mode === "boost" && input.vout <= input.vin) {
+            return "Boost mode requires VOUT to be higher than VIN.";
+          }
+          return "";
+        }
+
+        function render() {
+          var input = readInputs();
+          var validationError = validateInputs(input);
+          var modeBanner = byId("mode-banner");
+          messages.replaceChildren();
+          modeBanner.classList.toggle("invalid", Boolean(validationError));
+          byId("mode-name").textContent = mode === "buck" ? "Buck mode" : "Boost mode";
+          byId("mode-detail").textContent =
+            mode === "buck" ? "VOUT is below VIN" : "VOUT is above VIN";
+          byId("duty-equation").textContent =
+            mode === "buck" ? "D = VOUT / VIN" : "D = 1 - VIN / VOUT";
+          byId("il-equation").textContent =
+            mode === "buck" ? "IL(avg) = IOUT" : "IL(avg) = IOUT / (1 - D)";
+          byId("ripple-equation").textContent =
+            mode === "buck"
+              ? "dIL = (VIN - VOUT) D / (L fSW)"
+              : "dIL = VIN D / (L fSW)";
+          byId("input-cap-row").hidden = mode !== "buck";
+
+          if (validationError) {
+            addMessage(validationError, "error");
+            clearResults();
+            renderAllSweepCards();
+            return;
+          }
+
+          var result = calculateStage(mode, input);
+          var ripplePercent =
+            (result.rippleCurrent / result.ilAverage) * 100;
+          var ccm = result.ilMinimum > 0;
+
+          byId("out-duty").textContent =
+            formatNumber(result.duty * 100, 4) + "%";
+          byId("out-period").textContent =
+            "Switching period " + formatNumber(result.period * 1e6, 4) + " us";
+          byId("out-il-avg").textContent = formatCurrent(result.ilAverage);
+          byId("out-ripple").textContent = formatCurrent(result.rippleCurrent) + " p-p";
+          byId("out-ripple-detail").textContent =
+            formatNumber(ripplePercent, 4) + "% of average inductor current";
+          byId("out-il-range").textContent =
+            formatCurrent(result.ilMinimum) + " / " + formatCurrent(result.ilPeak);
+          byId("out-ccm").innerHTML =
+            '<span class="status-pill' +
+            (ccm ? "" : " warning") +
+            '">' +
+            (ccm ? "CCM" : "DCM boundary crossed") +
+            "</span>";
+          byId("out-switch-current").textContent =
+            formatCurrent(result.switchAverage) + " / " +
+            formatCurrent(result.switchRms) + " / " +
+            formatCurrent(result.ilPeak);
+          byId("out-rectifier-current").textContent =
+            formatCurrent(result.rectifierAverage) + " / " +
+            formatCurrent(result.rectifierRms) + " / " +
+            formatCurrent(result.ilPeak);
+          byId("out-cap-rms").textContent = formatCurrent(result.outputCapRms);
+          byId("out-input-cap-rms").textContent =
+            result.inputCapRms === null ? "--" : formatCurrent(result.inputCapRms);
+          byId("out-voltage-ripple").textContent =
+            formatVoltage(result.totalRipple) + " p-p";
+          byId("out-voltage-ripple-detail").textContent =
+            formatVoltage(result.capacitiveRipple) + " capacitive + " +
+            formatVoltage(result.esrRipple) + " ESR";
+          byId("out-critical-inductance").textContent =
+            formatInductance(result.criticalInductance);
+
+          if (!ccm) {
+            addMessage(
+              "Inductor current reaches zero. The CCM duty cycle remains a useful reference, but the CCM ripple and RMS-current model is no longer valid at this load.",
+              "warning",
+            );
+          } else if (ripplePercent > 80) {
+            addMessage(
+              "Inductor ripple exceeds 80% of average current. Check peak-current margin and operation near the CCM boundary.",
+              "warning",
+            );
+          }
+          renderAllSweepCards();
+        }
+
+        function setMode(nextMode) {
+          if (nextMode !== mode) {
+            var vinInput = byId("input-vin");
+            var voutInput = byId("input-vout");
+            var vin = Number(vinInput.value);
+            var vout = Number(voutInput.value);
+            var needsSwap =
+              (nextMode === "buck" && vin <= vout) ||
+              (nextMode === "boost" && vin >= vout);
+            if (needsSwap) {
+              vinInput.value = String(vout);
+              voutInput.value = String(vin);
+            }
+          }
+          mode = nextMode;
+          buckModeButton.classList.toggle("active", mode === "buck");
+          boostModeButton.classList.toggle("active", mode === "boost");
+          buckModeButton.setAttribute(
+            "aria-selected",
+            mode === "buck" ? "true" : "false",
+          );
+          boostModeButton.setAttribute(
+            "aria-selected",
+            mode === "boost" ? "true" : "false",
+          );
+          render();
+        }
+
+        function runSelfChecks() {
+          var common = {
+            iout: 2,
+            frequency: 500000,
+            inductance: 10e-6,
+            capacitance: 47e-6,
+            esr: 0,
+          };
+          var buck = calculateStage("buck", Object.assign({}, common, {
+            vin: 12,
+            vout: 5,
+          }));
+          var boost = calculateStage("boost", Object.assign({}, common, {
+            vin: 5,
+            vout: 12,
+            iout: 1,
+          }));
+          var tolerance = 1e-9;
+          var checks = [
+            Math.abs(buck.duty - 5 / 12) < tolerance,
+            Math.abs(buck.rippleCurrent - 7 / 12) < tolerance,
+            Math.abs(boost.duty - 7 / 12) < tolerance,
+            Math.abs(boost.ilAverage - 2.4) < tolerance,
+            Math.abs(boost.rippleCurrent - 7 / 12) < tolerance,
+          ];
+          if (checks.some(function (passed) { return !passed; })) {
+            console.error("Buck/boost calculator self-check failed.");
+          }
+        }
+
+        buckModeButton.addEventListener("click", function () {
+          setMode("buck");
+        });
+        boostModeButton.addEventListener("click", function () {
+          setMode("boost");
+        });
+        addSweepButton.addEventListener("click", buildSweepCard);
+        form.addEventListener("input", render);
+
+        runSelfChecks();
+        applyTheme(getStoredThemeMode(), false);
+        buildSweepCard();
+        setMode("buck");
+      })();
+    </script>
+  </body>
+</html>
