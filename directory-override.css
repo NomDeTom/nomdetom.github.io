@@ -1,0 +1,55 @@
+/*
+ * Optional directory-level style overrides.
+ *
+ * Every maintained HTML page in this directory loads this file after its
+ * embedded fallback styles. Uncomment only the declarations you want to
+ * replace. Keep light and dark values together when changing theme colours.
+ */
+
+:root {
+  /* --page-bg: #f7f7f2; */
+  /* --panel-bg: #ffffff; */
+  /* --field-bg: #ffffff; */
+  /* --text: #1f2520; */
+  /* --muted: #5c645d; */
+  /* --disabled: #888a88; */
+  /* --border: #d9ddd4; */
+  /* --accent: #1d6b43; */
+  /* --accent-soft: #eef6ef; */
+  /* --chip-selected-text: #ffffff; */
+  /* --error-text: #8c1d1d; */
+}
+
+:root[data-theme="dark"] {
+  /* --page-bg: #111713; */
+  /* --panel-bg: #1a241d; */
+  /* --field-bg: #131b15; */
+  /* --text: #e5efe6; */
+  /* --muted: #b2beb4; */
+  /* --disabled: #7a827b; */
+  /* --border: #3a4d40; */
+  /* --accent: #81d39d; */
+  /* --accent-soft: #23362a; */
+  /* --chip-selected-text: #0f1b13; */
+  /* --error-text: #ffb4b4; */
+}
+
+/* Optional structural overrides. */
+
+/*
+body {
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+main {
+  width: min(100%, 96rem);
+}
+
+.action-btn {
+  border-radius: 0;
+}
+
+section {
+  border-radius: 0;
+}
+*/
