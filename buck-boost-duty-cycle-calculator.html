@@ -132,30 +132,144 @@
         text-decoration: underline;
       }
 
-      .mode-picker {
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin-top: 1.25rem;
+        border-bottom: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .tab {
+        min-width: 0;
+        margin-bottom: -1px;
+        padding: 0.55rem 1rem;
+        border: 1px solid var(--border);
+        border-bottom: 0;
+        background: var(--page-bg);
+        color: var(--muted);
+        font: inherit;
+        font-weight: 600;
+        white-space: normal;
+        cursor: pointer;
+      }
+
+      .tab:hover {
+        color: var(--accent);
+      }
+
+      .tab:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -3px;
+      }
+
+      .tab[aria-selected="true"] {
+        border-color: var(--border);
+        border-bottom: 1px solid var(--panel-bg);
+        background: var(--panel-bg);
+        color: var(--accent);
+      }
+
+      [role="tabpanel"] > *:first-child,
+      [role="tabpanel"] > *:first-child > section:first-child {
+        margin-top: 0;
+      }
+
+      .efficiency-picker {
         display: grid;
         grid-template-columns: repeat(2, minmax(9rem, 14rem));
         gap: 0.55rem;
         margin-top: 1.25rem;
       }
 
-      .mode-btn {
+      .efficiency-picker {
+        margin: 0 0 0.9rem;
+        grid-template-columns: repeat(2, minmax(8rem, 1fr));
+      }
+
+      .efficiency-btn {
         width: 100%;
         text-align: center;
       }
 
-      .mode-btn.active {
+      .efficiency-btn.active {
         border-color: var(--accent);
         background: var(--accent-soft);
         color: var(--accent);
       }
 
+      [data-view-panel][hidden],
+      .estimated-efficiency-field[hidden],
+      .loss-rectifier-field[hidden] {
+        display: none !important;
+      }
+
       .calculator-grid {
         display: grid;
-        grid-template-columns: minmax(18rem, 0.85fr) minmax(22rem, 1.15fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
         align-items: start;
         margin-top: 1rem;
+      }
+
+      .loss-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        align-items: start;
+        margin-top: 1rem;
+      }
+
+      .loss-grid > section {
+        margin-top: 0;
+      }
+
+      .loss-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 1rem;
+      }
+
+      .loss-chart {
+        display: grid;
+        gap: 0.65rem;
+      }
+
+      .loss-bar-row {
+        display: grid;
+        grid-template-columns: minmax(8rem, 0.9fr) minmax(8rem, 1.5fr) auto;
+        gap: 0.7rem;
+        align-items: center;
+      }
+
+      .loss-bar-label,
+      .loss-bar-value {
+        font-size: 0.82rem;
+      }
+
+      .loss-bar-label {
+        color: var(--muted);
+      }
+
+      .loss-bar-value {
+        min-width: 6.5rem;
+        text-align: right;
+      }
+
+      .loss-bar-track {
+        display: block;
+        height: 0.75rem;
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+      }
+
+      .loss-bar-fill {
+        display: block;
+        min-width: 2px;
+        height: 100%;
+        background: var(--accent);
       }
 
       section {
@@ -614,6 +728,7 @@
 
       @media (max-width: 800px) {
         .calculator-grid,
+        .loss-grid,
         .sweep-cards {
           grid-template-columns: 1fr;
         }
@@ -628,7 +743,12 @@
           padding: 1.25rem 0.9rem 2rem;
         }
 
-        .mode-picker,
+        .tab {
+          padding: 0.5rem 0.3rem;
+          font-size: 0.82rem;
+        }
+
+        .efficiency-picker,
         .two-col-fields,
         .sweep-controls,
         .results {
@@ -638,6 +758,17 @@
         .result:nth-child(2) {
           border-top: 1px solid var(--border);
           padding-top: 0.8rem;
+        }
+
+        .loss-bar-row {
+          grid-template-columns: minmax(7rem, 1fr) minmax(6rem, 1.25fr);
+        }
+
+        .loss-bar-value {
+          grid-column: 1 / -1;
+          min-width: 0;
+          margin-top: -0.45rem;
+          text-align: left;
         }
 
         .result {
@@ -658,8 +789,9 @@
       <header>
         <h1>Buck and Boost Duty Cycle Calculator</h1>
         <p class="subtitle">
-          Generic ideal CCM duty cycle, ripple, and component-current estimates
-          for non-isolated buck and boost converters.
+          Generic ideal or efficiency-adjusted CCM duty cycle, ripple,
+          component-current, and first-order loss estimates for non-isolated
+          buck and boost converters.
         </p>
         <div class="top-actions">
           <a class="action-btn" href="index.html">Back to index</a>
@@ -701,28 +833,64 @@
             >
           </p>
         </div>
-        <div class="mode-picker" role="tablist" aria-label="Converter topology">
+        <div class="tabs" role="tablist" aria-label="Calculator mode">
           <button
-            id="buck-mode-btn"
-            class="action-btn mode-btn active"
+            id="tab-buck-basic"
+            class="tab"
             type="button"
             role="tab"
             aria-selected="true"
+            aria-controls="basic-view-panel"
+            data-mode="buck"
+            data-view="basic"
           >
-            Buck
+            Buck basic
           </button>
           <button
-            id="boost-mode-btn"
-            class="action-btn mode-btn"
+            id="tab-boost-basic"
+            class="tab"
             type="button"
             role="tab"
             aria-selected="false"
+            aria-controls="basic-view-panel"
+            data-mode="boost"
+            data-view="basic"
           >
-            Boost
+            Boost basic
+          </button>
+          <button
+            id="tab-buck-losses"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="loss-view-panel"
+            data-mode="buck"
+            data-view="loss"
+          >
+            Buck losses
+          </button>
+          <button
+            id="tab-boost-losses"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="loss-view-panel"
+            data-mode="boost"
+            data-view="loss"
+          >
+            Boost losses
           </button>
         </div>
       </header>
 
+      <div
+        id="basic-view-panel"
+        role="tabpanel"
+        aria-labelledby="tab-buck-basic"
+        data-view-panel="basic"
+      >
       <div class="calculator-grid">
         <section>
           <h2>Operating point</h2>
@@ -779,6 +947,51 @@
                   value="2"
                 />
                 <span class="unit-tag">A</span>
+              </div>
+            </div>
+
+            <h3>Efficiency model</h3>
+            <div
+              class="efficiency-picker"
+              role="group"
+              aria-label="Efficiency model"
+            >
+              <button
+                id="ideal-efficiency-btn"
+                class="action-btn efficiency-btn active"
+                type="button"
+                aria-pressed="true"
+              >
+                Ideal
+              </button>
+              <button
+                id="estimated-efficiency-btn"
+                class="action-btn efficiency-btn"
+                type="button"
+                aria-pressed="false"
+              >
+                Estimated
+              </button>
+            </div>
+            <div class="field estimated-efficiency-field" hidden>
+              <label for="input-efficiency">
+                Estimated efficiency
+                <span class="field-hint"
+                  >A lumped estimate used to adjust duty cycle and input
+                  current.</span
+                >
+              </label>
+              <div class="input-with-unit">
+                <input
+                  id="input-efficiency"
+                  type="number"
+                  inputmode="decimal"
+                  min="1"
+                  max="100"
+                  step="any"
+                  value="90"
+                />
+                <span class="unit-tag">%</span>
               </div>
             </div>
 
@@ -879,6 +1092,16 @@
               <span id="out-il-avg" class="result-value">&mdash;</span>
             </div>
             <div class="result">
+              <span class="result-label">Efficiency used</span>
+              <span id="out-efficiency" class="result-value">&mdash;</span>
+              <span id="out-efficiency-detail" class="result-detail"></span>
+            </div>
+            <div class="result">
+              <span class="result-label">Input power / loss allowance</span>
+              <span id="out-input-power" class="result-value">&mdash;</span>
+              <span id="out-loss-allowance" class="result-detail"></span>
+            </div>
+            <div class="result">
               <span class="result-label">
                 Inductor ripple current
                 <span id="ripple-equation" class="result-equation"></span>
@@ -945,6 +1168,187 @@
         </div>
         <div id="sweep-cards" class="sweep-cards" aria-live="polite"></div>
       </section>
+      </div>
+
+      <div
+        id="loss-view-panel"
+        role="tabpanel"
+        aria-labelledby="tab-buck-losses"
+        data-view-panel="loss"
+        hidden
+      >
+        <div class="loss-grid">
+          <section>
+            <h2>Component loss inputs</h2>
+            <form id="loss-form">
+              <div class="field">
+                <label for="loss-rectifier-type">Rectifier implementation</label>
+                <select id="loss-rectifier-type">
+                  <option value="diode" selected>Diode</option>
+                  <option value="synchronous">Synchronous MOSFET</option>
+                </select>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="loss-switch-rds">Main switch RDS(on)</label>
+                  <div class="input-with-unit">
+                    <input id="loss-switch-rds" type="number" min="0" step="any" value="30" />
+                    <span class="unit-tag">m&Omega;</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="loss-inductor-dcr">Inductor DCR</label>
+                  <div class="input-with-unit">
+                    <input id="loss-inductor-dcr" type="number" min="0" step="any" value="20" />
+                    <span class="unit-tag">m&Omega;</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field loss-rectifier-field" data-rectifier="diode">
+                <label for="loss-diode-vf">Diode forward voltage</label>
+                <div class="input-with-unit">
+                  <input id="loss-diode-vf" type="number" min="0" step="any" value="0.5" />
+                  <span class="unit-tag">V</span>
+                </div>
+              </div>
+              <div
+                class="field loss-rectifier-field"
+                data-rectifier="synchronous"
+                hidden
+              >
+                <label for="loss-sync-rds">Synchronous MOSFET RDS(on)</label>
+                <div class="input-with-unit">
+                  <input id="loss-sync-rds" type="number" min="0" step="any" value="20" />
+                  <span class="unit-tag">m&Omega;</span>
+                </div>
+              </div>
+
+              <h3>Dynamic and fixed losses</h3>
+              <div class="two-col-fields">
+                <div class="field">
+                  <label for="loss-transition-time">
+                    Rise + fall time
+                    <span class="field-hint">Combined switching overlap.</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="loss-transition-time" type="number" min="0" step="any" value="30" />
+                    <span class="unit-tag">ns</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="loss-gate-charge">
+                    Total driven gate charge
+                    <span class="field-hint"
+                      >Sum all MOSFET gate charge driven each cycle.</span
+                    >
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="loss-gate-charge" type="number" min="0" step="any" value="20" />
+                    <span class="unit-tag">nC</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="loss-gate-voltage">Gate-drive voltage</label>
+                  <div class="input-with-unit">
+                    <input id="loss-gate-voltage" type="number" min="0" step="any" value="5" />
+                    <span class="unit-tag">V</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="loss-controller-current">Controller input current</label>
+                  <div class="input-with-unit">
+                    <input id="loss-controller-current" type="number" min="0" step="any" value="2" />
+                    <span class="unit-tag">mA</span>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label for="loss-core-allowance">
+                  Inductor core-loss allowance
+                  <span class="field-hint"
+                    >Use a vendor loss estimate for the chosen core and ripple.</span
+                  >
+                </label>
+                <div class="input-with-unit">
+                  <input id="loss-core-allowance" type="number" min="0" step="any" value="0" />
+                  <span class="unit-tag">mW</span>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section>
+            <h2>Iterative loss estimate</h2>
+            <div id="loss-mode-banner" class="mode-banner" role="status" aria-live="polite">
+              <span class="mode-name">Calculated efficiency</span>
+              <span id="loss-mode-detail" class="mode-detail"></span>
+            </div>
+            <div id="loss-messages" class="messages" role="alert"></div>
+            <div class="results">
+              <div class="result primary">
+                <span class="result-label">Calculated efficiency</span>
+                <span id="loss-out-efficiency" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Total estimated loss</span>
+                <span id="loss-out-total" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Output / input power</span>
+                <span id="loss-out-power" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Converged duty cycle</span>
+                <span id="loss-out-duty" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Main switch conduction</span>
+                <span id="loss-out-switch" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Rectifier conduction</span>
+                <span id="loss-out-rectifier" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Inductor copper / core</span>
+                <span id="loss-out-inductor" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Switching transition</span>
+                <span id="loss-out-transition" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Gate drive / controller</span>
+                <span id="loss-out-control" class="result-value">&mdash;</span>
+              </div>
+              <div class="result">
+                <span class="result-label">Output capacitor ESR</span>
+                <span id="loss-out-capacitor" class="result-value">&mdash;</span>
+              </div>
+            </div>
+            <h3>Loss breakdown</h3>
+            <div
+              id="loss-chart"
+              class="loss-chart"
+              role="img"
+              aria-label="Loss breakdown unavailable"
+            ></div>
+            <div class="loss-actions">
+              <button id="apply-loss-efficiency-btn" class="action-btn" type="button">
+                Use in basic calculator
+              </button>
+            </div>
+            <p class="caveat">
+              <strong>This remains a first-order estimate.</strong> It excludes
+              dead-time, reverse recovery, COSS, AC winding loss, temperature
+              rise, nonlinear RDS(on), and control-loop effects unless they are
+              included in the entered allowances.
+            </p>
+          </section>
+        </div>
+      </div>
 
       <section>
         <h2>Equation reference</h2>
@@ -960,13 +1364,21 @@
             <tbody>
               <tr>
                 <td>Duty cycle</td>
-                <td><code>D = VOUT / VIN</code></td>
-                <td><code>D = 1 - VIN / VOUT</code></td>
+                <td>
+                  <code>Ideal: D = VOUT / VIN</code><br />
+                  <code>Estimated: D &asymp; VOUT / (&eta; VIN)</code>
+                </td>
+                <td>
+                  <code>Ideal: D = 1 - VIN / VOUT</code><br />
+                  <code>Estimated: D &asymp; 1 - &eta; VIN / VOUT</code>
+                </td>
               </tr>
               <tr>
                 <td>Average inductor current</td>
                 <td><code>IL = IOUT</code></td>
-                <td><code>IL = IOUT / (1 - D)</code></td>
+                <td>
+                  <code>IL = IOUT / (1 - D) = POUT / (&eta; VIN)</code>
+                </td>
               </tr>
               <tr>
                 <td>Inductor ripple, peak-to-peak</td>
@@ -997,11 +1409,28 @@
                 <td><code>&Delta;V = &Delta;IL / (8 fSW COUT)</code></td>
                 <td><code>&Delta;V = IOUT D / (fSW COUT)</code></td>
               </tr>
+              <tr>
+                <td>Calculated efficiency</td>
+                <td colspan="2">
+                  <code>&eta; = POUT / (POUT + &Sigma;PLOSS)</code>, iterated
+                  until the efficiency-adjusted duty and losses converge.
+                </td>
+              </tr>
+              <tr>
+                <td>Loss terms</td>
+                <td colspan="2">
+                  <code>I&sup2;R</code> conduction, <code>VF IAVG</code> diode,
+                  <code>0.5 V I (tr + tf) fSW</code> transition,
+                  <code>Qg VDRIVE fSW</code> gate drive, capacitor ESR,
+                  controller input, and entered core-loss allowance.
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
         <p class="formula-note">
-          <span><strong>Assumptions:</strong> ideal conversion ratio, steady state, continuous conduction, triangular inductor ripple, constant load current, and negligible switching dead time.</span>
+          <span><strong>Assumptions:</strong> steady state, continuous conduction, triangular inductor ripple, constant load current, and negligible switching dead time.</span>
+          <span><strong>Estimated duty:</strong> efficiency is used as a lumped correction. It is useful for an early pass but does not replace a topology-specific voltage-drop model.</span>
           <span><strong>RMS convention:</strong> switch and rectifier values include the triangular ripple term, not only the common square-root duty approximation.</span>
         </p>
         <p class="caveat">
@@ -1026,10 +1455,13 @@
         var toggleThemeButton = document.getElementById("toggle-theme-btn");
         var toggleLicenseButton = document.getElementById("toggle-license-btn");
         var attributionBlock = document.getElementById("attribution-block");
-        var buckModeButton = document.getElementById("buck-mode-btn");
-        var boostModeButton = document.getElementById("boost-mode-btn");
+        var calculatorTabs = Array.from(document.querySelectorAll(".tabs .tab"));
+        var idealEfficiencyButton = document.getElementById("ideal-efficiency-btn");
+        var estimatedEfficiencyButton = document.getElementById("estimated-efficiency-btn");
         var form = document.getElementById("calculator-form");
+        var lossForm = document.getElementById("loss-form");
         var messages = document.getElementById("messages");
+        var lossMessages = document.getElementById("loss-messages");
         var sweepCards = document.getElementById("sweep-cards");
         var addSweepButton = document.getElementById("add-sweep-btn");
         var autoThemeMediaQuery = window.matchMedia
@@ -1037,6 +1469,9 @@
           : null;
         var themeMode = "auto";
         var mode = "buck";
+        var activeView = "basic";
+        var efficiencyMode = "ideal";
+        var latestLossResult = null;
         var sweepCardCount = 0;
         var THEME_STORAGE_KEY = "nomdetom-theme-mode";
 
@@ -1117,14 +1552,21 @@
             inductance: readNumber("input-inductance") * 1e-6,
             capacitance: readNumber("input-capacitance") * 1e-6,
             esr: readNumber("input-esr") * 1e-3,
+            efficiency:
+              efficiencyMode === "estimated"
+                ? readNumber("input-efficiency") / 100
+                : 1,
           };
         }
 
         function calculateStage(selectedMode, input) {
+          var efficiency = Number.isFinite(input.efficiency)
+            ? input.efficiency
+            : 1;
           var duty =
             selectedMode === "buck"
-              ? input.vout / input.vin
-              : 1 - input.vin / input.vout;
+              ? input.vout / (efficiency * input.vin)
+              : 1 - (efficiency * input.vin) / input.vout;
           var ilAverage =
             selectedMode === "buck"
               ? input.iout
@@ -1189,6 +1631,246 @@
           };
         }
 
+        function readLossInputs() {
+          return {
+            rectifierType: byId("loss-rectifier-type").value,
+            switchResistance: readNumber("loss-switch-rds") * 1e-3,
+            inductorResistance: readNumber("loss-inductor-dcr") * 1e-3,
+            diodeVoltage: readNumber("loss-diode-vf"),
+            synchronousResistance: readNumber("loss-sync-rds") * 1e-3,
+            transitionTime: readNumber("loss-transition-time") * 1e-9,
+            gateCharge: readNumber("loss-gate-charge") * 1e-9,
+            gateVoltage: readNumber("loss-gate-voltage"),
+            controllerCurrent: readNumber("loss-controller-current") * 1e-3,
+            coreAllowance: readNumber("loss-core-allowance") * 1e-3,
+          };
+        }
+
+        function calculateLossEstimate(input, lossInput) {
+          var numericLossInputs = [
+            lossInput.switchResistance,
+            lossInput.inductorResistance,
+            lossInput.diodeVoltage,
+            lossInput.synchronousResistance,
+            lossInput.transitionTime,
+            lossInput.gateCharge,
+            lossInput.gateVoltage,
+            lossInput.controllerCurrent,
+            lossInput.coreAllowance,
+          ];
+          if (numericLossInputs.some(function (value) {
+            return !Number.isFinite(value) || value < 0;
+          })) {
+            return { error: "All component-loss inputs must be zero or greater." };
+          }
+
+          var outputPower = input.vout * input.iout;
+          if (!Number.isFinite(outputPower) || outputPower <= 0) {
+            return { error: "Output power must be greater than zero." };
+          }
+
+          function lossesAtEfficiency(efficiency) {
+            var stageInput = Object.assign({}, input, { efficiency: efficiency });
+            var stage = calculateStage(mode, stageInput);
+            if (
+              !Number.isFinite(stage.duty) ||
+              stage.duty <= 0 ||
+              stage.duty >= 1 ||
+              !Number.isFinite(stage.ilMinimum) ||
+              stage.ilMinimum <= 0
+            ) {
+              return {
+                error:
+                  "The loss model requires a valid CCM operating point with duty cycle below 100%.",
+              };
+            }
+            var inductorRms = Math.sqrt(
+              stage.ilAverage * stage.ilAverage +
+                (stage.rippleCurrent * stage.rippleCurrent) / 12,
+            );
+            var switchConduction =
+              stage.switchRms * stage.switchRms * lossInput.switchResistance;
+            var rectifierConduction =
+              lossInput.rectifierType === "synchronous"
+                ? stage.rectifierRms *
+                  stage.rectifierRms *
+                  lossInput.synchronousResistance
+                : stage.rectifierAverage * lossInput.diodeVoltage;
+            var inductorCopper =
+              inductorRms * inductorRms * lossInput.inductorResistance;
+            var blockingVoltage = mode === "buck" ? input.vin : input.vout;
+            var switchingTransition =
+              0.5 *
+              blockingVoltage *
+              stage.ilAverage *
+              lossInput.transitionTime *
+              input.frequency;
+            var gateDrive =
+              lossInput.gateCharge *
+              lossInput.gateVoltage *
+              input.frequency;
+            var controller = input.vin * lossInput.controllerCurrent;
+            var capacitor =
+              stage.outputCapRms * stage.outputCapRms * input.esr;
+            var total =
+              switchConduction +
+              rectifierConduction +
+              inductorCopper +
+              lossInput.coreAllowance +
+              switchingTransition +
+              gateDrive +
+              controller +
+              capacitor;
+            return {
+              stage: stage,
+              switchConduction: switchConduction,
+              rectifierConduction: rectifierConduction,
+              inductorCopper: inductorCopper,
+              coreAllowance: lossInput.coreAllowance,
+              switchingTransition: switchingTransition,
+              gateDrive: gateDrive,
+              controller: controller,
+              capacitor: capacitor,
+              total: total,
+              outputPower: outputPower,
+              inputPower: outputPower + total,
+              efficiency: outputPower / (outputPower + total),
+            };
+          }
+
+          var efficiency = 0.9;
+          var result = null;
+          var iterations = 0;
+          for (iterations = 1; iterations <= 40; iterations += 1) {
+            result = lossesAtEfficiency(efficiency);
+            if (result.error) return result;
+            if (Math.abs(result.efficiency - efficiency) < 1e-7) break;
+            efficiency = (efficiency + result.efficiency) / 2;
+          }
+          result = lossesAtEfficiency(result.efficiency);
+          if (result.error) return result;
+          result.iterations = iterations;
+          result.converged = iterations <= 40;
+          return result;
+        }
+
+        function clearLossResults() {
+          [
+            "loss-out-efficiency",
+            "loss-out-total",
+            "loss-out-power",
+            "loss-out-duty",
+            "loss-out-switch",
+            "loss-out-rectifier",
+            "loss-out-inductor",
+            "loss-out-transition",
+            "loss-out-control",
+            "loss-out-capacitor",
+          ].forEach(function (id) {
+            byId(id).textContent = "--";
+          });
+          byId("loss-chart").replaceChildren();
+          byId("loss-chart").setAttribute(
+            "aria-label",
+            "Loss breakdown unavailable",
+          );
+          latestLossResult = null;
+        }
+
+        function renderLossChart(result) {
+          var sources = [
+            ["Main switch", result.switchConduction],
+            ["Rectifier", result.rectifierConduction],
+            ["Inductor copper", result.inductorCopper],
+            ["Inductor core", result.coreAllowance],
+            ["Switching transition", result.switchingTransition],
+            ["Gate drive", result.gateDrive],
+            ["Controller", result.controller],
+            ["Capacitor ESR", result.capacitor],
+          ];
+          var chart = byId("loss-chart");
+          chart.replaceChildren();
+          sources.forEach(function (source) {
+            var percentage = result.total > 0 ? source[1] / result.total * 100 : 0;
+            var row = document.createElement("div");
+            row.className = "loss-bar-row";
+
+            var label = document.createElement("span");
+            label.className = "loss-bar-label";
+            label.textContent = source[0];
+
+            var track = document.createElement("span");
+            track.className = "loss-bar-track";
+            var fill = document.createElement("span");
+            fill.className = "loss-bar-fill";
+            fill.style.display = percentage > 0 ? "block" : "none";
+            fill.style.width = Math.min(percentage, 100) + "%";
+            track.appendChild(fill);
+
+            var value = document.createElement("span");
+            value.className = "loss-bar-value";
+            value.textContent =
+              formatPower(source[1]) + " (" + formatNumber(percentage, 3) + "%)";
+
+            row.append(label, track, value);
+            chart.appendChild(row);
+          });
+          chart.setAttribute(
+            "aria-label",
+            sources.map(function (source) {
+              return source[0] + " " + formatPower(source[1]);
+            }).join(", "),
+          );
+        }
+
+        function renderLossCalculation() {
+          var input = readInputs();
+          input.efficiency = 1;
+          var baseError = validateInputs(input);
+          var result = baseError
+            ? { error: baseError }
+            : calculateLossEstimate(input, readLossInputs());
+          var banner = byId("loss-mode-banner");
+          lossMessages.replaceChildren();
+          banner.classList.toggle("invalid", Boolean(result.error));
+          if (result.error) {
+            var message = document.createElement("div");
+            message.className = "message error";
+            message.textContent = result.error;
+            lossMessages.appendChild(message);
+            byId("loss-mode-detail").textContent = "Unable to converge";
+            clearLossResults();
+            return;
+          }
+
+          latestLossResult = result;
+          byId("loss-mode-detail").textContent =
+            (result.converged ? "Converged" : "Iteration limit reached") +
+            " in " + result.iterations + " passes";
+          byId("loss-out-efficiency").textContent =
+            formatNumber(result.efficiency * 100, 5) + "%";
+          byId("loss-out-total").textContent = formatPower(result.total);
+          byId("loss-out-power").textContent =
+            formatPower(result.outputPower) + " / " + formatPower(result.inputPower);
+          byId("loss-out-duty").textContent =
+            formatNumber(result.stage.duty * 100, 4) + "%";
+          byId("loss-out-switch").textContent =
+            formatPower(result.switchConduction);
+          byId("loss-out-rectifier").textContent =
+            formatPower(result.rectifierConduction);
+          byId("loss-out-inductor").textContent =
+            formatPower(result.inductorCopper) + " / " +
+            formatPower(result.coreAllowance);
+          byId("loss-out-transition").textContent =
+            formatPower(result.switchingTransition);
+          byId("loss-out-control").textContent =
+            formatPower(result.gateDrive) + " / " +
+            formatPower(result.controller);
+          byId("loss-out-capacitor").textContent =
+            formatPower(result.capacitor);
+          renderLossChart(result);
+        }
+
         var SWEEP_VARIABLES = {
           vin: { label: "Input voltage", shortLabel: "VIN", unit: "V", scale: 1 },
           vout: { label: "Output voltage", shortLabel: "VOUT", unit: "V", scale: 1 },
@@ -1197,6 +1879,7 @@
           inductance: { label: "Inductance", shortLabel: "L", unit: "uH", scale: 1e-6 },
           capacitance: { label: "Output capacitance", shortLabel: "COUT", unit: "uF", scale: 1e-6 },
           esr: { label: "Capacitor ESR", shortLabel: "ESR", unit: "mOhm", scale: 1e-3 },
+          efficiency: { label: "Efficiency", shortLabel: "eta", unit: "%", scale: 0.01 },
         };
 
         var SWEEP_METRICS = {
@@ -1247,6 +1930,7 @@
             ];
           }
           if (key === "esr") return [0, Math.max(value * 2, 1)];
+          if (key === "efficiency") return [80, 98];
           return [Math.max(value * 0.25, value > 0 ? value * 0.1 : 0.1), Math.max(value * 1.5, 1)];
         }
 
@@ -1732,6 +2416,13 @@
           return formatNumber(value * 1e6, 4) + " uH";
         }
 
+        function formatPower(value) {
+          if (Math.abs(value) < 1) {
+            return formatNumber(value * 1000, 4) + " mW";
+          }
+          return formatNumber(value, 4) + " W";
+        }
+
         function addMessage(text, type) {
           var message = document.createElement("div");
           message.className = "message " + type;
@@ -1745,6 +2436,8 @@
             "out-il-avg",
             "out-ripple",
             "out-il-range",
+            "out-efficiency",
+            "out-input-power",
             "out-switch-current",
             "out-rectifier-current",
             "out-cap-rms",
@@ -1758,6 +2451,8 @@
             "out-period",
             "out-ripple-detail",
             "out-ccm",
+            "out-efficiency-detail",
+            "out-loss-allowance",
             "out-voltage-ripple-detail",
           ].forEach(function (id) {
             byId(id).textContent = "";
@@ -1779,11 +2474,25 @@
           if (!Number.isFinite(input.esr) || input.esr < 0) {
             return "Capacitor ESR must be zero or greater.";
           }
+          if (
+            !Number.isFinite(input.efficiency) ||
+            input.efficiency <= 0 ||
+            input.efficiency > 1
+          ) {
+            return "Efficiency must be greater than 0% and no more than 100%.";
+          }
           if (mode === "buck" && input.vout >= input.vin) {
             return "Buck mode requires VOUT to be lower than VIN.";
           }
           if (mode === "boost" && input.vout <= input.vin) {
             return "Boost mode requires VOUT to be higher than VIN.";
+          }
+          var requiredDuty =
+            mode === "buck"
+              ? input.vout / (input.efficiency * input.vin)
+              : 1 - (input.efficiency * input.vin) / input.vout;
+          if (!Number.isFinite(requiredDuty) || requiredDuty <= 0 || requiredDuty >= 1) {
+            return "The selected efficiency requires an invalid duty cycle at this operating point.";
           }
           return "";
         }
@@ -1796,9 +2505,16 @@
           modeBanner.classList.toggle("invalid", Boolean(validationError));
           byId("mode-name").textContent = mode === "buck" ? "Buck mode" : "Boost mode";
           byId("mode-detail").textContent =
-            mode === "buck" ? "VOUT is below VIN" : "VOUT is above VIN";
+            (mode === "buck" ? "VOUT is below VIN" : "VOUT is above VIN") +
+            (efficiencyMode === "ideal" ? " · ideal conversion" : " · estimated efficiency");
           byId("duty-equation").textContent =
-            mode === "buck" ? "D = VOUT / VIN" : "D = 1 - VIN / VOUT";
+            mode === "buck"
+              ? efficiencyMode === "ideal"
+                ? "D = VOUT / VIN"
+                : "D ~= VOUT / (eta VIN)"
+              : efficiencyMode === "ideal"
+                ? "D = 1 - VIN / VOUT"
+                : "D ~= 1 - eta VIN / VOUT";
           byId("il-equation").textContent =
             mode === "buck" ? "IL(avg) = IOUT" : "IL(avg) = IOUT / (1 - D)";
           byId("ripple-equation").textContent =
@@ -1815,6 +2531,9 @@
           }
 
           var result = calculateStage(mode, input);
+          var outputPower = input.vout * input.iout;
+          var inputPower = outputPower / input.efficiency;
+          var lossAllowance = inputPower - outputPower;
           var ripplePercent =
             (result.rippleCurrent / result.ilAverage) * 100;
           var ccm = result.ilMinimum > 0;
@@ -1824,6 +2543,13 @@
           byId("out-period").textContent =
             "Switching period " + formatNumber(result.period * 1e6, 4) + " us";
           byId("out-il-avg").textContent = formatCurrent(result.ilAverage);
+          byId("out-efficiency").textContent =
+            formatNumber(input.efficiency * 100, 5) + "%";
+          byId("out-efficiency-detail").textContent =
+            efficiencyMode === "ideal" ? "No loss correction" : "User estimate";
+          byId("out-input-power").textContent = formatPower(inputPower);
+          byId("out-loss-allowance").textContent =
+            formatPower(lossAllowance) + " lumped loss";
           byId("out-ripple").textContent = formatCurrent(result.rippleCurrent) + " p-p";
           byId("out-ripple-detail").textContent =
             formatNumber(ripplePercent, 4) + "% of average inductor current";
@@ -1868,7 +2594,19 @@
           renderAllSweepCards();
         }
 
-        function setMode(nextMode) {
+        function setEfficiencyMode(nextMode) {
+          efficiencyMode = nextMode === "estimated" ? "estimated" : "ideal";
+          var isEstimated = efficiencyMode === "estimated";
+          byId("input-efficiency").closest(".estimated-efficiency-field").hidden =
+            !isEstimated;
+          idealEfficiencyButton.classList.toggle("active", !isEstimated);
+          estimatedEfficiencyButton.classList.toggle("active", isEstimated);
+          idealEfficiencyButton.setAttribute("aria-pressed", isEstimated ? "false" : "true");
+          estimatedEfficiencyButton.setAttribute("aria-pressed", isEstimated ? "true" : "false");
+          render();
+        }
+
+        function setCalculatorState(nextMode, nextView) {
           if (nextMode !== mode) {
             var vinInput = byId("input-vin");
             var voutInput = byId("input-vout");
@@ -1882,18 +2620,32 @@
               voutInput.value = String(vin);
             }
           }
-          mode = nextMode;
-          buckModeButton.classList.toggle("active", mode === "buck");
-          boostModeButton.classList.toggle("active", mode === "boost");
-          buckModeButton.setAttribute(
-            "aria-selected",
-            mode === "buck" ? "true" : "false",
-          );
-          boostModeButton.setAttribute(
-            "aria-selected",
-            mode === "boost" ? "true" : "false",
+          mode = nextMode === "boost" ? "boost" : "buck";
+          activeView = nextView === "loss" ? "loss" : "basic";
+          document.querySelectorAll("[data-view-panel]").forEach(function (panel) {
+            panel.hidden = panel.getAttribute("data-view-panel") !== activeView;
+          });
+          var activeTab = null;
+          calculatorTabs.forEach(function (tab) {
+            var selected =
+              tab.dataset.mode === mode && tab.dataset.view === activeView;
+            tab.setAttribute("aria-selected", selected ? "true" : "false");
+            tab.tabIndex = selected ? 0 : -1;
+            if (selected) activeTab = tab;
+          });
+          byId(activeView + "-view-panel").setAttribute(
+            "aria-labelledby",
+            activeTab.id,
           );
           render();
+          if (activeView === "loss") renderLossCalculation();
+        }
+
+        function syncRectifierFields() {
+          var selected = byId("loss-rectifier-type").value;
+          document.querySelectorAll(".loss-rectifier-field").forEach(function (field) {
+            field.hidden = field.getAttribute("data-rectifier") !== selected;
+          });
         }
 
         function runSelfChecks() {
@@ -1913,6 +2665,17 @@
             vout: 12,
             iout: 1,
           }));
+          var estimatedBuck = calculateStage("buck", Object.assign({}, common, {
+            vin: 12,
+            vout: 5,
+            efficiency: 0.9,
+          }));
+          var estimatedBoost = calculateStage("boost", Object.assign({}, common, {
+            vin: 5,
+            vout: 12,
+            iout: 1,
+            efficiency: 0.9,
+          }));
           var tolerance = 1e-9;
           var checks = [
             Math.abs(buck.duty - 5 / 12) < tolerance,
@@ -1920,25 +2683,63 @@
             Math.abs(boost.duty - 7 / 12) < tolerance,
             Math.abs(boost.ilAverage - 2.4) < tolerance,
             Math.abs(boost.rippleCurrent - 7 / 12) < tolerance,
+            Math.abs(estimatedBuck.duty - 5 / (0.9 * 12)) < tolerance,
+            Math.abs(estimatedBoost.duty - (1 - 0.9 * 5 / 12)) < tolerance,
           ];
           if (checks.some(function (passed) { return !passed; })) {
             console.error("Buck/boost calculator self-check failed.");
           }
         }
 
-        buckModeButton.addEventListener("click", function () {
-          setMode("buck");
+        calculatorTabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            setCalculatorState(tab.dataset.mode, tab.dataset.view);
+          });
         });
-        boostModeButton.addEventListener("click", function () {
-          setMode("boost");
+        document.querySelector(".tabs").addEventListener("keydown", function (event) {
+          var currentIndex = calculatorTabs.indexOf(document.activeElement);
+          if (currentIndex < 0) return;
+          var nextIndex = null;
+          if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % calculatorTabs.length;
+          if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + calculatorTabs.length) % calculatorTabs.length;
+          if (event.key === "Home") nextIndex = 0;
+          if (event.key === "End") nextIndex = calculatorTabs.length - 1;
+          if (nextIndex === null) return;
+          event.preventDefault();
+          calculatorTabs[nextIndex].focus();
+          calculatorTabs[nextIndex].click();
+        });
+        idealEfficiencyButton.addEventListener("click", function () {
+          setEfficiencyMode("ideal");
+        });
+        estimatedEfficiencyButton.addEventListener("click", function () {
+          setEfficiencyMode("estimated");
         });
         addSweepButton.addEventListener("click", buildSweepCard);
-        form.addEventListener("input", render);
+        form.addEventListener("input", function () {
+          render();
+          renderLossCalculation();
+        });
+        lossForm.addEventListener("input", renderLossCalculation);
+        byId("loss-rectifier-type").addEventListener("change", function () {
+          syncRectifierFields();
+          renderLossCalculation();
+        });
+        byId("apply-loss-efficiency-btn").addEventListener("click", function () {
+          if (!latestLossResult) return;
+          byId("input-efficiency").value = String(
+            Math.round(latestLossResult.efficiency * 100000) / 1000,
+          );
+          setEfficiencyMode("estimated");
+          setCalculatorState(mode, "basic");
+        });
 
         runSelfChecks();
         applyTheme(getStoredThemeMode(), false);
+        syncRectifierFields();
         buildSweepCard();
-        setMode("buck");
+        setEfficiencyMode("ideal");
+        setCalculatorState("buck", "basic");
       })();
     </script>
   </body>
