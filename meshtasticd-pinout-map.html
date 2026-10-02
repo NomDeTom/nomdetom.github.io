@@ -744,7 +744,7 @@
                 <span
                   class="help-tip"
                   tabindex="0"
-                  data-tip="Type to search by name, board, radio or compatible list; arrow keys and Enter to pick. Lists configs for the chosen board (all of them on Auto). Built-in examples work offline; Load list from GitHub fetches every file in meshtastic/firmware bin/config.d. Stack another adds a second pinout below; the stack is merged top to bottom, like config.d."
+                  data-tip="Type to search by name, board, radio or compatible list; arrow keys and Enter to pick. Lists configs for the chosen board (all of them on Auto). Built-in examples work offline; Load list from GitHub fetches every file in meshtastic/firmware bin/config.d (on an Irate-Box hub that holds them, Load list from this box needs no internet). Stack another adds a second pinout below; the stack is merged top to bottom, like config.d."
                   >?</span
                 >
               </label>
@@ -2403,21 +2403,43 @@
         return out;
       }
 
+      // Served from an Irate-Box hub, the configs may be held on the box itself: bin/config.d at
+      // the newest Meshtastic release the box keeps, every file's text in one JSON. Then the
+      // list needs no internet; anywhere else (or on a box without it) it comes from GitHub.
+      const LOCAL_CONFIGS = "/flasher/firmware/config.d.json";
+      const localConfigs = /^https?:$/.test(location.protocol) && !/\.github\.io$/.test(location.hostname)
+        ? fetch(LOCAL_CONFIGS, { cache: "no-cache" })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => (d && Array.isArray(d.files) && d.files.length ? d : null))
+            .catch(() => null)
+        : Promise.resolve(null);
+      localConfigs.then((d) => {
+        if (d) el.remoteListBtn.textContent = "Load list from this box";
+      });
+
       el.remoteListBtn.addEventListener("click", async () => {
         el.remoteListBtn.disabled = true;
-        setStatus("Listing meshtastic/firmware bin/config.d…");
         try {
-          const files = await listDir("bin/config.d");
-          files.sort((a, b) => a.path.localeCompare(b.path));
-          // Read every file now: the board filter needs each one's Meta.compatible.
-          setStatus("Reading " + files.length + " configs…");
-          const texts = await Promise.all(
-            files.map((f) =>
-              fetch(f.download_url)
-                .then((r) => (r.ok ? r.text() : null))
-                .catch(() => null),
-            ),
-          );
+          const local = await localConfigs;
+          let files, texts;
+          if (local) {
+            setStatus("Reading the configs held on this box…");
+            files = local.files.map((f) => ({ path: "bin/config.d/" + f.path, download_url: null }));
+            texts = local.files.map((f) => f.text);
+          } else {
+            setStatus("Listing meshtastic/firmware bin/config.d…");
+            files = await listDir("bin/config.d");
+            files.sort((a, b) => a.path.localeCompare(b.path));
+            // Read every file now: the board filter needs each one's Meta.compatible.
+            setStatus("Reading " + files.length + " configs…");
+            texts = await Promise.all(
+              files.map((f) =>
+                fetch(f.download_url)
+                  .then((r) => (r.ok ? r.text() : null))
+                  .catch(() => null),
+              ),
+            );
+          }
           remoteList.length = 0;
           files.forEach((f, i) => {
             const rel = f.path.replace(/^bin\/config\.d\//, "");
@@ -2432,7 +2454,8 @@
           updateBoardOptions();
           const unread = texts.filter((t) => t == null).length;
           setStatus(
-            files.length + " configs listed" + (unread ? " (" + unread + " could not be read, so show only under Auto)" : "") + ". Pick one and Load, or Stack another.",
+            files.length + " configs listed" + (local ? " from meshtastic/firmware " + local.tag + ", held on this box" : "") +
+              (unread ? " (" + unread + " could not be read, so show only under Auto)" : "") + ". Pick one and Load, or Stack another.",
             unread > 0,
           );
           el.remoteListBtn.textContent = "List loaded";
